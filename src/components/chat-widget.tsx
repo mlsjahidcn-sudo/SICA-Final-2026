@@ -671,12 +671,15 @@ export function ChatWidget() {
                       <p className="truncate font-medium">{conv.title}</p>
                       <p className="text-[10px] text-muted-foreground">{formatDate(conv.updatedAt)}</p>
                     </div>
-                    <button
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => deleteConversation(e, conv.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setConversations(prev => prev.filter(c => c.id !== conv.id)); } }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded cursor-pointer"
                     >
                       <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                    </button>
+                    </span>
                   </button>
                 ))
               )}
