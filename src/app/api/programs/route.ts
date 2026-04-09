@@ -60,12 +60,38 @@ export async function GET(request: NextRequest) {
 
     if (degree_level) {
       const degrees = degree_level.split(',').map(d => d.trim());
-      query = query.in('degree_level', degrees);
+      // Normalize to match database capitalization (Bachelor, Master, PhD, etc.)
+      const normalizedDegrees = degrees.map(d => {
+        const lower = d.toLowerCase();
+        if (lower === 'bachelor') return 'Bachelor';
+        if (lower === 'master') return 'Master';
+        if (lower === 'phd') return 'PhD';
+        if (lower === 'diploma') return 'Diploma';
+        if (lower === 'language') return 'language';
+        return d;
+      });
+      query = query.in('degree_level', normalizedDegrees);
     }
 
     if (language) {
       const languages = language.split(',').map(l => l.trim());
-      query = query.in('language', languages);
+      const normalizedLanguages: string[] = [];
+      for (const lang of languages) {
+        const lower = lang.toLowerCase();
+        if (lower === 'both') {
+          // "Both" means English and Chinese
+          normalizedLanguages.push('English', 'Chinese');
+        } else if (lower === 'english') {
+          normalizedLanguages.push('English');
+        } else if (lower === 'chinese') {
+          normalizedLanguages.push('Chinese');
+        } else {
+          normalizedLanguages.push(lang);
+        }
+      }
+      // Deduplicate
+      const uniqueLanguages = [...new Set(normalizedLanguages)];
+      query = query.in('language', uniqueLanguages);
     }
 
     if (category) {
