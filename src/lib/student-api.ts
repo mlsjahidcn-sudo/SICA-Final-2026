@@ -455,9 +455,8 @@ export interface Application {
   notes?: string;
   programs?: {
     id: string;
-    name_en: string;
-    name_cn?: string;
-    degree_type: string;
+    name: string;
+    degree_level: string;
     discipline?: string;
     tuition_per_year?: number;
     tuition_currency?: string;
@@ -466,7 +465,6 @@ export interface Application {
     universities?: {
       id: string;
       name_en: string;
-      name_cn?: string;
       city: string;
       province?: string;
       logo_url?: string;
@@ -508,7 +506,7 @@ export interface Document {
     id: string;
     programs?: {
       id: string;
-      name_en: string;
+      name: string;
       universities?: {
         id: string;
         name_en: string;
@@ -537,7 +535,7 @@ export interface Meeting {
     id: string;
     programs?: {
       id: string;
-      name_en: string;
+      name: string;
       universities?: {
         id: string;
         name_en: string;

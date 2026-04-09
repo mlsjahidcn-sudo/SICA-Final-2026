@@ -85,7 +85,7 @@ export default function MeetingsPage() {
               id: "app1",
               programs: {
                 id: "prog1",
-                name_en: "Computer Science",
+                name: "Computer Science",
                 universities: { id: "u1", name_en: "Tsinghua University", logo_url: undefined }
               }
             }
@@ -103,7 +103,7 @@ export default function MeetingsPage() {
               id: "app2",
               programs: {
                 id: "prog2",
-                name_en: "Data Science",
+                name: "Data Science",
                 universities: { id: "u2", name_en: "Peking University", logo_url: undefined }
               }
             }
@@ -121,7 +121,7 @@ export default function MeetingsPage() {
               id: "app3",
               programs: {
                 id: "prog3",
-                name_en: "International Business",
+                name: "International Business",
                 universities: { id: "u3", name_en: "Fudan University", logo_url: undefined }
               }
             }
@@ -265,7 +265,7 @@ export default function MeetingsPage() {
                               {meeting.applications?.programs && (
                                 <div className="flex items-center gap-2 mt-2 text-sm">
                                   <IconSchool className="h-4 w-4 text-muted-foreground" />
-                                  <span>{meeting.applications.programs.name_en}</span>
+                                  <span>{meeting.applications.programs.name}</span>
                                   {meeting.applications.programs.universities && (
                                     <>
                                       <span className="text-muted-foreground">at</span>

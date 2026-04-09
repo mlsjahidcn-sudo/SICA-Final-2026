@@ -104,15 +104,13 @@ function ApplicationsContent() {
             intake: "September 2025",
             programs: {
               id: "prog1",
-              name_en: "Computer Science and Technology",
-              name_cn: "计算机科学与技术",
-              degree_type: "Master",
+              name: "Computer Science and Technology",
+              degree_level: "Master",
               tuition_per_year: 35000,
               tuition_currency: "CNY",
               universities: {
                 id: "uni1",
                 name_en: "Tsinghua University",
-                name_cn: "清华大学",
                 city: "Beijing",
                 province: "Beijing",
                 logo_url: undefined
@@ -127,15 +125,13 @@ function ApplicationsContent() {
             intake: "March 2025",
             programs: {
               id: "prog2",
-              name_en: "Data Science",
-              name_cn: "数据科学",
-              degree_type: "Master",
+              name: "Data Science",
+              degree_level: "Master",
               tuition_per_year: 30000,
               tuition_currency: "CNY",
               universities: {
                 id: "uni2",
                 name_en: "Peking University",
-                name_cn: "北京大学",
                 city: "Beijing",
                 province: "Beijing",
                 logo_url: undefined
@@ -149,15 +145,13 @@ function ApplicationsContent() {
             updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
             programs: {
               id: "prog3",
-              name_en: "International Business",
-              name_cn: "国际商务",
-              degree_type: "Bachelor",
+              name: "International Business",
+              degree_level: "Bachelor",
               tuition_per_year: 25000,
               tuition_currency: "CNY",
               universities: {
                 id: "uni3",
                 name_en: "Fudan University",
-                name_cn: "复旦大学",
                 city: "Shanghai",
                 province: "Shanghai",
                 logo_url: undefined
@@ -309,10 +303,7 @@ function ApplicationsContent() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{app.programs?.name_en}</h3>
-                        {app.programs?.name_cn && (
-                          <span className="text-muted-foreground">({app.programs.name_cn})</span>
-                        )}
+                        <h3 className="font-semibold">{app.programs?.name}</h3>
                       </div>
                       {app.programs?.universities && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -321,7 +312,7 @@ function ApplicationsContent() {
                           <span>•</span>
                           <span>{app.programs.universities.city}</span>
                           <span>•</span>
-                          <span>{app.programs.degree_type}</span>
+                          <span>{app.programs.degree_level}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">

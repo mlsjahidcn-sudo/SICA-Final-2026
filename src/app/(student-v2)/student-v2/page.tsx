@@ -72,7 +72,7 @@ export default function StudentDashboard() {
                   id: "app1",
                   programs: {
                     id: "prog1",
-                    name_en: "Computer Science",
+                    name: "Computer Science",
                     universities: { id: "u1", name_en: "Tsinghua University" }
                   }
                 }
@@ -90,7 +90,7 @@ export default function StudentDashboard() {
                   id: "app2",
                   programs: {
                     id: "prog2",
-                    name_en: "Data Science",
+                    name: "Data Science",
                     universities: { id: "u2", name_en: "Peking University" }
                   }
                 }
@@ -105,7 +105,7 @@ export default function StudentDashboard() {
                 created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
                 applications: {
                   id: "app1",
-                  programs: { id: "prog1", name_en: "Computer Science" }
+                  programs: { id: "prog1", name: "Computer Science" }
                 }
               },
               {
@@ -117,7 +117,7 @@ export default function StudentDashboard() {
                 created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
                 applications: {
                   id: "app2",
-                  programs: { id: "prog2", name_en: "Data Science" }
+                  programs: { id: "prog2", name: "Data Science" }
                 }
               }
             ],
@@ -131,8 +131,8 @@ export default function StudentDashboard() {
                 study_plan: "",
                 programs: {
                   id: "prog1",
-                  name_en: "Computer Science and Technology",
-                  degree_type: "Master",
+                  name: "Computer Science and Technology",
+                  degree_level: "Master",
                   universities: { id: "u1", name_en: "Tsinghua University", city: "Beijing" }
                 }
               },
@@ -145,8 +145,8 @@ export default function StudentDashboard() {
                 study_plan: "",
                 programs: {
                   id: "prog2",
-                  name_en: "Data Science",
-                  degree_type: "Master",
+                  name: "Data Science",
+                  degree_level: "Master",
                   universities: { id: "u2", name_en: "Peking University", city: "Beijing" }
                 }
               }
@@ -365,7 +365,7 @@ export default function StudentDashboard() {
                       </p>
                       {meeting.applications?.programs && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {meeting.applications.programs.name_en}
+                          {meeting.applications.programs.name}
                         </p>
                       )}
                     </div>
@@ -458,11 +458,11 @@ export default function StudentDashboard() {
                         <IconSchool className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{app.programs?.name_en}</p>
+                        <p className="font-medium">{app.programs?.name}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>{app.programs?.universities?.name_en}</span>
                           <span>•</span>
-                          <span>{app.programs?.degree_type}</span>
+                          <span>{app.programs?.degree_level}</span>
                         </div>
                       </div>
                     </div>

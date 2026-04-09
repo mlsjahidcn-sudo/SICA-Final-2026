@@ -58,9 +58,8 @@ interface ApplicationDetail {
   notes: string | null
   programs?: {
     id: string
-    name_en: string
-    name_cn: string | null
-    degree_type: string
+    name: string
+    degree_level: string
     discipline: string
     teaching_language: string
     duration_months: number
@@ -72,7 +71,6 @@ interface ApplicationDetail {
     universities?: {
       id: string
       name_en: string
-      name_cn: string | null
       city: string
       province: string
       logo_url: string | null
@@ -122,9 +120,8 @@ export default function ApplicationDetailPage() {
           notes: null,
           programs: {
             id: "prog1",
-            name_en: "Computer Science and Technology",
-            name_cn: "计算机科学与技术",
-            degree_type: "Master",
+            name: "Computer Science and Technology",
+            degree_level: "Master",
             discipline: "Engineering",
             teaching_language: "English",
             duration_months: 24,
@@ -134,7 +131,6 @@ export default function ApplicationDetailPage() {
             universities: {
               id: "uni1",
               name_en: "Tsinghua University",
-              name_cn: "清华大学",
               city: "Beijing",
               province: "Beijing",
               logo_url: null,
@@ -276,20 +272,19 @@ export default function ApplicationDetailPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <CardTitle className="text-xl">
-                    {application.programs?.name_en}
+                    {application.programs?.name}
                   </CardTitle>
                   {getStatusBadge(application.status)}
                 </div>
                 <CardDescription className="text-base">
                   {application.programs?.universities?.name_en}
-                  {application.programs?.universities?.name_cn && ` (${application.programs.universities.name_cn})`}
                 </CardDescription>
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <IconMapPin className="h-4 w-4" />
                     {application.programs?.universities?.city}, {application.programs?.universities?.province}
                   </div>
-                  <div>{application.programs?.degree_type}</div>
+                  <div>{application.programs?.degree_level}</div>
                 </div>
               </div>
             </div>
@@ -368,7 +363,7 @@ export default function ApplicationDetailPage() {
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-2 text-sm">
-              <p><strong>Program:</strong> {application.programs?.name_en}</p>
+              <p><strong>Program:</strong> {application.programs?.name}</p>
               <p><strong>University:</strong> {application.programs?.universities?.name_en}</p>
               <p><strong>Intake:</strong> {application.intake || 'Not specified'}</p>
             </div>
@@ -405,7 +400,7 @@ export default function ApplicationDetailPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Degree</span>
-                  <span className="font-medium">{application.programs?.degree_type}</span>
+                  <span className="font-medium">{application.programs?.degree_level}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
@@ -436,7 +431,6 @@ export default function ApplicationDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium">{application.programs?.universities?.name_en}</p>
-                    <p className="text-sm text-muted-foreground">{application.programs?.universities?.name_cn}</p>
                   </div>
                 </div>
                 <Separator />

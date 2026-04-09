@@ -45,9 +45,8 @@ export async function GET(
         notes,
         programs (
           id,
-          name_en,
-          name_cn,
-          degree_type,
+          name,
+          degree_level,
           discipline,
           teaching_language,
           duration_months,
@@ -59,7 +58,6 @@ export async function GET(
           universities (
             id,
             name_en,
-            name_cn,
             city,
             province,
             logo_url,
@@ -177,8 +175,8 @@ export async function PUT(
         updated_at,
         programs (
           id,
-          name_en,
-          degree_type,
+          name,
+          degree_level,
           universities (
             id,
             name_en,

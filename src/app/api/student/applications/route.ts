@@ -56,9 +56,8 @@ export async function GET(request: NextRequest) {
         intake,
         programs (
           id,
-          name_en,
-          name_cn,
-          degree_type,
+          name,
+          degree_level,
           tuition_per_year,
           tuition_currency,
           application_deadline_fall,
@@ -66,7 +65,6 @@ export async function GET(request: NextRequest) {
           universities (
             id,
             name_en,
-            name_cn,
             city,
             province,
             logo_url
@@ -82,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Apply search filter (search in program name or university name)
     if (search) {
-      query = query.or(`programs.name_en.ilike.%${search}%,programs.name_cn.ilike.%${search}%`);
+      query = query.or(`programs.name.ilike.%${search}%,programs.universities.name_en.ilike.%${search}%`);
     }
 
     query = query
@@ -284,8 +282,8 @@ export async function POST(request: NextRequest) {
         created_at,
         programs (
           id,
-          name_en,
-          degree_type,
+          name,
+          degree_level,
           universities (
             id,
             name_en,

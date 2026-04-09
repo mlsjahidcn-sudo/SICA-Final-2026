@@ -43,7 +43,10 @@ import {
   IconFlask,
   IconCurrencyDollar,
   IconStar,
+  IconCircleCheck,
+  IconAlertCircle,
 } from "@tabler/icons-react"
+import { toast } from "sonner"
 import { studentApi, type StudentProfile, type WorkExperienceEntry, type EducationHistoryEntry, type FamilyMemberEntry, type ExtracurricularActivityEntry, type AwardEntry, type PublicationEntry, type ResearchExperienceEntry, type ScholarshipApplicationData, type FinancialGuaranteeData } from "@/lib/student-api"
 
 interface ProfileFormData {
@@ -233,56 +236,84 @@ export default function ProfilePage() {
   }, [fetchProfile])
 
   const handleSave = async () => {
+    // Client-side validation
+    if (!formData.full_name.trim()) {
+      toast.error('Full name is required', {
+        icon: <IconAlertCircle className="h-4 w-4" />,
+      })
+      return
+    }
+    
+    if (!formData.phone.trim()) {
+      toast.error('Phone number is required', {
+        icon: <IconAlertCircle className="h-4 w-4" />,
+      })
+      return
+    }
+
     setLoading(true)
     setSaveSuccess(false)
     
-    const { error } = await studentApi.updateProfile({
-      full_name: formData.full_name,
-      phone: formData.phone,
-      student_profile: {
-        nationality: formData.nationality,
-        date_of_birth: formData.date_of_birth,
-        gender: formData.gender,
-        current_address: formData.current_address,
-        postal_code: formData.postal_code,
-        permanent_address: formData.permanent_address,
-        chinese_name: formData.chinese_name,
-        marital_status: formData.marital_status,
-        religion: formData.religion,
-        emergency_contact_name: formData.emergency_contact_name,
-        emergency_contact_phone: formData.emergency_contact_phone,
-        emergency_contact_relationship: formData.emergency_contact_relationship,
-        passport_number: formData.passport_number,
-        passport_expiry_date: formData.passport_expiry_date,
-        passport_issuing_country: formData.passport_issuing_country,
-        education_history: formData.education_history,
-        work_experience: formData.work_experience,
-        hsk_level: formData.hsk_level ? parseInt(formData.hsk_level) : undefined,
-        hsk_score: formData.hsk_score ? parseInt(formData.hsk_score) : undefined,
-        ielts_score: formData.ielts_score,
-        toefl_score: formData.toefl_score ? parseInt(formData.toefl_score) : undefined,
-        family_members: formData.family_members,
-        extracurricular_activities: formData.extracurricular_activities,
-        awards: formData.awards,
-        publications: formData.publications,
-        research_experience: formData.research_experience,
-        scholarship_application: formData.scholarship_application,
-        financial_guarantee: formData.financial_guarantee,
-        study_mode: formData.study_mode,
-        funding_source: formData.funding_source,
-        wechat_id: formData.wechat_id,
+    try {
+      const { error } = await studentApi.updateProfile({
+        full_name: formData.full_name,
+        phone: formData.phone,
+        student_profile: {
+          nationality: formData.nationality,
+          date_of_birth: formData.date_of_birth,
+          gender: formData.gender,
+          current_address: formData.current_address,
+          postal_code: formData.postal_code,
+          permanent_address: formData.permanent_address,
+          chinese_name: formData.chinese_name,
+          marital_status: formData.marital_status,
+          religion: formData.religion,
+          emergency_contact_name: formData.emergency_contact_name,
+          emergency_contact_phone: formData.emergency_contact_phone,
+          emergency_contact_relationship: formData.emergency_contact_relationship,
+          passport_number: formData.passport_number,
+          passport_expiry_date: formData.passport_expiry_date,
+          passport_issuing_country: formData.passport_issuing_country,
+          education_history: formData.education_history,
+          work_experience: formData.work_experience,
+          hsk_level: formData.hsk_level ? parseInt(formData.hsk_level) : undefined,
+          hsk_score: formData.hsk_score ? parseInt(formData.hsk_score) : undefined,
+          ielts_score: formData.ielts_score,
+          toefl_score: formData.toefl_score ? parseInt(formData.toefl_score) : undefined,
+          family_members: formData.family_members,
+          extracurricular_activities: formData.extracurricular_activities,
+          awards: formData.awards,
+          publications: formData.publications,
+          research_experience: formData.research_experience,
+          scholarship_application: formData.scholarship_application,
+          financial_guarantee: formData.financial_guarantee,
+          study_mode: formData.study_mode,
+          funding_source: formData.funding_source,
+          wechat_id: formData.wechat_id,
+        }
+      })
+      
+      if (error) {
+        toast.error('Failed to save profile', {
+          description: error,
+          icon: <IconAlertCircle className="h-4 w-4" />,
+        })
+      } else {
+        toast.success('Profile saved successfully!', {
+          icon: <IconCircleCheck className="h-4 w-4" />,
+        })
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
+        fetchProfile()
       }
-    })
-    
-    if (error) {
-      alert("Failed to save profile: " + error)
-    } else {
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-      fetchProfile()
+    } catch (err) {
+      toast.error('An unexpected error occurred', {
+        description: (err as Error).message,
+        icon: <IconAlertCircle className="h-4 w-4" />,
+      })
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   const updateField = <K extends keyof ProfileFormData>(field: K, value: ProfileFormData[K]) => {
@@ -505,8 +536,12 @@ export default function ProfilePage() {
 
       {/* Save Success Indicator */}
       {saveSuccess && (
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg text-sm">
-          Profile saved successfully!
+        <div className="flex items-center gap-3 bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
+          <IconCircleCheck className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Profile saved successfully!</p>
+            <p className="text-sm opacity-80">Your changes have been saved to the database.</p>
+          </div>
         </div>
       )}
 
