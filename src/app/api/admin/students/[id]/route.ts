@@ -40,7 +40,7 @@ export async function GET(
         created_at,
         updated_at,
         referred_by_partner_id,
-        students!students_user_id_users_id_fk (
+        students (
           id,
           first_name,
           last_name,
