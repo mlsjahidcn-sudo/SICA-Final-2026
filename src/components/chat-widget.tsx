@@ -104,6 +104,7 @@ export function ChatWidget() {
   const [showHistory, setShowHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -175,6 +176,7 @@ export function ChatWidget() {
     setMessages(defaultMessages);
     setShowHistory(false);
     setFollowUpQuestions([]);
+    setSessionId(null);
   }, [defaultMessages]);
   
   // Switch to a different conversation
@@ -367,17 +369,14 @@ export function ChatWidget() {
     updateCurrentConversation(messagesWithPlaceholder);
 
     try {
-      // Prepare messages for API
-      const apiMessages = messages
-        .filter(m => m.id !== '1') // Exclude initial greeting
-        .map(m => ({ role: m.role, content: m.content }));
-      apiMessages.push({ role: 'user', content: userMessage.content });
-
-      // Call chat API with streaming
+      // Call chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ 
+          message: userMessage.content,
+          session_id: sessionId,
+        }),
       });
 
       if (!response.ok) {
@@ -405,9 +404,10 @@ export function ChatWidget() {
 
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.content) {
+                if (parsed.type === 'session') {
+                  setSessionId(parsed.session_id);
+                } else if (parsed.type === 'content' && parsed.content) {
                   fullContent += parsed.content;
-                  // Update message in place
                   const updatedMsgs = messagesWithPlaceholder.map(m => 
                     m.id === assistantId 
                       ? { ...m, content: fullContent }
@@ -477,7 +477,7 @@ export function ChatWidget() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, isLoading, fetchCardData, updateCurrentConversation, currentContext]);
+  }, [messages, isLoading, fetchCardData, updateCurrentConversation, currentContext, sessionId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

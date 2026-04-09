@@ -243,6 +243,33 @@
     "noHistory": "暂无对话记录",
     "thinking": "思考中...",
     "disclaimer": "AI 可能出错，请核实重要信息。",
+    "guestMode": "访客模式 - 登录可保存历史记录",
+    "guided": {
+      "degreeQuestion": "您想攻读什么学位？",
+      "majorQuestion": "您对什么专业感兴趣？",
+      "bachelor": "学士",
+      "master": "硕士",
+      "phd": "博士",
+      "language": "语言/非学位",
+      "getGuidance": "获取个性化指导",
+      "orAsk": "或直接提问："
+    },
+    "lead": {
+      "title": "获取个性化指导",
+      "desc": "我们将通过 WhatsApp 联系您，提供最佳项目推荐。",
+      "name": "姓名",
+      "email": "邮箱",
+      "whatsapp": "WhatsApp 号码",
+      "nationality": "国籍",
+      "degreeLevel": "学位层次",
+      "majorInterest": "专业/兴趣方向",
+      "preferredLanguage": "偏好授课语言",
+      "submit": "提交",
+      "success": "谢谢！我们的团队将通过 WhatsApp 联系您，提供个性化推荐。",
+      "required": "必填",
+      "invalidEmail": "邮箱格式不正确",
+      "invalidPhone": "号码格式不正确"
+    },
     "suggestions": {
       "engineering": "中国最好的工科大学有哪些？",
       "scholarship": "如何申请中国政府奖学金？",

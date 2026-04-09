@@ -243,6 +243,33 @@
     "noHistory": "No conversations yet",
     "thinking": "Thinking...",
     "disclaimer": "AI may make mistakes. Verify important information.",
+    "guestMode": "Guest mode - sign in for saved history",
+    "guided": {
+      "degreeQuestion": "What degree are you pursuing?",
+      "majorQuestion": "What field interests you?",
+      "bachelor": "Bachelor's",
+      "master": "Master's",
+      "phd": "PhD",
+      "language": "Language / Non-degree",
+      "getGuidance": "Get Personalized Guidance",
+      "orAsk": "Or ask anything:"
+    },
+    "lead": {
+      "title": "Get Personalized Guidance",
+      "desc": "We'll contact you via WhatsApp with the best program matches.",
+      "name": "Name",
+      "email": "Email",
+      "whatsapp": "WhatsApp Number",
+      "nationality": "Nationality",
+      "degreeLevel": "Degree Level",
+      "majorInterest": "Major / Field of Interest",
+      "preferredLanguage": "Preferred Language of Instruction",
+      "submit": "Submit",
+      "success": "Thank you! Our team will reach out via WhatsApp with personalized recommendations.",
+      "required": "Required",
+      "invalidEmail": "Invalid email format",
+      "invalidPhone": "Invalid number format"
+    },
     "suggestions": {
       "engineering": "What are the best universities for engineering in China?",
       "scholarship": "How do I apply for a Chinese Government Scholarship?",
