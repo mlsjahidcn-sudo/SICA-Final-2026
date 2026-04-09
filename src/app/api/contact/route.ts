@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize Resend to avoid build-time crash when API key is missing
+let _resend: Resend | null = null;
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null;
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 interface ContactFormData {
   name: string;
@@ -36,7 +42,9 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to support team
     try {
-      await resend.emails.send({
+      const resend = getResend();
+      if (resend) {
+        await resend.emails.send({
         from: 'Team SICA <info@studyinchina.academy>',
         to: ['info@studyinchina.academy'],
         subject: `[Contact Form] ${subject}`,
@@ -62,6 +70,7 @@ export async function POST(request: NextRequest) {
         `,
         replyTo: email,
       });
+      }
     } catch (emailError) {
       console.error('Error sending notification email:', emailError);
       // Continue even if email fails - we'll log it
@@ -69,7 +78,9 @@ export async function POST(request: NextRequest) {
 
     // Send confirmation email to the user
     try {
-      await resend.emails.send({
+      const resend = getResend();
+      if (resend) {
+        await resend.emails.send({
         from: 'Team SICA <info@studyinchina.academy>',
         to: [email],
         subject: 'We received your message - SICA',
@@ -110,6 +121,7 @@ export async function POST(request: NextRequest) {
           </div>
         `,
       });
+      }
     } catch (emailError) {
       console.error('Error sending confirmation email:', emailError);
       // Continue even if confirmation email fails
