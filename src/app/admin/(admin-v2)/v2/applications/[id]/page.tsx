@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -34,74 +34,74 @@ import {
   IconCircleX,
   IconAlertCircle,
   IconSend,
-  IconExternalLink,
   IconDownload,
-  IconMessage,
-  IconVideo
+  IconMessage
 } from "@tabler/icons-react"
 
 interface ApplicationDetail {
   id: string
+  student_id: string
+  program_id: string
+  partner_id: string | null
   status: string
+  priority: string | null
+  notes: string | null
+  profile_snapshot: Record<string, unknown> | null
   submitted_at: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
   created_at: string
   updated_at: string
-  notes?: string
-  passport_first_name: string
-  passport_last_name: string
-  passport_number?: string
-  nationality: string
-  date_of_birth?: string
-  gender?: string
-  phone?: string
-  email: string
-  address?: string
-  program_id: string
+  students: {
+    id: string
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+    nationality: string | null
+    gender: string | null
+    highest_education: string | null
+    current_address: string | null
+    wechat_id: string | null
+    users: {
+      id: string
+      full_name: string
+      email: string
+      phone: string
+    } | null
+  } | null
   programs: {
     id: string
-    name_en: string
-    name_cn: string | null
-    degree_type: string
+    name: string
+    degree_level: string
+    language: string
+    tuition_fee_per_year: number | null
+    currency: string
     duration_years: number | null
-    tuition_per_year: number | null
-    tuition_currency: string
+    scholarship_types: string | null
     universities: {
       id: string
       name_en: string
       name_cn: string | null
       city: string
       province: string
-    }
-  }
-  users: {
+    } | null
+  } | null
+  partner: {
     id: string
     full_name: string
     email: string
-  }
-  documents: Array<{
+    company_name?: string
+  } | null
+  reviewer: {
     id: string
-    document_type: string
-    file_name: string
-    file_url: string
-    uploaded_at: string
-    status: string
-  }>
+    full_name: string
+  } | null
   status_history: Array<{
     id: string
     old_status: string | null
     new_status: string
-    comment?: string
+    notes: string | null
     created_at: string
-    created_by: string
-  }>
-  meetings: Array<{
-    id: string
-    title: string
-    scheduled_at: string
-    duration_minutes: number
-    status: string
-    meeting_url?: string
-    meeting_platform?: string
   }>
 }
 
@@ -136,8 +136,9 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
 
         if (response.ok) {
           const data = await response.json()
-          setApplication(data)
-          setNewStatus(data.status)
+          const appData = data.application || data
+          setApplication(appData)
+          setNewStatus(appData.status)
         } else {
           toast.error('Failed to load application details')
           router.push('/admin/v2/applications')
@@ -255,45 +256,40 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                 <div>
                   <div className="text-sm text-muted-foreground">Full Name</div>
                   <div className="font-medium">
-                    {application.passport_first_name} {application.passport_last_name}
+                    {application.students?.users?.full_name || 
+                      `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'N/A'}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Email</div>
-                  <div className="font-medium">{application.email}</div>
+                  <div className="font-medium">{application.students?.users?.email || 'N/A'}</div>
                 </div>
-                {application.passport_number && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Passport Number</div>
-                    <div className="font-medium">{application.passport_number}</div>
-                  </div>
-                )}
                 <div>
                   <div className="text-sm text-muted-foreground">Nationality</div>
-                  <div className="font-medium">{application.nationality}</div>
+                  <div className="font-medium">{application.students?.nationality || 'N/A'}</div>
                 </div>
-                {application.date_of_birth && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Date of Birth</div>
-                    <div className="font-medium">{formatDate(application.date_of_birth)}</div>
-                  </div>
-                )}
-                {application.gender && (
+                {application.students?.gender && (
                   <div>
                     <div className="text-sm text-muted-foreground">Gender</div>
-                    <div className="font-medium capitalize">{application.gender}</div>
+                    <div className="font-medium capitalize">{application.students.gender}</div>
                   </div>
                 )}
-                {application.phone && (
+                {application.students?.users?.phone && (
                   <div>
                     <div className="text-sm text-muted-foreground">Phone</div>
-                    <div className="font-medium">{application.phone}</div>
+                    <div className="font-medium">{application.students.users.phone}</div>
                   </div>
                 )}
-                {application.address && (
+                {application.students?.highest_education && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Education</div>
+                    <div className="font-medium">{application.students.highest_education}</div>
+                  </div>
+                )}
+                {application.students?.current_address && (
                   <div className="sm:col-span-2">
                     <div className="text-sm text-muted-foreground">Address</div>
-                    <div className="font-medium">{application.address}</div>
+                    <div className="font-medium">{application.students.current_address}</div>
                   </div>
                 )}
               </div>
@@ -312,13 +308,10 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-medium text-lg">{application.programs.name_en}</div>
-                    {application.programs.name_cn && (
-                      <div className="text-sm text-muted-foreground">{application.programs.name_cn}</div>
-                    )}
+                    <div className="font-medium text-lg">{application.programs?.name || 'N/A'}</div>
                   </div>
                   <Badge variant="secondary" className="capitalize">
-                    {application.programs.degree_type}
+                    {application.programs?.degree_level || 'N/A'}
                   </Badge>
                 </div>
                 <Separator />
@@ -327,7 +320,7 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                     <IconSchool className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <div className="text-sm text-muted-foreground">University</div>
-                      <div className="font-medium">{application.programs.universities.name_en}</div>
+                      <div className="font-medium">{application.programs?.universities?.name_en || 'N/A'}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -335,21 +328,21 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                     <div>
                       <div className="text-sm text-muted-foreground">Location</div>
                       <div className="font-medium">
-                        {application.programs.universities.city}, {application.programs.universities.province}
+                        {application.programs?.universities?.city || 'N/A'}, {application.programs?.universities?.province || ''}
                       </div>
                     </div>
                   </div>
-                  {application.programs.duration_years && (
+                  {application.programs?.duration_years && (
                     <div>
                       <div className="text-sm text-muted-foreground">Duration</div>
                       <div className="font-medium">{application.programs.duration_years} years</div>
                     </div>
                   )}
-                  {application.programs.tuition_per_year && (
+                  {application.programs?.tuition_fee_per_year && (
                     <div>
                       <div className="text-sm text-muted-foreground">Tuition</div>
                       <div className="font-medium">
-                        {application.programs.tuition_currency} {application.programs.tuition_per_year.toLocaleString()}/year
+                        {application.programs.currency || 'CNY'} {application.programs.tuition_fee_per_year.toLocaleString()}/year
                       </div>
                     </div>
                   )}
@@ -367,35 +360,9 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {application.documents.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No documents uploaded
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {application.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <IconFileText className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm font-medium">{doc.file_name}</div>
-                          <div className="text-xs text-muted-foreground">{doc.document_type}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={doc.status === 'verified' ? 'default' : 'secondary'}>
-                          {doc.status}
-                        </Badge>
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                            <IconExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-center py-4 text-muted-foreground">
+                Documents available in the Documents tab
+              </div>
             </CardContent>
           </Card>
 
@@ -408,17 +375,17 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {application.status_history.length === 0 ? (
+              {(application.status_history?.length ?? 0) === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
                   No status changes yet
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {application.status_history.map((history, index) => (
+                  {(application.status_history || []).map((history, index) => (
                     <div key={history.id} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="h-2 w-2 rounded-full bg-primary" />
-                        {index < application.status_history.length - 1 && (
+                        {index < (application.status_history?.length ?? 0) - 1 && (
                           <div className="h-full w-0.5 bg-border" />
                         )}
                       </div>
@@ -431,8 +398,8 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                             {formatDateTime(history.created_at)}
                           </span>
                         </div>
-                        {history.comment && (
-                          <p className="text-sm text-muted-foreground mt-1">{history.comment}</p>
+                        {history.notes && (
+                          <p className="text-sm text-muted-foreground mt-1">{history.notes}</p>
                         )}
                       </div>
                     </div>
@@ -498,30 +465,9 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {application.meetings.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  No meetings scheduled
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {application.meetings.map((meeting) => (
-                    <div key={meeting.id} className="p-3 rounded-lg border">
-                      <div className="font-medium">{meeting.title}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {formatDateTime(meeting.scheduled_at)}
-                      </div>
-                      {meeting.meeting_url && (
-                        <Button variant="outline" size="sm" className="mt-2" asChild>
-                          <a href={meeting.meeting_url} target="_blank" rel="noopener noreferrer">
-                            <IconVideo className="mr-2 h-4 w-4" />
-                            Join Meeting
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-center py-4 text-muted-foreground text-sm">
+                No meetings scheduled
+              </div>
             </CardContent>
           </Card>
 
@@ -532,17 +478,19 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={`mailto:${application.email}`}>
+                <a href={`mailto:${application.students?.users?.email || ''}`}>
                   <IconSend className="mr-2 h-4 w-4" />
                   Send Email
                 </a>
               </Button>
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href={`/admin/v2/students/${application.users.id}`}>
-                  <IconUser className="mr-2 h-4 w-4" />
-                  View Student Profile
-                </Link>
-              </Button>
+              {application.students?.user_id && (
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href={`/admin/v2/students/${application.students.user_id}`}>
+                    <IconUser className="mr-2 h-4 w-4" />
+                    View Student Profile
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
