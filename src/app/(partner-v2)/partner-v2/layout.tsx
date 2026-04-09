@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
 import { PartnerSidebar } from '@/components/partner-v2/partner-sidebar';
+import { ChatWidget } from '@/components/chat/chat-widget';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SiteHeader } from '@/components/site-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -147,6 +148,7 @@ export default function PartnerV2Layout({
           </div>
         </div>
       </SidebarInset>
+      <ChatWidget />
     </SidebarProvider>
   );
 }

@@ -133,6 +133,8 @@ curl -s "https://maqzxlcsgfpwnfyleoga.supabase.co/rest/v1/{table}?select=*&limit
 │   │   └── universities/   # 大学浏览
 │   ├── components/ui/      # Shadcn UI 组件库
 │   │   ├── file-upload.tsx # 文件上传组件
+│   ├── components/chat/    # AI 聊天助手组件
+│   │   └── chat-widget.tsx # 聊天浮动组件
 │   ├── components/partner-v2/  # 合作伙伴 v2 组件
 │   │   ├── partner-sidebar.tsx  # v2 侧边栏
 │   │   ├── partner-stats-cards.tsx  # 统计卡片
@@ -992,6 +994,49 @@ window.URL.revokeObjectURL(blobUrl);
 **组件**：
 - `src/components/admin/sidebar.tsx` - 管理后台侧边栏
 - `src/components/admin/export-button.tsx` - 数据导出按钮
+
+### AI 聊天助手 (AI Chat Assistant)
+
+基于 LLM 的 AI 聊天助手，支持 SSE 流式输出，为用户解答来华留学相关问题。
+
+**功能特性**：
+- SSE 流式响应（打字机效果）
+- 对话历史持久化（Supabase 存储）
+- 多轮对话上下文（最近 20 条消息）
+- 角色感知（学生/合作伙伴/管理员获得不同上下文）
+- 建议问题快速入口
+- 对话历史管理（新建、加载、删除）
+- 中英文双语支持（自动匹配用户语言）
+
+**页面路由**：
+- 浮动气泡组件，集成在 Student Portal v2 和 Partner Portal v2 布局中
+
+**API 端点**：
+- `POST /api/chat` - 发送消息（SSE 流式响应）
+- `GET /api/chat/sessions` - 获取用户对话列表
+- `DELETE /api/chat/sessions?id=xxx` - 删除对话
+- `GET /api/chat/sessions/[id]/messages` - 获取对话消息
+
+**数据表**：
+- `chat_sessions` - 对话会话表（id, user_id, title, created_at, updated_at）
+- `chat_messages` - 对话消息表（id, session_id, role, content, metadata, created_at）
+
+**组件**：
+- `src/components/chat/chat-widget.tsx` - 聊天浮动组件（气泡 + 面板 + 流式渲染）
+
+**技术架构**：
+- LLM: `coze-coding-dev-sdk` (LLMClient)，模型 `doubao-seed-2-0-lite-260215`
+- 流式输出: SSE 协议 (`text/event-stream` + `ReadableStream`)
+- 前端渲染: `fetch` + `body.getReader()` 增量渲染
+- 对话存储: Supabase `chat_sessions` + `chat_messages`
+
+**消息格式 (SSE)**：
+```json
+{ "type": "session", "session_id": "uuid" }  // 会话创建
+{ "type": "content", "content": "text" }       // 流式内容
+{ "type": "done", "session_id": "uuid" }       // 完成信号
+{ "type": "error", "error": "message" }        // 错误信号
+```
 
 ## 国际化系统 (Internationalization)
 

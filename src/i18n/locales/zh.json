@@ -232,5 +232,22 @@
     "faq": "常见问题",
     "support": "支持",
     "copyright": "© 2024 中国留学学院 版权所有"
+  },
+  "chat": {
+    "title": "SICA AI 助手",
+    "placeholder": "咨询来华留学相关问题...",
+    "welcome": "有什么可以帮助您的？",
+    "welcomeDesc": "向我咨询中国大学、项目、奖学金或申请流程。",
+    "history": "聊天记录",
+    "newChat": "新对话",
+    "noHistory": "暂无对话记录",
+    "thinking": "思考中...",
+    "disclaimer": "AI 可能出错，请核实重要信息。",
+    "suggestions": {
+      "engineering": "中国最好的工科大学有哪些？",
+      "scholarship": "如何申请中国政府奖学金？",
+      "documents": "申请需要哪些材料？",
+      "english": "哪些项目是英文授课？"
+    }
   }
 }

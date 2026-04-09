@@ -232,5 +232,22 @@
     "faq": "FAQ",
     "support": "Support",
     "copyright": "© 2024 Study in China Academy. All rights reserved."
+  },
+  "chat": {
+    "title": "SICA AI Assistant",
+    "placeholder": "Ask about studying in China...",
+    "welcome": "How can I help you?",
+    "welcomeDesc": "Ask me about universities, programs, scholarships, or the application process.",
+    "history": "Chat History",
+    "newChat": "New Chat",
+    "noHistory": "No conversations yet",
+    "thinking": "Thinking...",
+    "disclaimer": "AI may make mistakes. Verify important information.",
+    "suggestions": {
+      "engineering": "What are the best universities for engineering in China?",
+      "scholarship": "How do I apply for a Chinese Government Scholarship?",
+      "documents": "What documents do I need for my application?",
+      "english": "Which programs are taught in English?"
+    }
   }
 }
