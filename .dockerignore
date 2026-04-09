@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+dist
+coverage
+.turbo
+test-screenshots
+e2e
+playwright-report
+*.log
+.DS_Store
+Thumbs.db
+.codebuddy
