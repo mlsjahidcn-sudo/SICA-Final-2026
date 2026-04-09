@@ -27,7 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get student details
+    // Get student details - only select columns that exist in the actual Supabase tables
     const { data: student, error } = await supabaseAdmin
       .from('users')
       .select(`
@@ -36,26 +36,30 @@ export async function GET(
         full_name,
         phone,
         avatar_url,
-        nationality,
         is_active,
         created_at,
-        last_sign_in_at,
+        updated_at,
         referred_by_partner_id,
         students!students_user_id_users_id_fk (
           id,
-          passport_first_name,
-          passport_last_name,
+          first_name,
+          last_name,
+          nationality,
           passport_number,
           date_of_birth,
           gender,
-          city,
-          province,
-          address,
+          current_address,
+          wechat_id,
           emergency_contact_name,
           emergency_contact_phone,
-          education_level,
+          highest_education,
           gpa,
-          language_proficiency
+          hsk_level,
+          hsk_score,
+          ielts_score,
+          toefl_score,
+          education_history,
+          work_experience
         )
       `)
       .eq('id', studentId)

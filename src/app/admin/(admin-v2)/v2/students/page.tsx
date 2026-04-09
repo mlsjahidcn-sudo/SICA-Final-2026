@@ -71,24 +71,23 @@ interface Student {
   avatar_url?: string
   is_active?: boolean
   created_at: string
-  last_sign_in_at?: string
+  updated_at?: string
   referred_by_partner_id?: string | null
   source: 'individual' | 'partner_referred'
   referred_by_partner: ReferredByPartner | null
   students?: {
     id: string
-    passport_first_name: string
-    passport_last_name: string
+    first_name: string
+    last_name: string
     passport_number?: string
     date_of_birth?: string
     gender?: string
-    city?: string
-    province?: string
-  }[]
+    current_address?: string
+    wechat_id?: string
+  } | null
   applications?: {
     total: number
     pending: number
-    accepted: number
   }
 }
 
@@ -320,7 +319,7 @@ function StudentsListContent() {
                   <TableHead>Source</TableHead>
                   <TableHead>Applications</TableHead>
                   <TableHead>Registered</TableHead>
-                  <TableHead>Last Active</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -397,7 +396,9 @@ function StudentsListContent() {
                     </TableCell>
                     <TableCell>{formatDate(student.created_at)}</TableCell>
                     <TableCell>
-                      {student.last_sign_in_at ? formatDate(student.last_sign_in_at) : 'Never'}
+                      <Badge variant={student.is_active ? 'default' : 'secondary'}>
+                        {student.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

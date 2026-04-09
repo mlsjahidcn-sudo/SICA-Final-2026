@@ -46,21 +46,26 @@ interface StudentDetail {
   avatar_url?: string
   is_active?: boolean
   created_at: string
-  last_sign_in_at?: string
+  updated_at?: string
   source: 'individual' | 'partner_referred'
   referred_by_partner_id?: string | null
   referred_by_partner: ReferredByPartner | null
-  student: {
+  students?: {
     id: string
-    passport_first_name: string
-    passport_last_name: string
+    first_name: string
+    last_name: string
     passport_number?: string
     date_of_birth?: string
     gender?: string
-    city?: string
-    province?: string
+    current_address?: string
     wechat_id?: string
-    address?: string
+    nationality?: string
+    highest_education?: string
+    gpa?: string
+    hsk_level?: string
+    hsk_score?: string
+    ielts_score?: string
+    toefl_score?: string
   } | null
   applications: Array<{
     id: string
@@ -81,10 +86,17 @@ interface StudentDetail {
   documents: Array<{
     id: string
     document_type: string
-    file_name: string
     file_url: string
     uploaded_at: string
+    verified: boolean
+    application_id: string
+  }>
+  meetings: Array<{
+    id: string
+    title: string
+    scheduled_at: string
     status: string
+    meeting_url: string
   }>
 }
 
@@ -202,20 +214,20 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
                 <span>{student.phone}</span>
               </div>
             )}
-            {student.nationality && (
+            {(student.nationality || student.students?.nationality) && (
               <div className="flex items-center gap-3 text-sm">
                 <IconMapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{student.nationality}</span>
+                <span>{student.nationality || student.students?.nationality}</span>
               </div>
             )}
             <div className="flex items-center gap-3 text-sm">
               <IconCalendar className="h-4 w-4 text-muted-foreground" />
               <span>Joined {formatDate(student.created_at)}</span>
             </div>
-            {student.last_sign_in_at && (
+            {student.updated_at && (
               <div className="flex items-center gap-3 text-sm">
                 <IconClock className="h-4 w-4 text-muted-foreground" />
-                <span>Last active {formatDate(student.last_sign_in_at)}</span>
+                <span>Last updated {formatDate(student.updated_at)}</span>
               </div>
             )}
 
@@ -274,54 +286,52 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
         {/* Details & Applications */}
         <div className="lg:col-span-2 space-y-6">
           {/* Passport Info */}
-          {student.student && (
+          {student.students && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <IconId className="h-5 w-5" />
-                  Passport Information
+                  Student Information
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <div className="text-sm text-muted-foreground">First Name</div>
-                    <div className="font-medium">{student.student.passport_first_name}</div>
+                    <div className="font-medium">{student.students.first_name}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">Last Name</div>
-                    <div className="font-medium">{student.student.passport_last_name}</div>
+                    <div className="font-medium">{student.students.last_name}</div>
                   </div>
-                  {student.student.passport_number && (
+                  {student.students.passport_number && (
                     <div>
                       <div className="text-sm text-muted-foreground">Passport Number</div>
-                      <div className="font-medium">{student.student.passport_number}</div>
+                      <div className="font-medium">{student.students.passport_number}</div>
                     </div>
                   )}
-                  {student.student.date_of_birth && (
+                  {student.students.date_of_birth && (
                     <div>
                       <div className="text-sm text-muted-foreground">Date of Birth</div>
-                      <div className="font-medium">{formatDate(student.student.date_of_birth)}</div>
+                      <div className="font-medium">{formatDate(student.students.date_of_birth)}</div>
                     </div>
                   )}
-                  {student.student.gender && (
+                  {student.students.gender && (
                     <div>
                       <div className="text-sm text-muted-foreground">Gender</div>
-                      <div className="font-medium capitalize">{student.student.gender}</div>
+                      <div className="font-medium capitalize">{student.students.gender}</div>
                     </div>
                   )}
-                  {(student.student.city || student.student.province) && (
+                  {student.students.current_address && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Location</div>
-                      <div className="font-medium">
-                        {[student.student.city, student.student.province].filter(Boolean).join(', ')}
-                      </div>
+                      <div className="text-sm text-muted-foreground">Address</div>
+                      <div className="font-medium">{student.students.current_address}</div>
                     </div>
                   )}
-                  {student.student.wechat_id && (
+                  {student.students.wechat_id && (
                     <div>
                       <div className="text-sm text-muted-foreground">WeChat ID</div>
-                      <div className="font-medium">{student.student.wechat_id}</div>
+                      <div className="font-medium">{student.students.wechat_id}</div>
                     </div>
                   )}
                 </div>
@@ -392,19 +402,23 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
                       <div className="flex items-center gap-3">
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <div className="text-sm font-medium">{doc.file_name}</div>
-                          <div className="text-xs text-muted-foreground">{doc.document_type}</div>
+                          <div className="text-sm font-medium">{doc.document_type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Uploaded {formatDateTime(doc.uploaded_at)}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={doc.status === 'verified' ? 'default' : 'secondary'}>
-                          {doc.status}
+                        <Badge variant={doc.verified ? 'default' : 'secondary'}>
+                          {doc.verified ? 'Verified' : 'Pending'}
                         </Badge>
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                            <IconExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
+                        {doc.file_url && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                              <IconExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

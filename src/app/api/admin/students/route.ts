@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const nationality = searchParams.get('nationality') || '';
     const offset = (page - 1) * limit;
 
-    // Build query
+    // Build query - only select columns that actually exist in the Supabase users table
     let query = supabaseAdmin
       .from('users')
       .select(`
@@ -40,21 +40,21 @@ export async function GET(request: NextRequest) {
         email,
         full_name,
         phone,
-        nationality,
         avatar_url,
         is_active,
         created_at,
-        last_sign_in_at,
+        updated_at,
         referred_by_partner_id,
         students!students_user_id_users_id_fk (
           id,
-          passport_first_name,
-          passport_last_name,
+          first_name,
+          last_name,
+          nationality,
           passport_number,
           date_of_birth,
           gender,
-          city,
-          province
+          current_address,
+          wechat_id
         )
       `, { count: 'exact' })
       .eq('role', 'student')
@@ -66,10 +66,8 @@ export async function GET(request: NextRequest) {
       query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    // Apply nationality filter
-    if (nationality) {
-      query = query.eq('nationality', nationality);
-    }
+    // Note: nationality is on the students table, not users table.
+    // We filter nationality in-memory after fetching.
 
     // Apply source filter
     if (source === 'individual') {
@@ -138,15 +136,27 @@ export async function GET(request: NextRequest) {
       applicationMap.set(app.user_id, existing);
     }
 
-    // Merge data
-    const enrichedStudents = students?.map(student => ({
-      ...student,
-      source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
-      referred_by_partner: student.referred_by_partner_id
-        ? partnerMap.get(student.referred_by_partner_id) || null
-        : null,
-      applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
-    }));
+    // Merge data - extract nationality from students join
+    let enrichedStudents = students?.map(student => {
+      // students is an array or single object depending on the join
+      const studentRecord = Array.isArray(student.students) ? student.students[0] : student.students;
+      return {
+        ...student,
+        nationality: studentRecord?.nationality || null,
+        source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
+        referred_by_partner: student.referred_by_partner_id
+          ? partnerMap.get(student.referred_by_partner_id) || null
+          : null,
+        applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
+      };
+    });
+
+    // Apply nationality filter in-memory (nationality is on students table, not users)
+    if (nationality) {
+      enrichedStudents = enrichedStudents?.filter(s =>
+        s.nationality?.toLowerCase() === nationality.toLowerCase()
+      );
+    }
 
     // Compute stats
     const totalStudents = count || 0;
