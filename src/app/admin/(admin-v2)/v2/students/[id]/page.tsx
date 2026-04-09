@@ -26,10 +26,16 @@ import {
   IconSchool,
   IconFileText,
   IconClock,
-  IconCircleCheck,
-  IconAlertCircle,
-  IconExternalLink
+  IconExternalLink,
+  IconUserPlus
 } from "@tabler/icons-react"
+
+interface ReferredByPartner {
+  id: string
+  full_name: string
+  email: string
+  company_name?: string
+}
 
 interface StudentDetail {
   id: string
@@ -38,8 +44,12 @@ interface StudentDetail {
   phone?: string
   nationality?: string
   avatar_url?: string
+  is_active?: boolean
   created_at: string
   last_sign_in_at?: string
+  source: 'individual' | 'partner_referred'
+  referred_by_partner_id?: string | null
+  referred_by_partner: ReferredByPartner | null
   student: {
     id: string
     passport_first_name: string
@@ -106,7 +116,7 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
 
         if (response.ok) {
           const data = await response.json()
-          setStudent(data)
+          setStudent(data.student || data)
         } else {
           toast.error('Failed to load student details')
           router.push('/admin/v2/students')
@@ -208,6 +218,43 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
                 <span>Last active {formatDate(student.last_sign_in_at)}</span>
               </div>
             )}
+
+            <Separator />
+
+            {/* Source Info */}
+            <div>
+              <div className="text-sm font-medium mb-2">Registration Source</div>
+              {student.source === 'individual' ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1">
+                    <IconUser className="h-3 w-3" />
+                    Individual
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">Self-registered</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
+                    <IconUserPlus className="h-3 w-3" />
+                    Partner-Referred
+                  </Badge>
+                  {student.referred_by_partner && (
+                    <div className="rounded-lg border p-3 space-y-1.5 bg-muted/30">
+                      {student.referred_by_partner.company_name && (
+                        <div className="text-sm font-medium">{student.referred_by_partner.company_name}</div>
+                      )}
+                      <div className="text-sm text-muted-foreground">{student.referred_by_partner.full_name}</div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <IconMail className="h-3 w-3" />
+                        <a href={`mailto:${student.referred_by_partner.email}`} className="hover:underline text-primary">
+                          {student.referred_by_partner.email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Separator />
 

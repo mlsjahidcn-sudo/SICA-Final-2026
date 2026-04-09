@@ -36,12 +36,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { 
   IconSearch, 
   IconUsers, 
   IconUserCheck, 
-  IconCalendar, 
   IconEye,
   IconChevronLeft,
   IconChevronRight,
@@ -49,8 +53,14 @@ import {
   IconMail,
   IconFileText,
   IconUser,
-  IconFilter
+  IconUserPlus
 } from "@tabler/icons-react"
+
+interface ReferredByPartner {
+  full_name: string
+  email: string
+  company_name?: string
+}
 
 interface Student {
   id: string
@@ -59,8 +69,12 @@ interface Student {
   phone?: string
   nationality?: string
   avatar_url?: string
+  is_active?: boolean
   created_at: string
   last_sign_in_at?: string
+  referred_by_partner_id?: string | null
+  source: 'individual' | 'partner_referred'
+  referred_by_partner: ReferredByPartner | null
   students?: {
     id: string
     passport_first_name: string
@@ -87,6 +101,8 @@ interface Pagination {
 
 interface Stats {
   total: number
+  individual: number
+  partnerReferred: number
   active: number
   newThisMonth: number
   withApplications: number
@@ -100,7 +116,7 @@ function StudentsListContent() {
 
   const [students, setStudents] = useState<Student[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState<Stats>({ total: 0, active: 0, newThisMonth: 0, withApplications: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, individual: 0, partnerReferred: 0, active: 0, newThisMonth: 0, withApplications: 0 })
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: ITEMS_PER_PAGE,
@@ -111,6 +127,7 @@ function StudentsListContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [nationalityFilter, setNationalityFilter] = useState(searchParams.get('nationality') || 'all')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
+  const [sourceFilter, setSourceFilter] = useState(searchParams.get('source') || 'all')
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1'))
 
   const nationalities = ['China', 'Nigeria', 'Pakistan', 'India', 'Bangladesh', 'Indonesia', 'Thailand', 'Vietnam', 'Russia', 'Kazakhstan']
@@ -125,6 +142,7 @@ function StudentsListContent() {
         ...(searchQuery && { search: searchQuery }),
         ...(nationalityFilter !== 'all' && { nationality: nationalityFilter }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(sourceFilter !== 'all' && { source: sourceFilter }),
       })
 
       const response = await fetch(`/api/admin/students?${params}`, {
@@ -147,7 +165,7 @@ function StudentsListContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentPage, searchQuery, nationalityFilter, statusFilter])
+  }, [currentPage, searchQuery, nationalityFilter, statusFilter, sourceFilter])
 
   useEffect(() => {
     fetchStudents()
@@ -168,7 +186,7 @@ function StudentsListContent() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
@@ -178,6 +196,30 @@ function StudentsListContent() {
             <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">
               {stats.newThisMonth} new this month
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Individual</CardTitle>
+            <IconUser className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.individual}</div>
+            <p className="text-xs text-muted-foreground">
+              Self-registered students
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Partner-Referred</CardTitle>
+            <IconUserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.partnerReferred}</div>
+            <p className="text-xs text-muted-foreground">
+              Added by partners
             </p>
           </CardContent>
         </Card>
@@ -205,18 +247,6 @@ function StudentsListContent() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-            <IconCalendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.newThisMonth}</div>
-            <p className="text-xs text-muted-foreground">
-              Recently registered
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters */}
@@ -234,6 +264,16 @@ function StudentsListContent() {
                 />
               </div>
             </div>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="individual">Individual</SelectItem>
+                <SelectItem value="partner_referred">Partner-Referred</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Nationality" />
@@ -277,6 +317,7 @@ function StudentsListContent() {
                   <TableHead>Student</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Nationality</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Applications</TableHead>
                   <TableHead>Registered</TableHead>
                   <TableHead>Last Active</TableHead>
@@ -304,6 +345,44 @@ function StudentsListContent() {
                     <TableCell>
                       {student.nationality && (
                         <Badge variant="secondary">{student.nationality}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {student.source === 'individual' ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="gap-1 cursor-default">
+                              <IconUser className="h-3 w-3" />
+                              Individual
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Self-registered student</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="gap-1 cursor-default border-primary/30 bg-primary/5 text-primary">
+                              <IconUserPlus className="h-3 w-3" />
+                              {student.referred_by_partner?.company_name || student.referred_by_partner?.full_name || 'Partner'}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <div className="space-y-1">
+                              <p className="font-medium">Referred by Partner</p>
+                              {student.referred_by_partner?.full_name && (
+                                <p className="text-xs">{student.referred_by_partner.full_name}</p>
+                              )}
+                              {student.referred_by_partner?.company_name && (
+                                <p className="text-xs text-muted-foreground">{student.referred_by_partner.company_name}</p>
+                              )}
+                              {student.referred_by_partner?.email && (
+                                <p className="text-xs text-muted-foreground">{student.referred_by_partner.email}</p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </TableCell>
                     <TableCell>

@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search') || '';
+    const source = searchParams.get('source') || 'all'; // 'all' | 'individual' | 'partner_referred'
+    const nationality = searchParams.get('nationality') || '';
     const offset = (page - 1) * limit;
 
     // Build query
@@ -39,8 +41,11 @@ export async function GET(request: NextRequest) {
         full_name,
         phone,
         nationality,
+        avatar_url,
+        is_active,
         created_at,
         last_sign_in_at,
+        referred_by_partner_id,
         students!students_user_id_users_id_fk (
           id,
           passport_first_name,
@@ -61,11 +66,58 @@ export async function GET(request: NextRequest) {
       query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
+    // Apply nationality filter
+    if (nationality) {
+      query = query.eq('nationality', nationality);
+    }
+
+    // Apply source filter
+    if (source === 'individual') {
+      query = query.is('referred_by_partner_id', null);
+    } else if (source === 'partner_referred') {
+      query = query.not('referred_by_partner_id', 'is', null);
+    }
+
     const { data: students, error, count } = await query;
 
     if (error) {
       console.error('Error fetching students:', error);
       return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
+    }
+
+    // Get partner info for referred students
+    const referredPartnerIds = students
+      ?.filter(s => s.referred_by_partner_id)
+      .map(s => s.referred_by_partner_id) || [];
+
+    const partnerMap = new Map<string, { full_name: string; email: string; company_name?: string }>();
+
+    if (referredPartnerIds.length > 0) {
+      // Fetch partner user info
+      const uniquePartnerIds = [...new Set(referredPartnerIds)];
+      const { data: partnerUsers } = await supabaseAdmin
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', uniquePartnerIds);
+
+      // Also fetch partner company info
+      const { data: partnerRecords } = await supabaseAdmin
+        .from('partners')
+        .select('user_id, company_name')
+        .in('user_id', uniquePartnerIds);
+
+      const partnerCompanyMap = new Map<string, string>();
+      for (const pr of (partnerRecords || [])) {
+        partnerCompanyMap.set(pr.user_id, pr.company_name);
+      }
+
+      for (const pu of (partnerUsers || [])) {
+        partnerMap.set(pu.id, {
+          full_name: pu.full_name,
+          email: pu.email,
+          company_name: partnerCompanyMap.get(pu.id),
+        });
+      }
     }
 
     // Get application counts for each student
@@ -89,8 +141,62 @@ export async function GET(request: NextRequest) {
     // Merge data
     const enrichedStudents = students?.map(student => ({
       ...student,
+      source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
+      referred_by_partner: student.referred_by_partner_id
+        ? partnerMap.get(student.referred_by_partner_id) || null
+        : null,
       applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
     }));
+
+    // Compute stats
+    const totalStudents = count || 0;
+    let individualCount = 0;
+    let partnerReferredCount = 0;
+
+    // Get counts for stats (efficient count query)
+    if (source === 'all') {
+      const { count: indCount } = await supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'student')
+        .is('referred_by_partner_id', null);
+      individualCount = indCount || 0;
+      partnerReferredCount = totalStudents - individualCount;
+    } else if (source === 'individual') {
+      individualCount = totalStudents;
+      // Get partner count separately
+      const { count: pCount } = await supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'student')
+        .not('referred_by_partner_id', 'is', null);
+      partnerReferredCount = pCount || 0;
+    } else {
+      partnerReferredCount = totalStudents;
+      const { count: iCount } = await supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'student')
+        .is('referred_by_partner_id', null);
+      individualCount = iCount || 0;
+    }
+
+    // Active students count
+    const { count: activeCount } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'student')
+      .eq('is_active', true);
+
+    // New this month count
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const { count: newThisMonthCount } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'student')
+      .gte('created_at', startOfMonth.toISOString());
 
     return NextResponse.json({
       students: enrichedStudents,
@@ -99,6 +205,14 @@ export async function GET(request: NextRequest) {
         limit,
         total: count || 0,
         totalPages: Math.ceil((count || 0) / limit),
+      },
+      stats: {
+        total: individualCount + partnerReferredCount,
+        individual: individualCount,
+        partnerReferred: partnerReferredCount,
+        active: activeCount || 0,
+        newThisMonth: newThisMonthCount || 0,
+        withApplications: applicationMap.size,
       },
     });
   } catch (error) {

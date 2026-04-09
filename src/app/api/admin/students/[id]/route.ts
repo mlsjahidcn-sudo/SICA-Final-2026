@@ -37,8 +37,10 @@ export async function GET(
         phone,
         avatar_url,
         nationality,
+        is_active,
         created_at,
         last_sign_in_at,
+        referred_by_partner_id,
         students!students_user_id_users_id_fk (
           id,
           passport_first_name,
@@ -62,6 +64,31 @@ export async function GET(
 
     if (error || !student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // Fetch referring partner info if student was referred
+    let referredByPartner: { full_name: string; email: string; company_name?: string; id: string } | null = null;
+    if (student.referred_by_partner_id) {
+      const { data: partnerUser } = await supabaseAdmin
+        .from('users')
+        .select('id, full_name, email')
+        .eq('id', student.referred_by_partner_id)
+        .single();
+
+      if (partnerUser) {
+        const { data: partnerRecord } = await supabaseAdmin
+          .from('partners')
+          .select('company_name')
+          .eq('user_id', student.referred_by_partner_id)
+          .maybeSingle();
+
+        referredByPartner = {
+          id: partnerUser.id,
+          full_name: partnerUser.full_name,
+          email: partnerUser.email,
+          company_name: partnerRecord?.company_name,
+        };
+      }
     }
 
     // Get student's applications
@@ -116,6 +143,8 @@ export async function GET(
     return NextResponse.json({
       student: {
         ...student,
+        source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
+        referred_by_partner: referredByPartner,
         applications: applications || [],
         documents: documents || [],
         meetings: meetings || [],
