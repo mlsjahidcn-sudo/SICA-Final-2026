@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         approved_at,
         created_at,
         updated_at,
-        partners:user_id(
+        partners(
           id,
           company_name,
           contact_person,
@@ -137,70 +137,37 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      name_en,
-      name_cn,
-      logo_url,
-      logo_alt,
-      partner_type,
-      category,
-      website_url,
-      description_en,
-      description_cn,
-      country,
-      country_code,
-      city,
-      partnership_level,
-      partnership_since,
-      students_referred,
-      success_rate,
-      is_featured,
-      display_order,
-      status,
-      contact_name,
-      contact_email,
+      user_id,
+      company_name,
+      company_address,
+      business_license,
+      contact_person,
       contact_phone,
-      linkedin_url,
-      facebook_url,
-      twitter_url,
-      wechat_id,
+      website,
+      status,
+      commission_rate,
     } = body;
 
-    if (!name_en || !partner_type) {
+    if (!company_name) {
       return NextResponse.json(
-        { error: 'Name (English) and partner type are required' },
+        { error: 'Company name is required' },
         { status: 400 }
       );
     }
 
+    // Only insert columns that exist on the partners table
     const { data: partner, error } = await supabase
       .from('partners')
       .insert({
-        name_en,
-        name_cn,
-        logo_url,
-        logo_alt,
-        partner_type,
-        category,
-        website_url,
-        description_en,
-        description_cn,
-        country,
-        country_code,
-        city,
-        partnership_level,
-        partnership_since,
-        students_referred,
-        success_rate,
-        is_featured,
-        display_order,
-        status,
-        contact_name,
-        contact_email,
+        user_id,
+        company_name,
+        company_address,
+        business_license,
+        contact_person,
         contact_phone,
-        linkedin_url,
-        facebook_url,
-        twitter_url,
-        wechat_id,
+        website,
+        status: status || 'active',
+        commission_rate,
       })
       .select()
       .single();

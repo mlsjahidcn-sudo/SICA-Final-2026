@@ -40,14 +40,17 @@ export async function GET(
         applications (
           id,
           status,
+          student_id,
+          program_id,
           students (
             id,
-            full_name,
+            first_name,
+            last_name,
             email
           ),
           programs (
             id,
-            name_en,
+            name,
             universities (
               id,
               name_en

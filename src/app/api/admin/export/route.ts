@@ -7,25 +7,21 @@ interface StudentExport {
   full_name: string;
   phone: string;
   nationality: string;
-  passport_first_name: string;
-  passport_last_name: string;
+  first_name: string;
+  last_name: string;
   passport_number: string;
   gender: string;
-  city: string;
-  province: string;
   created_at: string;
-  last_sign_in_at: string;
 }
 
 interface ApplicationExport {
   id: string;
   student_name: string;
   student_email: string;
-  passport_first_name: string;
-  passport_last_name: string;
   nationality: string;
   program_name: string;
-  degree_type: string;
+  degree_level: string;
+  university_name: string;
   status: string;
   created_at: string;
   submitted_at: string;
@@ -35,11 +31,9 @@ interface PartnerExport {
   id: string;
   email: string;
   full_name: string;
-  phone: string;
   company_name: string;
-  approval_status: string;
+  status: string;
   created_at: string;
-  approved_at: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -63,16 +57,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get query parameters
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'students'; // students, applications, partners
-    const format = searchParams.get('format') || 'csv'; // csv, json
+    const type = searchParams.get('type') || 'students';
+    const format = searchParams.get('format') || 'csv';
 
     let data: StudentExport[] | ApplicationExport[] | PartnerExport[] = [];
     let headers: string[] = [];
 
     switch (type) {
-      case 'students':
+      case 'students': {
         const { data: students } = await supabaseAdmin
           .from('users')
           .select(`
@@ -80,44 +73,42 @@ export async function GET(request: NextRequest) {
             email,
             full_name,
             phone,
-            nationality,
             created_at,
-            last_sign_in_at,
-            students!students_user_id_users_id_fk (
-              passport_first_name,
-              passport_last_name,
+            students (
+              first_name,
+              last_name,
               passport_number,
-              gender,
-              city,
-              province
+              nationality,
+              gender
             )
           `)
           .eq('role', 'student');
         
-        data = (students || []).map((s): StudentExport => ({
-          id: s.id,
-          email: s.email,
-          full_name: s.full_name,
-          phone: s.phone || '',
-          nationality: s.nationality || '',
-          passport_first_name: s.students?.[0]?.passport_first_name || '',
-          passport_last_name: s.students?.[0]?.passport_last_name || '',
-          passport_number: s.students?.[0]?.passport_number || '',
-          gender: s.students?.[0]?.gender || '',
-          city: s.students?.[0]?.city || '',
-          province: s.students?.[0]?.province || '',
-          created_at: s.created_at,
-          last_sign_in_at: s.last_sign_in_at || '',
-        }));
+        data = (students || []).map((s): StudentExport => {
+          const student = Array.isArray(s.students) ? s.students[0] : s.students;
+          return {
+            id: s.id,
+            email: s.email,
+            full_name: s.full_name,
+            phone: s.phone || '',
+            nationality: student?.nationality || '',
+            first_name: student?.first_name || '',
+            last_name: student?.last_name || '',
+            passport_number: student?.passport_number || '',
+            gender: student?.gender || '',
+            created_at: s.created_at,
+          };
+        });
         
         headers = [
           'ID', 'Email', 'Full Name', 'Phone', 'Nationality',
-          'Passport First Name', 'Passport Last Name', 'Passport Number',
-          'Gender', 'City', 'Province', 'Created At', 'Last Sign In'
+          'First Name', 'Last Name', 'Passport Number',
+          'Gender', 'Created At'
         ];
         break;
+      }
 
-      case 'applications':
+      case 'applications': {
         const { data: applications } = await supabaseAdmin
           .from('applications')
           .select(`
@@ -125,25 +116,42 @@ export async function GET(request: NextRequest) {
             status,
             created_at,
             submitted_at,
-            passport_first_name,
-            passport_last_name,
-            nationality,
-            users ( full_name, email ),
-            programs ( name_en, degree_type )
+            students (
+              first_name,
+              last_name,
+              nationality,
+              email,
+              users (
+                full_name,
+                email
+              )
+            ),
+            programs (
+              name,
+              degree_level,
+              universities (
+                name_en
+              )
+            )
           `);
         
         data = (applications || []).map((a): ApplicationExport => {
-          const user = Array.isArray(a.users) ? a.users[0] : a.users;
+          const student = Array.isArray(a.students) ? a.students[0] : a.students;
+          const studentUser = student?.users
+            ? (Array.isArray(student.users) ? student.users[0] : student.users)
+            : null;
           const program = Array.isArray(a.programs) ? a.programs[0] : a.programs;
+          const university = program?.universities
+            ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+            : null;
           return {
             id: a.id,
-            student_name: user?.full_name || '',
-            student_email: user?.email || '',
-            passport_first_name: a.passport_first_name,
-            passport_last_name: a.passport_last_name,
-            nationality: a.nationality || '',
-            program_name: program?.name_en || '',
-            degree_type: program?.degree_type || '',
+            student_name: studentUser?.full_name || student?.first_name || '',
+            student_email: studentUser?.email || student?.email || '',
+            nationality: student?.nationality || '',
+            program_name: program?.name || '',
+            degree_level: program?.degree_level || '',
+            university_name: university?.name_en || '',
             status: a.status,
             created_at: a.created_at,
             submitted_at: a.submitted_at || '',
@@ -151,43 +159,46 @@ export async function GET(request: NextRequest) {
         });
         
         headers = [
-          'ID', 'Student Name', 'Student Email', 'Passport First Name',
-          'Passport Last Name', 'Nationality', 'Program', 'Degree Type',
+          'ID', 'Student Name', 'Student Email', 'Nationality',
+          'Program', 'Degree Level', 'University',
           'Status', 'Created At', 'Submitted At'
         ];
         break;
+      }
 
-      case 'partners':
+      case 'partners': {
         const { data: partners } = await supabaseAdmin
-          .from('users')
+          .from('partners')
           .select(`
             id,
-            email,
-            full_name,
-            phone,
             company_name,
-            approval_status,
+            contact_person,
+            status,
             created_at,
-            approved_at
-          `)
-          .eq('role', 'partner');
+            users (
+              email,
+              full_name
+            )
+          `);
         
-        data = (partners || []).map((p): PartnerExport => ({
-          id: p.id,
-          email: p.email,
-          full_name: p.full_name,
-          phone: p.phone || '',
-          company_name: p.company_name || '',
-          approval_status: p.approval_status,
-          created_at: p.created_at,
-          approved_at: p.approved_at || '',
-        }));
+        data = (partners || []).map((p): PartnerExport => {
+          const partnerUser = Array.isArray(p.users) ? p.users[0] : p.users;
+          return {
+            id: p.id,
+            email: partnerUser?.email || '',
+            full_name: partnerUser?.full_name || p.contact_person || '',
+            company_name: p.company_name || '',
+            status: p.status || '',
+            created_at: p.created_at,
+          };
+        });
         
         headers = [
-          'ID', 'Email', 'Full Name', 'Phone', 'Company Name',
-          'Status', 'Created At', 'Approved At'
+          'ID', 'Email', 'Full Name', 'Company Name',
+          'Status', 'Created At'
         ];
         break;
+      }
 
       default:
         return NextResponse.json({ error: 'Invalid export type' }, { status: 400 });
@@ -207,7 +218,6 @@ export async function GET(request: NextRequest) {
       headers.join(','),
       ...data.map(row => 
         Object.values(row).map(val => {
-          // Escape values containing commas or quotes
           const str = String(val || '');
           if (str.includes(',') || str.includes('"') || str.includes('\n')) {
             return `"${str.replace(/"/g, '""')}"`;

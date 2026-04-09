@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' });
 
     // Apply sorting
-    const validSortFields = ['created_at', 'ranking_national', 'name_en', 'view_count'];
+    const validSortFields = ['created_at', 'ranking_national', 'name_en'];
     const validSortBy = validSortFields.includes(sortBy) ? sortBy : 'created_at';
     const validSortOrder = sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc';
     

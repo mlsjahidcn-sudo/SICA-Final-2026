@@ -50,9 +50,8 @@ export async function GET(request: NextRequest) {
         created_at,
         programs (
           id,
-          name_en,
-          name_cn,
-          degree_type,
+          name,
+          degree_level,
           universities (
             id,
             name_en,
@@ -64,6 +63,9 @@ export async function GET(request: NextRequest) {
         students (
           id,
           user_id,
+          first_name,
+          last_name,
+          email,
           users (
             id,
             full_name,
@@ -132,37 +134,12 @@ export async function POST(request: NextRequest) {
       student_id, // Required for partners/admins (students.id, not users.id)
       user_id, // Alternative: if partner provides users.id, look up students.id
       program_id,
-      university_id,
-      passport_number,
-      passport_first_name,
-      passport_last_name,
-      nationality,
-      date_of_birth,
-      gender,
-      email,
-      phone,
-      current_address,
-      permanent_address,
-      highest_degree,
-      graduation_school,
-      graduation_date,
-      gpa,
-      chinese_level,
-      chinese_test_score,
-      chinese_test_date,
-      english_level,
-      english_test_type,
-      english_test_score,
-      english_test_date,
-      study_plan,
-      research_interest,
-      career_goals,
     } = body;
 
     // Validate required fields
-    if (!program_id || !university_id) {
+    if (!program_id) {
       return NextResponse.json(
-        { error: 'Program and university are required' },
+        { error: 'Program is required' },
         { status: 400 }
       );
     }
@@ -211,38 +188,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Store all extra form data in profile_snapshot JSONB column
+    // The applications table only has: student_id, program_id, partner_id, status, priority, notes, profile_snapshot
+    const profileSnapshot = {
+      passport_number: body.passport_number,
+      first_name: body.passport_first_name || body.first_name,
+      last_name: body.passport_last_name || body.last_name,
+      nationality: body.nationality,
+      date_of_birth: body.date_of_birth,
+      gender: body.gender,
+      email: body.email,
+      phone: body.phone,
+      current_address: body.current_address,
+      permanent_address: body.permanent_address,
+      highest_degree: body.highest_degree,
+      graduation_school: body.graduation_school,
+      graduation_date: body.graduation_date,
+      gpa: body.gpa,
+      chinese_level: body.chinese_level,
+      chinese_test_score: body.chinese_test_score,
+      chinese_test_date: body.chinese_test_date,
+      english_level: body.english_level,
+      english_test_type: body.english_test_type,
+      english_test_score: body.english_test_score,
+      english_test_date: body.english_test_date,
+      study_plan: body.study_plan,
+      research_interest: body.research_interest,
+      career_goals: body.career_goals,
+    };
+
     const { data: application, error } = await supabase
       .from('applications')
       .insert({
         student_id: finalStudentId,
         program_id,
-        university_id,
         partner_id: finalPartnerId,
         status: 'draft',
-        passport_number,
-        passport_first_name,
-        passport_last_name,
-        nationality,
-        date_of_birth,
-        gender,
-        email,
-        phone,
-        current_address,
-        permanent_address,
-        highest_degree,
-        graduation_school,
-        graduation_date,
-        gpa,
-        chinese_level,
-        chinese_test_score,
-        chinese_test_date,
-        english_level,
-        english_test_type,
-        english_test_score,
-        english_test_date,
-        study_plan,
-        research_interest,
-        career_goals,
+        profile_snapshot: profileSnapshot,
       })
       .select('*')
       .single();

@@ -21,31 +21,20 @@ export async function GET(request: NextRequest) {
     
     const offset = (page - 1) * limit;
 
-    // Build query with correct relationships
+    // Build query with correct schema columns
+    // applications: student_id (-> students), program_id (-> programs)
+    // programs: name, degree_level (NOT name_en, degree_type)
+    // universities: name_en (NOT name)
     let query = supabase
       .from('applications')
       .select(`
         id,
         status,
+        priority,
+        notes,
         submitted_at,
         created_at,
         updated_at,
-        intake,
-        personal_statement,
-        study_plan,
-        programs (
-          id,
-          name_en,
-          name_cn,
-          degree_type,
-          universities (
-            id,
-            name_en,
-            name_cn,
-            city,
-            province
-          )
-        ),
         students (
           id,
           user_id,
@@ -56,6 +45,17 @@ export async function GET(request: NextRequest) {
             id,
             full_name,
             email
+          )
+        ),
+        programs (
+          id,
+          name,
+          degree_level,
+          universities (
+            id,
+            name_en,
+            city,
+            province
           )
         )
       `, { count: 'exact' });
@@ -70,12 +70,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (universityId) {
-      query = query.eq('university_id', universityId);
+      query = query.eq('programs.university_id', universityId);
     }
 
     if (search) {
-      // Search in student name or program name
-      query = query.or(`students.users.full_name.ilike.%${search}%,programs.name_en.ilike.%${search}%`);
+      // Search in student user name or program name
+      query = query.or(`students.users.full_name.ilike.%${search}%,programs.name.ilike.%${search}%`);
     }
 
     query = query
@@ -91,25 +91,40 @@ export async function GET(request: NextRequest) {
 
     // Transform data to flatten structure for frontend
     const transformedApplications = (applications || []).map(app => {
-      // Handle Supabase returning relations as arrays
+      // Handle Supabase returning relations as arrays or single objects
       const student = Array.isArray(app.students) ? app.students[0] : app.students;
-      const user = student?.users ? (Array.isArray(student.users) ? student.users[0] : student.users) : null;
+      const studentUser = student?.users
+        ? (Array.isArray(student.users) ? student.users[0] : student.users)
+        : null;
+      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
+      const university = program?.universities
+        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+        : null;
       
       return {
         id: app.id,
         status: app.status,
+        priority: app.priority,
+        notes: app.notes,
         submitted_at: app.submitted_at,
         created_at: app.created_at,
         updated_at: app.updated_at,
-        intake: app.intake,
-        personal_statement: app.personal_statement,
-        study_plan: app.study_plan,
-        program: app.programs,
+        program: program ? {
+          id: program.id,
+          name: program.name,
+          degree_level: program.degree_level,
+          university: university ? {
+            id: university.id,
+            name_en: university.name_en,
+            city: university.city,
+            province: university.province,
+          } : null,
+        } : null,
         student: {
           id: student?.id,
           user_id: student?.user_id,
-          full_name: user?.full_name,
-          email: user?.email,
+          full_name: studentUser?.full_name,
+          email: studentUser?.email,
           nationality: student?.nationality,
           gender: student?.gender,
           highest_education: student?.highest_education,

@@ -74,13 +74,16 @@ export async function GET(request: NextRequest) {
         .from('students')
         .select('nationality'),
       
-      // Applications by degree type
+      // Applications by degree level (actual column: programs.degree_level)
       supabaseAdmin
         .from('applications')
-        .select('programs(degree_type)')
+        .select('programs(degree_level)')
         .not('status', 'eq', 'draft'),
       
-      // Recent activity for table
+      // Recent activity for table - use correct column names
+      // applications has: student_id (-> students.id), program_id (-> programs.id)
+      // programs has: name (not name_en), degree_level (not degree_type)
+      // universities has: name_en (not name)
       supabaseAdmin
         .from('applications')
         .select(`
@@ -88,17 +91,34 @@ export async function GET(request: NextRequest) {
           status,
           created_at,
           updated_at,
-          passport_first_name,
-          passport_last_name,
-          users (full_name, email),
-          programs (name, degree_type, universities (name))
+          students (
+            id,
+            user_id,
+            first_name,
+            last_name,
+            nationality,
+            users (
+              id,
+              full_name,
+              email
+            )
+          ),
+          programs (
+            id,
+            name,
+            degree_level,
+            universities (
+              id,
+              name_en
+            )
+          )
         `)
         .order('updated_at', { ascending: false })
         .limit(20),
     ]);
 
     // Process applications trend
-    const trendData: { date: string; applications: number; students: number }[] = [];
+    const trendData: { date: string; applications: number }[] = [];
     const trendMap = new Map<string, number>();
     
     for (const app of (applicationsTrend.data || [])) {
@@ -113,7 +133,6 @@ export async function GET(request: NextRequest) {
       trendData.push({
         date,
         applications: trendMap.get(date) || 0,
-        students: Math.floor(Math.random() * 5) + 1, // Placeholder for demo
       });
     }
 
@@ -129,40 +148,42 @@ export async function GET(request: NextRequest) {
       .slice(0, 5)
       .map(([country, count]) => ({ country, count }));
 
-    // Process applications by degree
-    const degreeCounts: Record<string, number> = {
-      bachelor: 0,
-      master: 0,
-      phd: 0,
-      language: 0,
-      short_term: 0,
-    };
+    // Process applications by degree level
+    const degreeCounts: Record<string, number> = {};
     for (const app of (applicationsByDegree.data || [])) {
-      const program = app.programs as { degree_type?: string } | { degree_type?: string }[] | null;
+      const program = app.programs as { degree_level?: string } | { degree_level?: string }[] | null;
       let degree: string | undefined;
       if (Array.isArray(program)) {
-        degree = program[0]?.degree_type;
+        degree = program[0]?.degree_level;
       } else if (program) {
-        degree = program.degree_type;
+        degree = program.degree_level;
       }
-      if (degree && degree in degreeCounts) {
-        degreeCounts[degree]++;
+      if (degree) {
+        degreeCounts[degree] = (degreeCounts[degree] || 0) + 1;
       }
     }
 
     // Format recent activity for table
     const tableData = (recentActivity.data || []).map((app) => {
-      const user = Array.isArray(app.users) ? app.users[0] : app.users;
-      const program = app.programs as { name?: string; degree_type?: string; universities?: { name?: string } | { name?: string }[] | null } | null;
+      const student = Array.isArray(app.students) ? app.students[0] : app.students;
+      const studentUser = student?.users
+        ? (Array.isArray(student.users) ? student.users[0] : student.users)
+        : null;
+      const program = app.programs as { name?: string; degree_level?: string; universities?: { name_en?: string } | { name_en?: string }[] | null } | null;
       const university = Array.isArray(program?.universities) ? program?.universities[0] : program?.universities;
+      
+      // Student name: prefer users.full_name, fallback to first_name + last_name
+      const studentName = studentUser?.full_name 
+        || (student?.first_name || student?.last_name ? [student?.first_name, student?.last_name].filter(Boolean).join(' ') : null)
+        || '-';
       
       return {
         id: app.id,
-        student: user?.full_name || `${app.passport_first_name} ${app.passport_last_name}`,
-        email: user?.email || '-',
+        student: studentName,
+        email: studentUser?.email || '-',
         program: program?.name || '-',
-        degree: program?.degree_type || '-',
-        university: university?.name || '-',
+        degree: program?.degree_level || '-',
+        university: university?.name_en || '-',
         status: app.status,
         date: app.updated_at || app.created_at,
       };

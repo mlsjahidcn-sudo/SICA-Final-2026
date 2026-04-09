@@ -17,20 +17,51 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabaseClient();
 
+    // Query with correct schema - no FK hints since no FK constraints exist
+    // applications has: student_id (-> students.id), program_id (-> programs.id), partner_id (-> partners.id)
+    // Use students join then students->users for student info
     const { data: application, error } = await supabase
       .from('applications')
       .select(`
-        *,
+        id,
+        student_id,
+        program_id,
+        partner_id,
+        status,
+        priority,
+        notes,
+        profile_snapshot,
+        submitted_at,
+        reviewed_at,
+        reviewed_by,
+        created_at,
+        updated_at,
+        students (
+          id,
+          user_id,
+          first_name,
+          last_name,
+          nationality,
+          gender,
+          highest_education,
+          current_address,
+          wechat_id,
+          users (
+            id,
+            full_name,
+            email,
+            phone
+          )
+        ),
         programs (
           id,
-          name_en,
-          name_cn,
-          degree_type,
-          discipline,
-          duration_months,
-          tuition_per_year,
-          tuition_currency,
-          scholarship_available,
+          name,
+          degree_level,
+          language,
+          tuition_fee_per_year,
+          currency,
+          duration_years,
+          scholarship_types,
           universities (
             id,
             name_en,
@@ -38,20 +69,6 @@ export async function GET(
             city,
             province
           )
-        ),
-        users!applications_student_id_fkey (
-          id,
-          full_name,
-          email
-        ),
-        partner:users!applications_partner_id_fkey (
-          id,
-          full_name,
-          email
-        ),
-        reviewer:users!applications_reviewed_by_fkey (
-          id,
-          full_name
         )
       `)
       .eq('id', id)
@@ -66,26 +83,67 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get status history
+    // Fetch partner info separately if exists
+    let partnerInfo: { id: string; full_name: string; email: string; company_name?: string } | null = null;
+    if (application.partner_id) {
+      // partner_id references partners.id, get the partner user info
+      const { data: partnerRecord } = await supabase
+        .from('partners')
+        .select('id, user_id, company_name')
+        .eq('id', application.partner_id)
+        .maybeSingle();
+      
+      if (partnerRecord?.user_id) {
+        const { data: partnerUser } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('id', partnerRecord.user_id)
+          .maybeSingle();
+        
+        if (partnerUser) {
+          partnerInfo = {
+            id: partnerUser.id,
+            full_name: partnerUser.full_name,
+            email: partnerUser.email,
+            company_name: partnerRecord.company_name,
+          };
+        }
+      }
+    }
+
+    // Fetch reviewer info separately
+    let reviewerInfo: { id: string; full_name: string } | null = null;
+    if (application.reviewed_by) {
+      const { data: reviewerUser } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', application.reviewed_by)
+        .maybeSingle();
+      
+      if (reviewerUser) {
+        reviewerInfo = { id: reviewerUser.id, full_name: reviewerUser.full_name };
+      }
+    }
+
+    // Get status history from assessment_status_history
+    // (application_status_history doesn't exist; assessment_status_history is the closest)
     const { data: history } = await supabase
-      .from('application_status_history')
+      .from('assessment_status_history')
       .select(`
         id,
         old_status,
         new_status,
         notes,
-        changed_at,
-        users (
-          id,
-          full_name
-        )
+        created_at
       `)
       .eq('application_id', id)
-      .order('changed_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     return NextResponse.json({ 
       application: {
         ...application,
+        partner: partnerInfo,
+        reviewer: reviewerInfo,
         status_history: history || []
       }
     });
@@ -134,7 +192,7 @@ export async function PUT(
 
     const now = new Date().toISOString();
 
-    // Update application
+    // Update application - only use columns that exist
     const updateData: Record<string, unknown> = {
       status,
       reviewed_by: user.id,
@@ -142,9 +200,8 @@ export async function PUT(
       updated_at: now,
     };
 
-    if (review_notes) updateData.review_notes = review_notes;
-    if (rejection_reason) updateData.rejection_reason = rejection_reason;
-    if (status === 'accepted') updateData.offer_sent_at = now;
+    if (review_notes) updateData.notes = review_notes;
+    if (rejection_reason) updateData.notes = rejection_reason;
 
     const { error: updateError } = await supabase
       .from('applications')
@@ -156,9 +213,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
     }
 
-    // Record status history
+    // Record status history in assessment_status_history
+    // (application_status_history doesn't exist)
     await supabase
-      .from('application_status_history')
+      .from('assessment_status_history')
       .insert({
         application_id: id,
         old_status: existing.status,
@@ -175,26 +233,41 @@ export async function PUT(
           .from('applications')
           .select(`
             id,
-            users!applications_student_id_fkey (full_name, email),
-            programs (name_en, universities (name_en))
+            students (
+              users (
+                full_name,
+                email
+              )
+            ),
+            programs (
+              name,
+              universities (
+                name_en
+              )
+            )
           `)
           .eq('id', id)
           .single();
 
         if (fullApp) {
-          // Handle Supabase response - nested relationships may be arrays
-          const usersData = fullApp.users as unknown as { full_name: string; email: string };
-          const programsData = fullApp.programs as unknown as { name_en: string; universities: { name_en: string } };
+          const student = Array.isArray(fullApp.students) ? fullApp.students[0] : fullApp.students;
+          const studentUser = student?.users
+            ? (Array.isArray(student.users) ? student.users[0] : student.users)
+            : null;
+          const program = Array.isArray(fullApp.programs) ? fullApp.programs[0] : fullApp.programs;
+          const university = program?.universities
+            ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+            : null;
           
-          const studentEmail = usersData?.email || '';
-          const studentName = usersData?.full_name || 'Student';
+          const studentEmail = studentUser?.email || '';
+          const studentName = studentUser?.full_name || 'Student';
           
           const emailPayload = getApplicationStatusUpdateTemplate({
             applicationId: id,
             studentName,
             studentEmail,
-            programName: programsData?.name_en || 'Program',
-            universityName: programsData?.universities?.name_en || 'Unknown University',
+            programName: program?.name || 'Program',
+            universityName: university?.name_en || 'Unknown University',
             status,
             rejectionReason: rejection_reason,
           });

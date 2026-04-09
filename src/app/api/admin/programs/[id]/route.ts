@@ -38,13 +38,6 @@ export async function GET(
     // Transform to match frontend expectations
     const transformedProgram = {
       ...program,
-      degree_level: program.degree_type,
-      category: program.discipline,
-      sub_category: program.major,
-      duration_years: program.duration_months ? program.duration_months / 12 : null,
-      teaching_languages: program.teaching_language 
-        ? program.teaching_language.split(',').map((l: string) => l.trim())
-        : [],
       status: program.is_active ? 'active' : 'inactive',
     };
 
@@ -81,46 +74,36 @@ export async function PUT(
       return NextResponse.json({ error: 'Program not found' }, { status: 404 });
     }
 
-    // Map frontend fields to database schema
+    // Map frontend fields to actual database schema
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
-    // Map fields
-    if (body.name_en !== undefined) updateData.name_en = body.name_en;
-    if (body.name_cn !== undefined) updateData.name_cn = body.name_cn;
+    // Map fields to actual columns
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.name_fr !== undefined) updateData.name_fr = body.name_fr;
+    if (body.code !== undefined) updateData.code = body.code;
     if (body.description !== undefined) updateData.description = body.description;
-    if (body.degree_level !== undefined || body.degree_type !== undefined) {
-      updateData.degree_type = body.degree_level || body.degree_type;
-    }
-    if (body.category !== undefined || body.discipline !== undefined) {
-      updateData.discipline = body.category || body.discipline;
-    }
-    if (body.sub_category !== undefined || body.major !== undefined) {
-      updateData.major = body.sub_category || body.major;
-    }
-    if (body.teaching_languages !== undefined) {
-      updateData.teaching_language = Array.isArray(body.teaching_languages)
-        ? body.teaching_languages.join(', ')
-        : body.teaching_languages;
-    }
-    if (body.duration_years !== undefined) {
-      updateData.duration_months = body.duration_years ? Math.round(body.duration_years * 12) : null;
-    }
-    if (body.duration_months !== undefined) updateData.duration_months = body.duration_months;
-    if (body.tuition_per_year !== undefined) updateData.tuition_per_year = body.tuition_per_year;
-    if (body.tuition_currency !== undefined) updateData.tuition_currency = body.tuition_currency;
-    if (body.application_fee !== undefined) updateData.application_fee = body.application_fee;
+    if (body.description_en !== undefined) updateData.description_en = body.description_en;
+    if (body.description_cn !== undefined) updateData.description_cn = body.description_cn;
+    if (body.degree_level !== undefined) updateData.degree_level = body.degree_level;
+    if (body.category !== undefined) updateData.category = body.category;
+    if (body.sub_category !== undefined) updateData.sub_category = body.sub_category;
+    if (body.language !== undefined) updateData.language = body.language;
+    if (body.duration_years !== undefined) updateData.duration_years = body.duration_years;
+    if (body.tuition_fee_per_year !== undefined) updateData.tuition_fee_per_year = body.tuition_fee_per_year;
+    if (body.currency !== undefined) updateData.currency = body.currency;
     if (body.scholarship_available !== undefined) updateData.scholarship_available = body.scholarship_available;
-    if (body.scholarship_details !== undefined) updateData.scholarship_details = body.scholarship_details;
-    if (body.application_requirements !== undefined || body.language_requirement !== undefined) {
-      updateData.entry_requirements = body.application_requirements || body.language_requirement;
-    }
-    if (body.application_documents !== undefined) updateData.required_documents = body.application_documents;
-    if (body.is_featured !== undefined) updateData.is_featured = body.is_featured;
-    if (body.status !== undefined) updateData.is_active = body.status === 'active';
+    if (body.scholarship_types !== undefined) updateData.scholarship_types = body.scholarship_types;
+    if (body.application_fee !== undefined) updateData.application_fee = body.application_fee;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (body.teaching_language !== undefined) updateData.teaching_language = body.teaching_language;
+    if (body.status !== undefined) updateData.is_active = body.status === 'active';
+    if (body.tags !== undefined) updateData.tags = body.tags;
+    // Legacy field mappings for backward compatibility
+    if (body.name_en !== undefined && !body.name) updateData.name = body.name_en;
+    if (body.teaching_language !== undefined && !body.language) updateData.language = body.teaching_language;
+    if (body.tuition_per_year !== undefined && !body.tuition_fee_per_year) updateData.tuition_fee_per_year = body.tuition_per_year;
+    if (body.tuition_currency !== undefined && !body.currency) updateData.currency = body.tuition_currency;
 
     const { data: program, error } = await supabase
       .from('programs')
@@ -146,8 +129,6 @@ export async function PUT(
     return NextResponse.json({ 
       program: {
         ...program,
-        degree_level: program.degree_type,
-        category: program.discipline,
         status: program.is_active ? 'active' : 'inactive'
       }
     });

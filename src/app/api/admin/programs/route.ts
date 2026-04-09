@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' });
 
     if (search) {
-      query = query.or(`name_en.ilike.%${search}%,name_cn.ilike.%${search}%,major.ilike.%${search}%`);
+      query = query.or(`name.ilike.%${search}%,name_fr.ilike.%${search}%,code.ilike.%${search}%`);
     }
 
     if (universityId) {
@@ -150,24 +150,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       university_id,
-      name_en,
-      name_cn,
+      name,
+      name_fr,
       description,
+      description_en,
+      description_cn,
       degree_level,
-      degree_type,
       category,
       discipline,
-      major,
       sub_category,
+      major,
       duration_years,
       duration_months,
       start_month,
-      teaching_languages,
+      language,
       teaching_language,
       language_requirement,
       entrance_exam_required,
+      tuition_fee_per_year,
       tuition_per_year,
       tuition_currency,
+      currency,
       scholarship_available,
       scholarship_types,
       scholarship_details,
@@ -175,42 +178,42 @@ export async function POST(request: NextRequest) {
       application_documents,
       application_requirements,
       capacity,
-      is_featured,
+      is_active,
       tags,
+      code,
     } = body;
 
     // Validate required fields
-    if (!university_id || !name_en || !(degree_level || degree_type)) {
+    if (!university_id || !name) {
       return NextResponse.json(
-        { error: 'University, program name, and degree type are required' },
+        { error: 'University and program name are required' },
         { status: 400 }
       );
     }
 
     const supabase = getSupabaseClient();
 
-    // Map to existing schema
+    // Map to actual schema columns
     const programData = {
       university_id,
-      name_en,
-      name_cn: name_cn || null,
-      description: description || null,
-      degree_type: degree_level || degree_type,
-      discipline: category || discipline || null,
-      major: sub_category || major || 'General', // Required field, default to 'General'
-      teaching_language: Array.isArray(teaching_languages) 
-        ? teaching_languages.join(', ') 
-        : teaching_language || 'Chinese',
-      duration_months: duration_months || (duration_years ? Math.round(duration_years * 12) : null),
-      tuition_per_year: tuition_per_year || null,
-      tuition_currency: tuition_currency || 'CNY',
-      application_fee: application_fee || null,
+      name,
+      name_fr: name_fr || null,
+      code: code || null,
+      description: description || description_en || null,
+      description_en: description_en || description || null,
+      description_cn: description_cn || null,
+      degree_level: degree_level || null,
+      category: category || discipline || null,
+      sub_category: sub_category || major || null,
+      language: language || teaching_language || 'Chinese',
+      duration_years: duration_years || null,
+      tuition_fee_per_year: tuition_fee_per_year || tuition_per_year || null,
+      currency: currency || tuition_currency || 'CNY',
+      scholarship_types: scholarship_types || null,
       scholarship_available: scholarship_available || false,
-      scholarship_details: scholarship_details || null,
-      entry_requirements: application_requirements || language_requirement || null,
-      required_documents: application_documents ? application_documents : null,
-      is_featured: is_featured || false,
-      is_active: true,
+      application_fee: application_fee || null,
+      is_active: is_active !== undefined ? is_active : true,
+      tags: tags || null,
     };
 
     const { data: program, error } = await supabase
@@ -218,17 +221,17 @@ export async function POST(request: NextRequest) {
       .insert(programData)
       .select(`
         id,
-        name_en,
-        name_cn,
-        degree_type,
-        discipline,
-        major,
-        teaching_language,
-        duration_months,
-        tuition_per_year,
-        tuition_currency,
+        name,
+        name_fr,
+        code,
+        degree_level,
+        category,
+        sub_category,
+        language,
+        duration_years,
+        tuition_fee_per_year,
+        currency,
         scholarship_available,
-        is_featured,
         is_active,
         universities (
           id,
@@ -248,8 +251,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       program: {
         ...program,
-        degree_level: program.degree_type,
-        category: program.discipline,
         status: program.is_active ? 'active' : 'inactive'
       }
     }, { status: 201 });

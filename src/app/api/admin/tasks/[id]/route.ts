@@ -34,29 +34,18 @@ export async function GET(
       );
     }
 
+    // Note: creator_id/assignee_id/user_id reference auth.users which can't be joined via PostgREST
+    // We fetch the task first, then look up user names from public.users separately
     const { data, error } = await supabase
       .from('admin_tasks')
       .select(`
         *,
-        creator:creator_id (
-          id,
-          email,
-          raw_user_meta_data
-        ),
-        assignee:assignee_id (
-          id,
-          email,
-          raw_user_meta_data
-        ),
         admin_task_comments (
           id,
           content,
-          created_at,
-          user:user_id (
-            id,
-            email,
-            raw_user_meta_data
-          )
+          user_id,
+          user_role,
+          created_at
         ),
         admin_task_subtasks (
           id,
@@ -90,7 +79,37 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ task: data });
+    // Collect user IDs for name resolution
+    const userIds = new Set<string>();
+    if (data.creator_id) userIds.add(data.creator_id);
+    if (data.assignee_id) userIds.add(data.assignee_id);
+    for (const comment of (data.admin_task_comments || [])) {
+      if (comment.user_id) userIds.add(comment.user_id);
+    }
+
+    const userMap = new Map<string, { full_name: string; email: string }>();
+    if (userIds.size > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', Array.from(userIds));
+      
+      for (const u of (users || [])) {
+        userMap.set(u.id, { full_name: u.full_name, email: u.email });
+      }
+    }
+
+    const enrichedTask = {
+      ...data,
+      creator: data.creator_id ? userMap.get(data.creator_id) || null : null,
+      assignee: data.assignee_id ? userMap.get(data.assignee_id) || null : null,
+      admin_task_comments: (data.admin_task_comments || []).map((comment: { user_id?: string; [key: string]: unknown }) => ({
+        ...comment,
+        user: comment.user_id ? userMap.get(comment.user_id) || null : null,
+      })),
+    };
+
+    return NextResponse.json({ task: enrichedTask });
   } catch (error) {
     console.error('Task GET error:', error);
     return NextResponse.json(
