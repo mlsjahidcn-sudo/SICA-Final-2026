@@ -1,0 +1,644 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { AppSidebar } from "@/components/dashboard-v2-sidebar"
+import { SiteHeader } from "@/components/dashboard-v2-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { toast } from "sonner"
+import { 
+  IconArrowLeft,
+  IconBuilding,
+  IconDeviceFloppy,
+  IconMapPin,
+  IconTag,
+  IconCurrencyDollar
+} from "@tabler/icons-react"
+
+const provinces = [
+  'Beijing', 'Shanghai', 'Tianjin', 'Chongqing',
+  'Guangdong', 'Jiangsu', 'Zhejiang', 'Shandong', 
+  'Hubei', 'Sichuan', 'Henan', 'Hebei', 
+  'Hunan', 'Anhui', 'Fujian', 'Liaoning',
+  'Shaanxi', 'Jilin', 'Heilongjiang', 'Jiangxi',
+  'Yunnan', 'Guizhou', 'Guangxi', 'Hainan',
+  'Gansu', 'Qinghai', 'Ningxia', 'Xinjiang',
+  'Inner Mongolia', 'Tibet'
+]
+
+const universityCategories = [
+  'Comprehensive',
+  'Science & Technology',
+  'Medical',
+  'Agricultural',
+  'Normal (Teacher Training)',
+  'Finance & Economics',
+  'Language',
+  'Arts',
+  'Law',
+  'Sports',
+  'Pharmaceutical',
+  'Aerospace',
+  'Maritime',
+  'Petroleum',
+  'Forestry'
+]
+
+const classificationTypes = [
+  { value: '985', label: '985 Project', color: 'bg-red-500/10 text-red-600 border-red-200' },
+  { value: '211', label: '211 Project', color: 'bg-blue-500/10 text-blue-600 border-blue-200' },
+  { value: 'Double First-Class', label: 'Double First-Class', color: 'bg-purple-500/10 text-purple-600 border-purple-200' },
+  { value: 'Provincial', label: 'Provincial Key', color: 'bg-green-500/10 text-green-600 border-green-200' },
+]
+
+export default function NewUniversityPage() {
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    name_en: '',
+    name_cn: '',
+    short_name: '',
+    slug: '',
+    province: '',
+    city: '',
+    type: [] as string[],
+    category: '',
+    tier: '',
+    ranking_national: '',
+    ranking_international: '',
+    website: '',
+    description: '',
+    description_en: '',
+    description_cn: '',
+    logo_url: '',
+    cover_image_url: '',
+    contact_email: '',
+    contact_phone: '',
+    tuition_min: '',
+    tuition_max: '',
+    tuition_currency: 'CNY',
+    scholarship_available: false,
+    scholarship_percentage: '',
+    founded_year: '',
+    is_active: true,
+  })
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/admin/login')
+    }
+  }, [user, authLoading, router])
+
+  const handleTypeToggle = (typeValue: string) => {
+    setFormData(prev => ({
+      ...prev,
+      type: prev.type.includes(typeValue)
+        ? prev.type.filter(t => t !== typeValue)
+        : [...prev.type, typeValue]
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name_en || !formData.province || !formData.city) {
+      toast.error('Please fill in all required fields (Name, Province, City)')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const token = localStorage.getItem('sica_auth_token')
+      const response = await fetch('/api/admin/universities', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          ranking_national: formData.ranking_national ? parseInt(formData.ranking_national) : null,
+          ranking_international: formData.ranking_international ? parseInt(formData.ranking_international) : null,
+          founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
+          tuition_min: formData.tuition_min ? parseFloat(formData.tuition_min) : null,
+          tuition_max: formData.tuition_max ? parseFloat(formData.tuition_max) : null,
+          scholarship_percentage: formData.scholarship_percentage ? parseInt(formData.scholarship_percentage) : null,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success('University created successfully')
+        router.push(`/admin/v2/universities/${data.university.id}`)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to create university')
+      }
+    } catch (error) {
+      console.error('Error creating university:', error)
+      toast.error('Failed to create university')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null
+  }
+
+  return (
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <SiteHeader title="Add New University" />
+          <div className="flex flex-col gap-6 p-6">
+            {/* Header */}
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/admin/v2/universities">
+                  <IconArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Universities
+                </Link>
+              </Button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconBuilding className="h-5 w-5" />
+                    Basic Information
+                  </CardTitle>
+                  <CardDescription>
+                    Enter the essential details about the university
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name_en">English Name *</Label>
+                      <Input
+                        id="name_en"
+                        placeholder="e.g., Tsinghua University"
+                        value={formData.name_en}
+                        onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name_cn">Chinese Name</Label>
+                      <Input
+                        id="name_cn"
+                        placeholder="e.g., 清华大学"
+                        value={formData.name_cn}
+                        onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="short_name">Short Name / Abbreviation</Label>
+                      <Input
+                        id="short_name"
+                        placeholder="e.g., THU"
+                        value={formData.short_name}
+                        onChange={(e) => setFormData({ ...formData, short_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slug">URL Slug</Label>
+                      <Input
+                        id="slug"
+                        placeholder="e.g., tsinghua-university"
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        type="url"
+                        placeholder="https://www.example.edu.cn"
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="founded_year">Founded Year</Label>
+                      <Input
+                        id="founded_year"
+                        type="number"
+                        placeholder="e.g., 1911"
+                        value={formData.founded_year}
+                        onChange={(e) => setFormData({ ...formData, founded_year: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Location */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconMapPin className="h-5 w-5" />
+                    Location
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="province">Province *</Label>
+                      <Select
+                        value={formData.province}
+                        onValueChange={(value) => setFormData({ ...formData, province: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select province" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {provinces.map((prov) => (
+                            <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        placeholder="e.g., Beijing"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Classification */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconTag className="h-5 w-5" />
+                    Classification & Rankings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Classification Type</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Select all that apply
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {classificationTypes.map((ct) => (
+                        <Badge
+                          key={ct.value}
+                          variant={formData.type.includes(ct.value) ? "default" : "outline"}
+                          className={`cursor-pointer ${formData.type.includes(ct.value) ? '' : ct.color}`}
+                          onClick={() => handleTypeToggle(ct.value)}
+                        >
+                          {ct.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">University Category</Label>
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {universityCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tier">University Tier</Label>
+                      <Select
+                        value={formData.tier}
+                        onValueChange={(value) => setFormData({ ...formData, tier: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tier 1">Tier 1 (Top)</SelectItem>
+                          <SelectItem value="Tier 2">Tier 2</SelectItem>
+                          <SelectItem value="Tier 3">Tier 3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="ranking_national">National Ranking</Label>
+                      <Input
+                        id="ranking_national"
+                        type="number"
+                        placeholder="e.g., 1"
+                        value={formData.ranking_national}
+                        onChange={(e) => setFormData({ ...formData, ranking_national: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ranking_international">International Ranking</Label>
+                      <Input
+                        id="ranking_international"
+                        type="number"
+                        placeholder="e.g., 20"
+                        value={formData.ranking_international}
+                        onChange={(e) => setFormData({ ...formData, ranking_international: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Description */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="description">General Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="University description..."
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="description_en">Description (English)</Label>
+                      <Textarea
+                        id="description_en"
+                        placeholder="Description in English..."
+                        rows={4}
+                        value={formData.description_en}
+                        onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description_cn">Description (Chinese)</Label>
+                      <Textarea
+                        id="description_cn"
+                        placeholder="中文描述..."
+                        rows={4}
+                        value={formData.description_cn}
+                        onChange={(e) => setFormData({ ...formData, description_cn: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Media */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Logo & Images</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="logo_url">Logo URL</Label>
+                      <Input
+                        id="logo_url"
+                        type="url"
+                        placeholder="https://example.com/logo.png"
+                        value={formData.logo_url}
+                        onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cover_image_url">Cover Image URL</Label>
+                      <Input
+                        id="cover_image_url"
+                        type="url"
+                        placeholder="https://example.com/cover.jpg"
+                        value={formData.cover_image_url}
+                        onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_email">Contact Email</Label>
+                      <Input
+                        id="contact_email"
+                        type="email"
+                        placeholder="admissions@university.edu.cn"
+                        value={formData.contact_email}
+                        onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_phone">Contact Phone</Label>
+                      <Input
+                        id="contact_phone"
+                        type="tel"
+                        placeholder="+86 10 1234 5678"
+                        value={formData.contact_phone}
+                        onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tuition */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconCurrencyDollar className="h-5 w-5" />
+                    Tuition & Scholarships
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="tuition_min">Minimum Tuition</Label>
+                      <Input
+                        id="tuition_min"
+                        type="number"
+                        placeholder="e.g., 20000"
+                        value={formData.tuition_min}
+                        onChange={(e) => setFormData({ ...formData, tuition_min: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tuition_max">Maximum Tuition</Label>
+                      <Input
+                        id="tuition_max"
+                        type="number"
+                        placeholder="e.g., 50000"
+                        value={formData.tuition_max}
+                        onChange={(e) => setFormData({ ...formData, tuition_max: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tuition_currency">Currency</Label>
+                      <Select
+                        value={formData.tuition_currency}
+                        onValueChange={(value) => setFormData({ ...formData, tuition_currency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CNY">CNY</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Scholarship Available</Label>
+                      <p className="text-sm text-muted-foreground">
+                        University offers scholarships to international students
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.scholarship_available}
+                      onCheckedChange={(checked) => setFormData({ ...formData, scholarship_available: checked })}
+                    />
+                  </div>
+                  
+                  {formData.scholarship_available && (
+                    <div className="space-y-2">
+                      <Label htmlFor="scholarship_percentage">Scholarship Coverage (%)</Label>
+                      <Input
+                        id="scholarship_percentage"
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="e.g., 50"
+                        value={formData.scholarship_percentage}
+                        onChange={(e) => setFormData({ ...formData, scholarship_percentage: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Active</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Make this university visible to students
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fixed Action Bar */}
+              <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t py-4 px-6 z-50 lg:ml-64">
+                <div className="flex items-center justify-between max-w-7xl mx-auto">
+                  <div className="text-sm text-muted-foreground">
+                    Creating new university
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" asChild>
+                      <Link href="/admin/v2/universities">
+                        Cancel
+                      </Link>
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <IconDeviceFloppy className="mr-2 h-4 w-4" />
+                          Create University
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  )
+}

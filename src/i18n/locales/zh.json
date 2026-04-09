@@ -1,0 +1,236 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "retry": "重试",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "view": "查看",
+    "search": "搜索",
+    "filter": "筛选",
+    "clear": "清除",
+    "submit": "提交",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "close": "关闭",
+    "confirm": "确认",
+    "yes": "是",
+    "no": "否",
+    "all": "全部",
+    "none": "无",
+    "other": "其他",
+    "required": "必填",
+    "optional": "选填"
+  },
+  "nav": {
+    "home": "首页",
+    "universities": "大学",
+    "programs": "项目",
+    "about": "关于我们",
+    "contact": "联系我们",
+    "faq": "常见问题",
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "dashboard": "仪表盘",
+    "profile": "个人资料",
+    "settings": "设置",
+    "applications": "申请",
+    "documents": "文档",
+    "meetings": "会议",
+    "notifications": "通知"
+  },
+  "home": {
+    "hero": {
+      "title": "中国留学学院",
+      "subtitle": "开启您在中国的一流教育之旅",
+      "description": "探索中国顶尖大学、课程和奖学金机会。我们帮助国际学生规划他们的教育之旅。",
+      "cta": {
+        "explore": "探索大学",
+        "apply": "开始申请"
+      }
+    },
+    "features": {
+      "title": "为什么选择我们",
+      "subtitle": "我们为您的留学之旅提供全面支持",
+      "university": {
+        "title": "顶尖大学",
+        "description": "对接500+所中国顶尖大学，提供世界级课程"
+      },
+      "scholarship": {
+        "title": "奖学金支持",
+        "description": "提供奖学金和助学金申请指导"
+      },
+      "application": {
+        "title": "便捷申请",
+        "description": "简化申请流程，提供专业指导"
+      },
+      "support": {
+        "title": "全天候支持",
+        "description": "专业团队全程协助您的留学之旅"
+      }
+    },
+    "stats": {
+      "universities": "合作大学",
+      "students": "在读学生",
+      "programs": "课程项目",
+      "countries": "覆盖国家"
+    }
+  },
+  "universities": {
+    "title": "大学列表",
+    "subtitle": "探索中国顶尖大学",
+    "search": "搜索大学...",
+    "filter": {
+      "province": "省份",
+      "type": "大学类型",
+      "category": "学科类别",
+      "scholarship": "提供奖学金"
+    },
+    "card": {
+      "ranking": "国内排名",
+      "students": "在校学生",
+      "international": "国际学生",
+      "programs": "开设项目"
+    },
+    "detail": {
+      "overview": "学校概况",
+      "programs": "开设项目",
+      "facilities": "学校设施",
+      "gallery": "校园风光",
+      "contact": "联系方式",
+      "location": "学校位置",
+      "website": "官方网站"
+    }
+  },
+  "programs": {
+    "title": "课程项目",
+    "subtitle": "找到适合您的项目",
+    "search": "搜索项目...",
+    "filter": {
+      "degree": "学位类型",
+      "language": "授课语言",
+      "field": "学科领域",
+      "duration": "学习时长"
+    },
+    "card": {
+      "degree": "学位",
+      "duration": "学制",
+      "tuition": "学费",
+      "language": "授课语言",
+      "scholarship": "提供奖学金"
+    },
+    "detail": {
+      "overview": "项目概况",
+      "requirements": "申请要求",
+      "curriculum": "课程设置",
+      "career": "就业前景",
+      "apply": "立即申请"
+    }
+  },
+  "application": {
+    "title": "申请",
+    "status": {
+      "draft": "草稿",
+      "submitted": "已提交",
+      "under_review": "审核中",
+      "accepted": "已录取",
+      "rejected": "已拒绝",
+      "withdrawn": "已撤回"
+    },
+    "form": {
+      "personal": "个人信息",
+      "education": "教育背景",
+      "documents": "所需材料",
+      "review": "审核提交"
+    },
+    "document": {
+      "passport": "护照",
+      "diploma": "学位证书",
+      "transcript": "成绩单",
+      "language": "语言证书",
+      "photo": "证件照",
+      "recommendation": "推荐信",
+      "cv": "简历",
+      "study_plan": "学习计划",
+      "financial": "财力证明"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "欢迎回来",
+      "subtitle": "登录您的账户",
+      "email": "邮箱",
+      "password": "密码",
+      "remember": "记住我",
+      "forgot": "忘记密码？",
+      "submit": "登录",
+      "noAccount": "还没有账户？",
+      "register": "创建账户"
+    },
+    "register": {
+      "title": "创建账户",
+      "subtitle": "加入数千名国际学生",
+      "fullName": "姓名",
+      "email": "邮箱",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "agree": "我同意",
+      "terms": "服务条款",
+      "and": "和",
+      "privacy": "隐私政策",
+      "submit": "创建账户",
+      "hasAccount": "已有账户？",
+      "login": "立即登录"
+    }
+  },
+  "dashboard": {
+    "welcome": "欢迎回来",
+    "overview": "概览",
+    "recentActivity": "近期活动",
+    "upcomingMeetings": "即将举行的会议",
+    "pendingDocuments": "待处理文档",
+    "quickActions": "快捷操作",
+    "stats": {
+      "applications": "总申请数",
+      "accepted": "已录取",
+      "pending": "待处理",
+      "rejected": "已拒绝"
+    }
+  },
+  "profile": {
+    "title": "个人资料",
+    "personal": "个人信息",
+    "education": "教育背景",
+    "language": "语言能力",
+    "work": "工作经历",
+    "edit": "编辑资料",
+    "completeness": "资料完成度"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "通用",
+    "notifications": "通知",
+    "privacy": "隐私",
+    "security": "安全",
+    "language": "语言",
+    "theme": "主题",
+    "timezone": "时区",
+    "emailNotifications": "邮件通知",
+    "pushNotifications": "推送通知",
+    "meetingReminders": "会议提醒",
+    "applicationUpdates": "申请更新"
+  },
+  "footer": {
+    "about": "关于我们",
+    "contact": "联系我们",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "faq": "常见问题",
+    "support": "支持",
+    "copyright": "© 2024 中国留学学院 版权所有"
+  }
+}
