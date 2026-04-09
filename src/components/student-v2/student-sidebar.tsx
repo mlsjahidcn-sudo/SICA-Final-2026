@@ -58,6 +58,11 @@ const navItems = [
     icon: <IconDashboard />,
   },
   {
+    title: "Profile",
+    url: "/student-v2/profile",
+    icon: <IconUserCircle />,
+  },
+  {
     title: "Applications",
     url: "/student-v2/applications",
     icon: <IconFileText />,
@@ -159,12 +164,6 @@ function NavUser({ user }: { user: { full_name: string; email: string } | null }
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/student-v2/profile">
-                  <IconUserCircle />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/student-v2/notifications">
                   <IconBell />

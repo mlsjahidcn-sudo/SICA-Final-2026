@@ -92,7 +92,10 @@ export async function PUT(request: NextRequest) {
           .from('users')
           .update(userUpdateData)
           .eq('id', userId);
-        if (updateError) console.error('User update error:', updateError.message);
+        if (updateError) {
+          console.error('User update error:', updateError.message);
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
       } else {
         const { error: insertError } = await supabase
           .from('users')
@@ -102,7 +105,10 @@ export async function PUT(request: NextRequest) {
             role: 'student',
             ...userUpdateData
           });
-        if (insertError) console.error('User insert error:', insertError.message);
+        if (insertError) {
+          console.error('User insert error:', insertError.message);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
       }
     }
 
@@ -168,12 +174,18 @@ export async function PUT(request: NextRequest) {
           .from('students')
           .update(safeStudentData)
           .eq('user_id', userId);
-        if (updateError) console.error('Student update error:', updateError.message);
+        if (updateError) {
+          console.error('Student update error:', updateError.message);
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
       } else {
         const { error: insertError } = await supabase
           .from('students')
           .insert({ user_id: userId, ...safeStudentData });
-        if (insertError) console.error('Student insert error:', insertError.message);
+        if (insertError) {
+          console.error('Student insert error:', insertError.message);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
       }
     }
 
