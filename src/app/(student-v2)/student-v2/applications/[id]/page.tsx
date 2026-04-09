@@ -74,7 +74,7 @@ interface ApplicationDetail {
       city: string
       province: string
       logo_url: string | null
-      website: string | null
+      website_url: string | null
     }
   }
   documents?: {
@@ -134,7 +134,7 @@ export default function ApplicationDetailPage() {
               city: "Beijing",
               province: "Beijing",
               logo_url: null,
-              website: "https://www.tsinghua.edu.cn"
+              website_url: "https://www.tsinghua.edu.cn"
             }
           },
           documents: [
@@ -438,9 +438,9 @@ export default function ApplicationDetailPage() {
                   <IconMapPin className="h-4 w-4 text-muted-foreground" />
                   <span>{application.programs?.universities?.city}, {application.programs?.universities?.province}</span>
                 </div>
-                {application.programs?.universities?.website && (
+                {application.programs?.universities?.website_url && (
                   <a 
-                    href={application.programs.universities.website}
+                    href={application.programs.universities.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-primary hover:underline"

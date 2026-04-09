@@ -47,21 +47,20 @@ export async function GET(
           id,
           name,
           degree_level,
-          discipline,
-          teaching_language,
-          duration_months,
-          tuition_per_year,
-          tuition_currency,
-          scholarship_available,
-          application_deadline_fall,
-          application_deadline_spring,
+          category,
+          language,
+          duration_years,
+          tuition_fee_per_year,
+          currency,
+          scholarship_coverage,
+          application_end_date,
           universities (
             id,
             name_en,
             city,
             province,
             logo_url,
-            website
+            website_url
           )
         ),
         application_documents (

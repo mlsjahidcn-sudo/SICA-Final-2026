@@ -8,8 +8,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12');
     const university_id = searchParams.get('university_id');
     const search = searchParams.get('search');
-    const degree_level = searchParams.get('degree_level');
+    const degree_level = searchParams.get('degree_level') || searchParams.get('degree_type');
     const language = searchParams.get('language');
+    const category = searchParams.get('category') || searchParams.get('discipline');
+    const sub_category = searchParams.get('sub_category');
+    const scholarship = searchParams.get('scholarship');
 
     const offset = (page - 1) * limit;
 
@@ -27,22 +30,24 @@ export async function GET(request: NextRequest) {
         currency,
         description,
         description_en,
-        description_cn,
         category,
         sub_category,
         curriculum_en,
-        curriculum_cn,
-        career_prospects_en,
+        duration_years,
+        scholarship_coverage,
+        scholarship_types,
         is_active,
+        cover_image,
+        rating,
+        review_count,
         universities (
           id,
           name_en,
-          name_cn,
           city,
           logo_url
         )
       `, { count: 'exact' })
-      .eq('is_active', true) // Only show active programs
+      .eq('is_active', true)
       .order('name', { ascending: true });
 
     if (university_id) {
@@ -50,19 +55,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,description_en.ilike.%${search}%`);
     }
 
     if (degree_level) {
-      // Support comma-separated degree levels
       const degrees = degree_level.split(',').map(d => d.trim());
       query = query.in('degree_level', degrees);
     }
 
     if (language) {
-      // Support comma-separated languages
       const languages = language.split(',').map(l => l.trim());
       query = query.in('language', languages);
+    }
+
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    if (sub_category) {
+      query = query.eq('sub_category', sub_category);
+    }
+
+    if (scholarship === 'true') {
+      query = query.not('scholarship_coverage', 'is', null);
     }
 
     // Apply pagination

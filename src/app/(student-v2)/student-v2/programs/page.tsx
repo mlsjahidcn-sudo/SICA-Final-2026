@@ -41,8 +41,14 @@ interface Program {
   tuition_fee_per_year: number | null
   currency: string
   description: string | null
+  description_en: string | null
   duration_years: number | null
+  scholarship_coverage: string | null
+  scholarship_types: string[] | null
   is_active: boolean
+  cover_image: string | null
+  rating: number | null
+  review_count: number | null
   universities?: {
     id: string
     name_en: string
@@ -52,9 +58,9 @@ interface Program {
 }
 
 const DEGREE_TYPES = ["Bachelor", "Master", "PhD"]
-const DISCIPLINES = ["Engineering", "Science", "Business", "Arts", "Medicine"]
+const CATEGORIES = ["Engineering", "Science", "Business", "Arts", "Medicine", "Law", "Education", "Agriculture"]
 
-// Program Card Component (admin-style)
+// Program Card Component
 function ProgramCard({ program }: { program: Program }) {
   const formatTuition = (amount: number | null | undefined, currency: string | null | undefined) => {
     if (!amount) return "N/A"
@@ -67,12 +73,14 @@ function ProgramCard({ program }: { program: Program }) {
     return `${years} year${years > 1 ? 's' : ''}`
   }
 
+  const hasScholarship = !!program.scholarship_coverage || (program.scholarship_types && program.scholarship_types.length > 0)
+
   return (
     <Link href={`/student-v2/programs/${program.id}`}>
       <Card className="group relative overflow-hidden transition-all hover:shadow-md hover:border-primary/20 h-full cursor-pointer">
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
-            {/* University Logo (without link to avoid nesting) */}
+            {/* University Logo */}
             {program.universities && (
               <Avatar className="rounded-lg shrink-0 h-12 w-12">
                 {program.universities.logo_url && program.universities.logo_url.trim() !== '' ? (
@@ -90,6 +98,12 @@ function ProgramCard({ program }: { program: Program }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant="secondary">{program.degree_level}</Badge>
+                    {hasScholarship && (
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:border-yellow-800 dark:text-yellow-400">
+                        <IconStar className="mr-1 h-3 w-3" />
+                        Scholarship
+                      </Badge>
+                    )}
                   </div>
                   <h3 className="font-semibold truncate">{program.name}</h3>
                 </div>
@@ -115,12 +129,17 @@ function ProgramCard({ program }: { program: Program }) {
               <div className="flex items-center gap-2 mt-3">
                 <Badge variant="outline" className="text-xs">
                   <IconLanguage className="mr-1 h-3 w-3" />
-                  {program.category || "General"}
+                  {program.language || "General"}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   <IconClock className="mr-1 h-3 w-3" />
                   {formatDuration(program.duration_years)}
                 </Badge>
+                {program.category && (
+                  <Badge variant="outline" className="text-xs">
+                    {program.category}
+                  </Badge>
+                )}
               </div>
 
               {/* Tuition */}
@@ -152,7 +171,7 @@ function ProgramsContent() {
   
   const [search, setSearch] = React.useState(searchParams.get("search") || "")
   const [degree, setDegree] = React.useState(searchParams.get("degree") || "all")
-  const [discipline, setDiscipline] = React.useState(searchParams.get("discipline") || "all")
+  const [category, setCategory] = React.useState(searchParams.get("category") || "all")
   const [scholarship, setScholarship] = React.useState(false)
   const [page, setPage] = React.useState(1)
   const itemsPerPage = 12
@@ -165,8 +184,8 @@ function ProgramsContent() {
         params.set("page", page.toString())
         params.set("limit", itemsPerPage.toString())
         if (search) params.set("search", search)
-        if (degree !== "all") params.set("degree_type", degree)
-        if (discipline !== "all") params.set("discipline", discipline)
+        if (degree !== "all") params.set("degree_level", degree)
+        if (category !== "all") params.set("category", category)
         if (scholarship) params.set("scholarship", "true")
 
         const response = await fetch(`/api/programs?${params.toString()}`)
@@ -181,7 +200,7 @@ function ProgramsContent() {
     }
 
     fetchPrograms()
-  }, [page, search, degree, discipline, scholarship])
+  }, [page, search, degree, category, scholarship])
 
   const totalPages = Math.ceil(total / itemsPerPage)
 
@@ -203,32 +222,32 @@ function ProgramsContent() {
                 <Input 
                   placeholder="Search programs..." 
                   value={search} 
-                  onChange={(e) => setSearch(e.target.value)} 
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }} 
                   className="pl-9" 
                 />
               </div>
             </div>
-            <Select value={degree} onValueChange={setDegree}>
+            <Select value={degree} onValueChange={(v) => { setDegree(v); setPage(1); }}>
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Degree" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Degrees</SelectItem>
                 {DEGREE_TYPES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={discipline} onValueChange={setDiscipline}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Discipline" /></SelectTrigger>
+            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
+              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Category" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Disciplines</SelectItem>
-                {DISCIPLINES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button 
               variant={scholarship ? "default" : "outline"} 
-              onClick={() => setScholarship(!scholarship)}
+              onClick={() => { setScholarship(!scholarship); setPage(1); }}
             >
+              <IconStar className="mr-2 h-4 w-4" />
               Scholarship Only
             </Button>
-            <Button onClick={() => setPage(1)}>Search</Button>
           </div>
         </CardContent>
       </Card>
@@ -245,6 +264,7 @@ function ProgramsContent() {
           <CardContent className="flex flex-col items-center justify-center h-64">
             <IconBook className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No programs found</p>
+            <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters</p>
           </CardContent>
         </Card>
       ) : (
