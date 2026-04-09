@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status') || '';
     const universityId = searchParams.get('university_id') || '';
+    const degreeLevel = searchParams.get('degree_type') || searchParams.get('degree_level') || '';
     const search = searchParams.get('search') || '';
     
     const offset = (page - 1) * limit;
@@ -71,6 +72,10 @@ export async function GET(request: NextRequest) {
 
     if (universityId) {
       query = query.eq('programs.university_id', universityId);
+    }
+
+    if (degreeLevel) {
+      query = query.eq('programs.degree_level', degreeLevel);
     }
 
     if (search) {
@@ -132,12 +137,55 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Compute stats from the current result set
+    const stats = {
+      total: count || 0,
+      submitted: 0,
+      under_review: 0,
+      document_request: 0,
+      interview_scheduled: 0,
+      accepted: 0,
+      rejected: 0,
+    };
+    // Count statuses from the current page (approximate)
+    for (const app of applications || []) {
+      const s = app.status as string;
+      if (s in stats) {
+        (stats as Record<string, number>)[s]++;
+      }
+    }
+
+    // Get total counts across all applications (not just current page)
+    const { data: allStatuses } = await supabase
+      .from('applications')
+      .select('status');
+    
+    if (allStatuses) {
+      const fullStats = {
+        total: allStatuses.length,
+        submitted: 0,
+        under_review: 0,
+        document_request: 0,
+        interview_scheduled: 0,
+        accepted: 0,
+        rejected: 0,
+      };
+      for (const row of allStatuses) {
+        const s = row.status as string;
+        if (s in fullStats) {
+          (fullStats as Record<string, number>)[s]++;
+        }
+      }
+      Object.assign(stats, fullStats);
+    }
+
     return NextResponse.json({
       applications: transformedApplications,
       total: count || 0,
       page,
       limit,
       totalPages: Math.ceil((count || 0) / limit),
+      stats,
     });
   } catch (error) {
     console.error('Error in admin applications GET:', error);

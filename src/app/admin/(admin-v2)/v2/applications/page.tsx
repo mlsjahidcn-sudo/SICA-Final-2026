@@ -59,26 +59,30 @@ import {
 interface Application {
   id: string
   status: string
+  priority: string | null
+  notes: string | null
   submitted_at: string | null
   created_at: string
-  passport_first_name: string
-  passport_last_name: string
-  nationality: string
-  email: string
-  programs: {
+  updated_at: string
+  program: {
     id: string
-    name_en: string
-    degree_type: string
-    universities: {
+    name: string
+    degree_level: string
+    university: {
       id: string
       name_en: string
       city: string
-    }
-  }
-  users: {
+      province: string
+    } | null
+  } | null
+  student: {
     id: string
-    full_name: string
-    email: string
+    user_id: string
+    full_name: string | null
+    email: string | null
+    nationality: string | null
+    gender: string | null
+    highest_education: string | null
   }
 }
 
@@ -342,23 +346,23 @@ function ApplicationsListContent() {
                       <TableCell>
                         <div>
                           <div className="font-medium">
-                            {app.passport_first_name} {app.passport_last_name}
+                            {app.student?.full_name || 'Unknown'}
                           </div>
-                          <div className="text-xs text-muted-foreground">{app.email}</div>
+                          <div className="text-xs text-muted-foreground">{app.student?.email || ''}</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{app.programs.name_en}</div>
+                        <div className="font-medium">{app.program?.name || 'N/A'}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <IconMapPin className="h-3 w-3 text-muted-foreground" />
-                          <span>{app.programs.universities.name_en}</span>
+                          <span>{app.program?.university?.name_en || 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
-                          {app.programs.degree_type}
+                          {app.program?.degree_level || 'N/A'}
                         </Badge>
                       </TableCell>
                       <TableCell>
