@@ -17,6 +17,7 @@
 - ❌ Create mock databases or in-memory databases
 - ❌ Hardcode database credentials in code
 - ❌ Use different Supabase projects without explicit approval
+- ❌ Run SQL via local psql or any local database client
 
 **ALWAYS**:
 - ✅ Use the external Supabase database configured in `.env.local`
@@ -24,6 +25,36 @@
 - ✅ Use the service role key for admin operations
 - ✅ Use the anon key for public/anonymous operations
 - ✅ Check database connectivity before assuming local fallback
+- ✅ Use `exec_sql` tool with `env: "develop"` for all SQL operations on the external Supabase database
+
+### exec_sql Usage Rule
+
+When running SQL queries against the external Supabase database, **always** use the `exec_sql` tool with `env: "develop"`. This ensures the SQL is executed against the external Supabase at `maqzxlcsgfpwnfyleoga.supabase.co`, NOT a local database.
+
+**⚠️ IMPORTANT**: Do NOT use `psql`, `pg_isready`, or any shell-based PostgreSQL client. These may connect to a local PostgreSQL instance if one exists, causing schema/data drift between local and external databases.
+
+```yaml
+# ✅ CORRECT - Uses external Supabase via exec_sql tool
+exec_sql(env: "develop", sql: "SELECT * FROM users LIMIT 5;")
+
+# ❌ WRONG - May connect to local database
+exec_shell(command: "psql -c 'SELECT * FROM users LIMIT 5;'")
+
+# ❌ WRONG - May connect to local database  
+exec_shell(command: "PGPASSWORD=xxx psql -h localhost ...")
+```
+
+**Why this matters**: The `exec_sql` tool with `env: "develop"` is configured to route to the correct external Supabase instance. Shell-based PostgreSQL commands may resolve to a local `psql` binary that defaults to a local socket or localhost connection, leading to:
+- Tables/columns created in the wrong database
+- Data inserted locally instead of externally
+- Schema mismatches between what PostgREST sees and what your code expects
+
+**Verifying connection**: After running DDL (CREATE/ALTER), verify the change via the PostgREST REST API (not information_schema via exec_sql, which may show stale or different results):
+```bash
+curl -s "https://maqzxlcsgfpwnfyleoga.supabase.co/rest/v1/{table}?select=*&limit=1" \
+  -H "apikey: {SERVICE_ROLE_KEY}" \
+  -H "Authorization: Bearer {SERVICE_ROLE_KEY}"
+```
 
 **Database Connection File**: `src/storage/database/supabase-client.ts`
 
