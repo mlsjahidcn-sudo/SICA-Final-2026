@@ -11,6 +11,8 @@ export async function GET(
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
+    console.log('[GET University] ID:', id, 'Token exists:', !!token);
+
     if (!token) {
       return NextResponse.json(
         { error: 'No authorization token provided' },
@@ -24,6 +26,8 @@ export async function GET(
     // Verify user token
     const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
 
+    console.log('[GET University] Auth result:', { userId: authUser?.id, authError: authError?.message });
+
     if (authError || !authUser) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
@@ -34,11 +38,13 @@ export async function GET(
     // Use service role key client for database operations (bypasses RLS)
     const supabase = getSupabaseClient();
     
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role')
       .eq('id', authUser.id)
       .single();
+
+    console.log('[GET University] Profile result:', { role: profile?.role, error: profileError?.message });
 
     if (profile?.role !== 'admin') {
       return NextResponse.json(
@@ -80,6 +86,8 @@ export async function PUT(
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
+    console.log('[PUT University] ID:', id, 'Token exists:', !!token);
+
     if (!token) {
       return NextResponse.json(
         { error: 'No authorization token provided' },
@@ -93,6 +101,8 @@ export async function PUT(
     // Verify user token
     const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
 
+    console.log('[PUT University] Auth result:', { userId: authUser?.id, authError: authError?.message });
+
     if (authError || !authUser) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
@@ -103,11 +113,13 @@ export async function PUT(
     // Use service role key client for database operations (bypasses RLS)
     const supabase = getSupabaseClient();
     
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role')
       .eq('id', authUser.id)
       .single();
+
+    console.log('[PUT University] Profile result:', { role: profile?.role, error: profileError?.message });
 
     if (profile?.role !== 'admin') {
       return NextResponse.json(
@@ -117,6 +129,7 @@ export async function PUT(
     }
 
     const body = await request.json();
+    console.log('[PUT University] Request body keys:', Object.keys(body));
 
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {
@@ -164,12 +177,20 @@ export async function PUT(
       }
     }
 
+    console.log('[PUT University] Update data keys:', Object.keys(updateData));
+
     const { data: university, error: updateError } = await supabase
       .from('universities')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
+
+    console.log('[PUT University] Update result:', { 
+      success: !updateError, 
+      error: updateError?.message,
+      universityId: university?.id 
+    });
 
     if (updateError) {
       return NextResponse.json(
