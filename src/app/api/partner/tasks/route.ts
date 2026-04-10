@@ -19,31 +19,15 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const priority = searchParams.get('priority');
 
-    // Partners can see:
-    // 1. Tasks assigned to them
-    // 2. Tasks where partner_id is their user ID (since applications.partner_id stores user.id)
+    // Build query for admin_tasks (without joins - PostgREST schema cache may not be refreshed)
     let query = supabase
       .from('admin_tasks')
-      .select(`
-        *,
-        creator:creator_id (
-          id,
-          email,
-          full_name
-        ),
-        assignee:assignee_id (
-          id,
-          email,
-          full_name
-        )
-      `);
+      .select('*');
 
     // Partners should see tasks where assignee is them OR partner_id is their user ID
     if (userRole === 'partner') {
       query = query.or(`assignee_id.eq.${user.id},partner_id.eq.${user.id}`);
     }
-
-    query = query.order('created_at', { ascending: false });
 
     if (status) {
       query = query.eq('status', status);
@@ -52,17 +36,50 @@ export async function GET(request: NextRequest) {
       query = query.eq('priority', priority);
     }
 
+    query = query.order('created_at', { ascending: false });
+
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching partner tasks:', error);
+      console.error('Error fetching partner tasks:', JSON.stringify(error));
       return NextResponse.json(
         { error: 'Failed to fetch tasks' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ tasks: data || [] });
+    const tasks = data || [];
+
+    // Collect unique creator_id and assignee_id values to batch-fetch user info
+    const userIds = new Set<string>();
+    for (const task of tasks) {
+      if (task.creator_id) userIds.add(task.creator_id);
+      if (task.assignee_id) userIds.add(task.assignee_id);
+    }
+
+    // Fetch user info for all referenced users
+    let userMap: Record<string, { id: string; email: string; full_name: string }> = {};
+    if (userIds.size > 0) {
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .in('id', Array.from(userIds));
+
+      if (!usersError && users) {
+        for (const u of users) {
+          userMap[u.id] = u;
+        }
+      }
+    }
+
+    // Enrich tasks with creator/assignee info
+    const enrichedTasks = tasks.map(task => ({
+      ...task,
+      creator: task.creator_id ? (userMap[task.creator_id] || null) : null,
+      assignee: task.assignee_id ? (userMap[task.assignee_id] || null) : null,
+    }));
+
+    return NextResponse.json({ tasks: enrichedTasks });
   } catch (error) {
     console.error('Partner tasks GET error:', error);
     return NextResponse.json(

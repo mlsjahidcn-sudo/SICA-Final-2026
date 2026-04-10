@@ -52,9 +52,8 @@ interface Task {
 const statuses = [
   { value: 'todo', label: 'To Do', icon: ListTodo },
   { value: 'in_progress', label: 'In Progress', icon: Clock },
-  { value: 'review', label: 'Review', icon: AlertCircle },
   { value: 'done', label: 'Done', icon: CheckCircle2 },
-  { value: 'blocked', label: 'Blocked', icon: AlertCircle },
+  { value: 'cancelled', label: 'Cancelled', icon: AlertCircle },
 ];
 
 const priorities = [
@@ -67,9 +66,8 @@ const priorities = [
 function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case 'done': return 'default';
-    case 'blocked': return 'destructive';
+    case 'cancelled': return 'destructive';
     case 'in_progress': return 'secondary';
-    case 'review': return 'outline';
     default: return 'outline';
   }
 }
