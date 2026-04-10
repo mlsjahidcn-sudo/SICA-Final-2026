@@ -1,44 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 // GET - Get university statistics for charts
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No authorization token provided' },
-        { status: 401 }
-      );
+    // Verify admin authentication
+    const user = await verifyAuthToken(request);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = getSupabaseClient(token);
-
-    // Verify admin role - must pass JWT explicitly since persistSession is false
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Get user profile to check role
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', authUser.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
+    // Use service role client for database operations (bypasses RLS)
+    const supabase = getSupabaseClient();
 
     // Get all universities with their data
     const { data: universities, error } = await supabase
