@@ -54,7 +54,7 @@ const LANGUAGES = [
 ];
 
 const CATEGORIES = [
-  { value: '', label: 'Select...' },
+  { value: 'General', label: 'General' },
   { value: 'Engineering', label: 'Engineering' },
   { value: 'Business', label: 'Business' },
   { value: 'Medicine', label: 'Medicine' },
@@ -74,7 +74,7 @@ const emptyRow: ProgramRow = {
   language: 'English',
   duration_years: '',
   tuition_fee_per_year: '',
-  category: '',
+  category: 'General',
   description: '',
 };
 
