@@ -144,7 +144,15 @@ export function ProgramDetailContent({ program }: { program: Program }) {
       const now = new Date();
       const diff = targetDate.getTime() - now.getTime();
       
-      if (diff <= 0) {
+      // Mark as expired if deadline has passed or is less than 1 second away
+      if (diff <= 1000) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+      
+      // Don't show countdown if less than 1 minute remaining - just mark as not ready yet
+      // This prevents showing "00:00:00" right before expiration
+      if (diff < 60000) {
         setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
         return;
       }
