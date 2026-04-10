@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { toast } from "sonner"
 import {
   Card,
@@ -43,6 +44,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   IconArrowLeft,
   IconSchool,
@@ -57,6 +60,9 @@ import {
   IconCircleCheck,
   IconAlertCircle,
   IconDeviceFloppy,
+  IconPlus,
+  IconInfoCircle,
+  IconBuilding,
 } from "@tabler/icons-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
@@ -73,44 +79,38 @@ interface Student {
 
 interface Program {
   id: string
-  name_en: string
-  name_cn: string | null
-  degree_type: string
-  discipline: string
-  universities?: {
+  name: string
+  name_en?: string
+  name_cn?: string | null
+  degree_level: string
+  category?: string
+  universities: {
     id: string
-    name_en: string
-    name_cn: string | null
+    name: string
+    name_en?: string
+    name_cn?: string | null
     city: string
-    logo_url: string | null
+    logo_url?: string | null
   }
 }
 
 interface University {
   id: string
-  name_en: string
-  name_cn: string | null
+  name: string
+  name_en?: string
+  name_cn?: string | null
   city: string
-  logo_url: string | null
-}
-
-interface DocChecklistItem {
-  document_type: string
-  label_en: string
-  label_zh: string
-  description: string
-  is_required: boolean
-  is_uploaded: boolean
-  status: string
+  logo_url?: string | null
 }
 
 interface WizardFormData {
   student_id: string
-  program_id: string
+  program_ids: string[] // Changed to array for multiple programs
   university_id: string
   intake: string
   personal_statement: string
   study_plan: string
+  requested_university_program_note: string // New field
   documents: Array<{
     document_type: string
     file_url: string
@@ -152,34 +152,33 @@ export default function PartnerNewApplicationPage() {
   // Form data
   const [formData, setFormData] = React.useState<WizardFormData>({
     student_id: preselectedStudentId || "",
-    program_id: "",
+    program_ids: [], // Changed to array
     university_id: "",
     intake: "",
     personal_statement: "",
     study_plan: "",
+    requested_university_program_note: "", // New field
     documents: [],
   })
 
+  // UI state for "Can't find university/program?" toggle
+  const [showRequestNote, setShowRequestNote] = React.useState(false)
+
   // Data fetching
   const [students, setStudents] = React.useState<Student[]>([])
-  const [universities, setUniversities] = React.useState<University[]>([])
   const [programs, setPrograms] = React.useState<Program[]>([])
-  const [docChecklist, setDocChecklist] = React.useState<DocChecklistItem[]>([])
   const [isLoadingStudents, setIsLoadingStudents] = React.useState(false)
-  const [isLoadingUniversities, setIsLoadingUniversities] = React.useState(false)
   const [isLoadingPrograms, setIsLoadingPrograms] = React.useState(false)
-  const [isLoadingChecklist, setIsLoadingChecklist] = React.useState(false)
 
   // Student search
   const [studentSearch, setStudentSearch] = React.useState("")
   const [studentPopoverOpen, setStudentPopoverOpen] = React.useState(false)
   const debouncedStudentSearch = useDebounce(studentSearch, 300)
 
-  // University/Program search
-  const [universitySearch, setUniversitySearch] = React.useState("")
-  const [universityPopoverOpen, setUniversityPopoverOpen] = React.useState(false)
+  // Program search
   const [programSearch, setProgramSearch] = React.useState("")
   const [programPopoverOpen, setProgramPopoverOpen] = React.useState(false)
+  const [programDegreeFilter, setProgramDegreeFilter] = React.useState<string>("all")
 
   // ─── Data Fetching Effects ─────────────────────────────────────────
 
@@ -210,89 +209,42 @@ export default function PartnerNewApplicationPage() {
     fetchStudents()
   }, [])
 
-  // Fetch universities
+  // Fetch ALL programs (with university details included)
   React.useEffect(() => {
-    const fetchUniversities = async () => {
-      setIsLoadingUniversities(true)
+    const fetchPrograms = async () => {
+      setIsLoadingPrograms(true)
       try {
         const token = localStorage.getItem("sica_auth_token")
-        const response = await fetch("/api/universities?limit=100", {
+        const response = await fetch("/api/programs?limit=500", {
           headers: { Authorization: `Bearer ${token}` },
         })
 
         if (response.ok) {
           const data = await response.json()
-          setUniversities(data.universities || [])
+          // Normalize programs (handle arrays from Supabase relations)
+          const normalizedPrograms = (data.programs || []).map((p: any) => {
+            const universities = Array.isArray(p.universities) ? p.universities[0] : p.universities
+            return {
+              id: p.id,
+              name: p.name_en || p.name,
+              name_en: p.name_en,
+              name_cn: p.name_cn,
+              degree_level: p.degree_level,
+              category: p.category,
+              universities: universities
+            }
+          })
+          setPrograms(normalizedPrograms)
         }
       } catch (error) {
-        console.error("Error fetching universities:", error)
+        console.error("Error fetching programs:", error)
       } finally {
-        setIsLoadingUniversities(false)
+        setIsLoadingPrograms(false)
       }
     }
 
-    fetchUniversities()
+    fetchPrograms()
   }, [])
-
-  // Fetch programs when university is selected
-  React.useEffect(() => {
-    if (formData.university_id) {
-      const fetchPrograms = async () => {
-        setIsLoadingPrograms(true)
-        try {
-          const token = localStorage.getItem("sica_auth_token")
-          const response = await fetch(
-            `/api/programs?university_id=${formData.university_id}&limit=100`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          )
-
-          if (response.ok) {
-            const data = await response.json()
-            setPrograms(data.programs || [])
-          }
-        } catch (error) {
-          console.error("Error fetching programs:", error)
-        } finally {
-          setIsLoadingPrograms(false)
-        }
-      }
-
-      fetchPrograms()
-    } else {
-      setPrograms([])
-    }
-  }, [formData.university_id])
-
-  // Fetch document checklist when program is selected
-  React.useEffect(() => {
-    if (applicationId) {
-      const fetchChecklist = async () => {
-        setIsLoadingChecklist(true)
-        try {
-          const token = localStorage.getItem("sica_auth_token")
-          const response = await fetch(
-            `/api/student/applications/${applicationId}/documents/checklist`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          )
-
-          if (response.ok) {
-            const data = await response.json()
-            setDocChecklist(data.checklist || [])
-          }
-        } catch (error) {
-          console.error("Error fetching document checklist:", error)
-        } finally {
-          setIsLoadingChecklist(false)
-        }
-      }
-
-      fetchChecklist()
-    }
-  }, [applicationId])
 
   // ─── Handlers ───────────────────────────────────────────────────────
 
@@ -301,28 +253,38 @@ export default function PartnerNewApplicationPage() {
     setStudentPopoverOpen(false)
   }
 
-  const handleUniversitySelect = (universityId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      university_id: universityId,
-      program_id: "", // Reset program when university changes
-    }))
-    setUniversityPopoverOpen(false)
+  const handleProgramToggle = (programId: string) => {
+    setFormData((prev) => {
+      const isSelected = prev.program_ids.includes(programId)
+      return {
+        ...prev,
+        program_ids: isSelected
+          ? prev.program_ids.filter(id => id !== programId)
+          : [...prev.program_ids, programId]
+      }
+    })
   }
 
-  const handleProgramSelect = (programId: string) => {
-    setFormData((prev) => ({ ...prev, program_id: programId }))
-    setProgramPopoverOpen(false)
+  const clearAllPrograms = () => {
+    setFormData((prev) => ({ ...prev, program_ids: [] }))
   }
 
   const createDraftApplication = async () => {
-    if (!formData.student_id || !formData.program_id || !formData.intake) {
+    if (!formData.student_id || (formData.program_ids.length === 0 && !showRequestNote) || !formData.intake) {
       toast.error("Please fill in all required fields")
       return false
     }
 
     try {
       const token = localStorage.getItem("sica_auth_token")
+      
+      // If multiple programs selected, create one application per program
+      // For now, let's use the first selected program and store the rest in notes or create multiple
+      const primaryProgramId = formData.program_ids[0] || null
+      const primaryUniversityId = primaryProgramId 
+        ? programs.find(p => p.id === primaryProgramId)?.universities.id || null 
+        : null
+      
       const response = await fetch("/api/applications", {
         method: "POST",
         headers: {
@@ -331,9 +293,11 @@ export default function PartnerNewApplicationPage() {
         },
         body: JSON.stringify({
           student_id: formData.student_id,
-          university_id: formData.university_id,
-          program_id: formData.program_id,
+          university_id: primaryUniversityId,
+          program_id: primaryProgramId,
           intake: formData.intake,
+          requested_university_program_note: showRequestNote ? formData.requested_university_program_note : null,
+          selected_program_ids: formData.program_ids // Extra field for future use
         }),
       })
 
@@ -362,8 +326,8 @@ export default function PartnerNewApplicationPage() {
 
     // Step 2: Program & Intake - create draft application
     if (currentStep === 1) {
-      if (!formData.program_id || !formData.intake) {
-        toast.error("Please select a program and intake")
+      if ((formData.program_ids.length === 0 && !showRequestNote) || !formData.intake) {
+        toast.error("Please select at least one program or add a request note, and select an intake")
         return
       }
 
@@ -416,10 +380,6 @@ export default function PartnerNewApplicationPage() {
     }
   }
 
-  const handleSaveDraft = async () => {
-    toast.success("Draft saved successfully")
-  }
-
   // ─── Filters ─────────────────────────────────────────────────────────
 
   const filteredStudents = React.useMemo(() => {
@@ -433,40 +393,29 @@ export default function PartnerNewApplicationPage() {
     )
   }, [students, debouncedStudentSearch])
 
-  const filteredUniversities = React.useMemo(() => {
-    if (!universitySearch) return universities
-    const search = universitySearch.toLowerCase()
-    return universities.filter(
-      (u) =>
-        u.name_en.toLowerCase().includes(search) ||
-        u.name_cn?.toLowerCase().includes(search) ||
-        u.city.toLowerCase().includes(search)
-    )
-  }, [universities, universitySearch])
-
   const filteredPrograms = React.useMemo(() => {
-    if (!programSearch) return programs
-    const search = programSearch.toLowerCase()
-    return programs.filter(
-      (p) =>
-        p.name_en.toLowerCase().includes(search) ||
-        p.name_cn?.toLowerCase().includes(search)
-    )
-  }, [programs, programSearch])
+    let result = [...programs]
+    if (programDegreeFilter !== "all") {
+      result = result.filter(p => p.degree_level.toLowerCase() === programDegreeFilter.toLowerCase())
+    }
+    if (programSearch) {
+      const search = programSearch.toLowerCase()
+      result = result.filter(p => 
+        (p.name?.toLowerCase().includes(search) || p.name_en?.toLowerCase().includes(search) || p.name_cn?.toLowerCase().includes(search)) ||
+        (p.universities.name?.toLowerCase().includes(search) || p.universities.name_en?.toLowerCase().includes(search) || p.universities.name_cn?.toLowerCase().includes(search))
+      )
+    }
+    return result
+  }, [programs, programSearch, programDegreeFilter])
 
   const selectedStudent = React.useMemo(
     () => students.find((s) => s.id === formData.student_id),
     [students, formData.student_id]
   )
 
-  const selectedUniversity = React.useMemo(
-    () => universities.find((u) => u.id === formData.university_id),
-    [universities, formData.university_id]
-  )
-
-  const selectedProgram = React.useMemo(
-    () => programs.find((p) => p.id === formData.program_id),
-    [programs, formData.program_id]
+  const selectedProgramsList = React.useMemo(
+    () => programs.filter(p => formData.program_ids.includes(p.id)),
+    [programs, formData.program_ids]
   )
 
   // ─── Render ───────────────────────────────────────────────────────────
@@ -541,7 +490,7 @@ export default function PartnerNewApplicationPage() {
           <CardTitle>{STEPS[currentStep].label}</CardTitle>
           <CardDescription>
             {currentStep === 0 && "Select a student to create an application for"}
-            {currentStep === 1 && "Choose the program and intake period"}
+            {currentStep === 1 && "Choose the program(s) and intake period"}
             {currentStep === 2 && "Provide personal statement and study plan"}
             {currentStep === 3 && "Upload required documents"}
             {currentStep === 4 && "Review and submit the application"}
@@ -632,6 +581,7 @@ export default function PartnerNewApplicationPage() {
                     size="sm"
                     onClick={() => router.push("/partner-v2/students/new")}
                   >
+                    <IconPlus className="h-4 w-4 mr-2" />
                     Add New Student
                   </Button>
                 </div>
@@ -639,116 +589,81 @@ export default function PartnerNewApplicationPage() {
             </div>
           )}
 
-          {/* Step 1: Program & Intake */}
+          {/* Step 1: Program & Intake (Enhanced!) */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              {/* University Selection */}
-              <div className="space-y-2">
-                <Label>University *</Label>
-                <Popover
-                  open={universityPopoverOpen}
-                  onOpenChange={setUniversityPopoverOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={universityPopoverOpen}
-                      className="w-full justify-between"
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        {selectedUniversity ? (
-                          <>
-                            <IconSchool className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="truncate">{selectedUniversity.name_en}</span>
-                            {selectedUniversity.name_cn && (
-                              <span className="text-muted-foreground truncate">
-                                ({selectedUniversity.name_cn})
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          "Select a university..."
-                        )}
-                      </span>
-                      <IconChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search universities..."
-                        value={universitySearch}
-                        onValueChange={setUniversitySearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          {isLoadingUniversities ? "Loading..." : "No universities found"}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {filteredUniversities.map((university) => (
-                            <CommandItem
-                              key={university.id}
-                              value={university.id}
-                              onSelect={() => handleUniversitySelect(university.id)}
-                            >
-                              <div className="flex items-center gap-2 w-full">
-                                <IconSchool className="h-4 w-4 text-muted-foreground" />
-                                <div className="flex-1">
-                                  <div className="font-medium">
-                                    {university.name_en}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {university.city}
-                                  </div>
-                                </div>
-                                {formData.university_id === university.id && (
-                                  <IconCheck className="h-4 w-4 text-primary" />
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Program Selection */}
-              <div className="space-y-2">
-                <Label>Program *</Label>
-                <Popover open={programPopoverOpen} onOpenChange={setProgramPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={programPopoverOpen}
-                      className="w-full justify-between"
-                      disabled={!formData.university_id}
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        {selectedProgram ? (
-                          <>
-                            <IconFileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="truncate">{selectedProgram.name_en}</span>
-                          </>
-                        ) : formData.university_id ? (
-                          "Select a program..."
-                        ) : (
-                          "Select a university first..."
-                        )}
-                      </span>
-                      <IconChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search programs..."
+              {/* Program Selection First! */}
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <Label>Select Programs * (Multiple allowed)</Label>
+                  
+                  {/* Filters for programs */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search programs or universities..."
                         value={programSearch}
-                        onValueChange={setProgramSearch}
+                        onChange={(e) => setProgramSearch(e.target.value)}
+                        className="pl-9"
                       />
+                    </div>
+                    <Select value={programDegreeFilter} onValueChange={setProgramDegreeFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Degrees" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Degrees</SelectItem>
+                        <SelectItem value="bachelor">Bachelor</SelectItem>
+                        <SelectItem value="master">Master</SelectItem>
+                        <SelectItem value="phd">PhD</SelectItem>
+                        <SelectItem value="language">Language Program</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selected programs summary */}
+                  {selectedProgramsList.length > 0 && (
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium">
+                          Selected Programs ({selectedProgramsList.length})
+                        </Label>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={clearAllPrograms}
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProgramsList.map((program) => (
+                          <div 
+                            key={program.id}
+                            className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
+                          >
+                            <IconCheck className="h-3 w-3" />
+                            <span className="truncate max-w-[250px]">
+                              {program.universities.name_en || program.universities.name} - {program.name}
+                            </span>
+                            <Button 
+                              variant="ghost" 
+                              size="icon-xs" 
+                              className="h-5 w-5"
+                              onClick={() => handleProgramToggle(program.id)}
+                            >
+                              <IconX className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Programs list with checkboxes */}
+                  <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                    <Command>
                       <CommandList>
                         <CommandEmpty>
                           {isLoadingPrograms ? "Loading..." : "No programs found"}
@@ -757,50 +672,108 @@ export default function PartnerNewApplicationPage() {
                           {filteredPrograms.map((program) => (
                             <CommandItem
                               key={program.id}
-                              value={program.id}
-                              onSelect={() => handleProgramSelect(program.id)}
+                              onSelect={() => handleProgramToggle(program.id)}
+                              className="flex items-start gap-3 py-3"
                             >
-                              <div className="flex items-center gap-2 w-full">
-                                <IconFileText className="h-4 w-4 text-muted-foreground" />
-                                <div className="flex-1">
-                                  <div className="font-medium">{program.name_en}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {program.degree_type} • {program.discipline}
-                                  </div>
+                              <Checkbox 
+                                checked={formData.program_ids.includes(program.id)} 
+                                onCheckedChange={() => handleProgramToggle(program.id)} 
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <IconSchool className="h-4 w-4 text-primary" />
+                                  <span className="font-medium">{program.name}</span>
                                 </div>
-                                {formData.program_id === program.id && (
-                                  <IconCheck className="h-4 w-4 text-primary" />
-                                )}
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <IconBuilding className="h-3 w-3" />
+                                  <span>{program.universities.name_en || program.universities.name}</span>
+                                  <span>•</span>
+                                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                    {program.degree_level}
+                                  </span>
+                                  {program.category && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{program.category}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                  </div>
+                </div>
 
-              {/* Intake Selection */}
-              <div className="space-y-2">
-                <Label>Intake *</Label>
-                <Select
-                  value={formData.intake}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, intake: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select intake period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INTAKE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Request New University/Program Toggle */}
+                <div className="space-y-4 pt-2">
+                  <Separator />
+                  
+                  <div className="flex items-center gap-3">
+                    <Switch 
+                      id="request-toggle" 
+                      checked={showRequestNote} 
+                      onCheckedChange={setShowRequestNote} 
+                    />
+                    <div>
+                      <Label htmlFor="request-toggle" className="font-medium">
+                        Can't find your university or program?
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Describe what you need and we'll add it to our database
+                      </p>
+                    </div>
+                  </div>
+
+                  {showRequestNote && (
+                    <div className="rounded-lg border bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <IconInfoCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <Label className="text-amber-800 dark:text-amber-200 font-medium">
+                            Request a new university or program
+                          </Label>
+                          <p className="text-sm text-amber-700 dark:text-amber-300">
+                            Please provide details about the university and/or program you need, including:
+                            <br />- University name (if known)
+                            <br />- Program name and degree level
+                            <br />- Any other relevant information
+                          </p>
+                        </div>
+                      </div>
+                      <Textarea
+                        placeholder="Describe the university and/or program you need..."
+                        value={formData.requested_university_program_note}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, requested_university_program_note: e.target.value }))}
+                        rows={4}
+                        className="bg-white dark:bg-gray-900"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Intake Selection */}
+                <div className="space-y-2 pt-2">
+                  <Label>Intake *</Label>
+                  <Select 
+                    value={formData.intake} 
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, intake: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select intake period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INTAKE_OPTIONS.map((intake) => (
+                        <SelectItem key={intake.value} value={intake.value}>
+                          {intake.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
@@ -811,37 +784,20 @@ export default function PartnerNewApplicationPage() {
               <div className="space-y-2">
                 <Label>Personal Statement</Label>
                 <Textarea
-                  placeholder="Write a personal statement for the student..."
+                  placeholder="Write the student's personal statement here..."
                   value={formData.personal_statement}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      personal_statement: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, personal_statement: e.target.value }))}
                   rows={8}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Recommended: 500-1000 words
-                </p>
               </div>
-
               <div className="space-y-2">
                 <Label>Study Plan</Label>
                 <Textarea
-                  placeholder="Write a study plan for the student..."
+                  placeholder="Write the student's study plan here..."
                   value={formData.study_plan}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      study_plan: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, study_plan: e.target.value }))}
                   rows={8}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Outline the student's academic goals and research interests
-                </p>
               </div>
             </div>
           )}
@@ -849,159 +805,130 @@ export default function PartnerNewApplicationPage() {
           {/* Step 3: Documents */}
           {currentStep === 3 && (
             <div className="space-y-4">
-              {isLoadingChecklist ? (
-                <div className="flex items-center justify-center py-8">
-                  <IconLoader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : docChecklist.length > 0 ? (
-                <div className="space-y-3">
-                  {docChecklist.map((doc) => (
-                    <div
-                      key={doc.document_type}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <IconFileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">{doc.label_en}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {doc.description}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {doc.is_uploaded ? (
-                          <span className="text-sm text-green-600 flex items-center gap-1">
-                            <IconCheck className="h-4 w-4" />
-                            Uploaded
-                          </span>
-                        ) : doc.is_required ? (
-                          <span className="text-sm text-amber-600">Required</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            Optional
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <IconFileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                  <p>No document checklist available</p>
-                </div>
+              <p className="text-sm text-muted-foreground">
+                Document upload functionality will be available after creating the draft application.
+              </p>
+              {applicationId && (
+                <Button asChild>
+                  <a href={`/partner-v2/applications/${applicationId}/documents`}>
+                    Go to Document Manager
+                  </a>
+                </Button>
               )}
-
-              <Separator />
-
-              <div className="rounded-lg border border-dashed p-8 text-center">
-                <IconFileText className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Documents can be uploaded after creating the application
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  You can skip this step and upload documents later from the application details page
-                </p>
-              </div>
             </div>
           )}
 
-          {/* Step 4: Review & Submit */}
+          {/* Step 4: Review */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              {/* Student Info */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <IconUser className="h-4 w-4" />
-                  Student Information
-                </h3>
-                <div className="rounded-lg border p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="font-medium">{selectedStudent?.full_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Email:</span>
-                    <span>{selectedStudent?.email}</span>
-                  </div>
-                  {selectedStudent?.nationality && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Nationality:</span>
-                      <span>{selectedStudent.nationality}</span>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Student</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedStudent && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <IconUser className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{selectedStudent.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedStudent.email}</p>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              <Separator />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Program & Intake</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Selected Programs</p>
+                    {selectedProgramsList.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedProgramsList.map((program) => (
+                          <div 
+                            key={program.id} 
+                            className="flex items-center gap-2 p-2 rounded border"
+                          >
+                            <IconCheck className="h-4 w-4 text-primary" />
+                            <div>
+                              <p className="font-medium">{program.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {program.universities.name_en || program.universities.name} • {program.degree_level}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No program selected - using request note
+                      </p>
+                    )}
+                  </div>
+                  
+                  {showRequestNote && formData.requested_university_program_note && (
+                    <div className="mt-3 p-3 rounded bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-2">
+                        <IconInfoCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-800 dark:text-amber-200">
+                            Request Note
+                          </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 whitespace-pre-wrap">
+                            {formData.requested_university_program_note}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Program Info */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <IconSchool className="h-4 w-4" />
-                  Program Information
-                </h3>
-                <div className="rounded-lg border p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">University:</span>
-                    <span className="font-medium">
-                      {selectedUniversity?.name_en}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Program:</span>
-                    <span>{selectedProgram?.name_en}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Degree:</span>
-                    <span className="capitalize">{selectedProgram?.degree_type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Intake:</span>
-                    <span className="capitalize">
-                      {formData.intake?.replace("-", " ")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Documents Status */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <IconFileText className="h-4 w-4" />
-                  Documents
-                </h3>
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      Required Documents:
-                    </span>
-                    <span>
-                      {docChecklist.filter((d) => d.is_uploaded).length} /{" "}
-                      {docChecklist.filter((d) => d.is_required).length} uploaded
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-start gap-3">
-                  <IconAlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-900">
-                      Important Notice
-                    </p>
-                    <p className="text-amber-700 mt-1">
-                      By submitting this application, you confirm that all information
-                      provided is accurate and complete. The student will be notified
-                      about the application status.
+                  <div className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Intake</p>
+                    <p className="font-medium">
+                      {INTAKE_OPTIONS.find(i => i.value === formData.intake)?.label || formData.intake}
                     </p>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Statement</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {formData.personal_statement ? (
+                    <p className="whitespace-pre-wrap text-sm">
+                      {formData.personal_statement}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground italic text-sm">
+                      No personal statement provided
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Study Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {formData.study_plan ? (
+                    <p className="whitespace-pre-wrap text-sm">
+                      {formData.study_plan}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground italic text-sm">
+                      No study plan provided
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
         </CardContent>
@@ -1009,38 +936,35 @@ export default function PartnerNewApplicationPage() {
 
       {/* Navigation Buttons */}
       <div className="flex items-center justify-between">
-        <div>
-          {currentStep > 0 && (
-            <Button variant="outline" onClick={handleBack}>
-              <IconArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          )}
-        </div>
-
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          disabled={currentStep === 0}
+        >
+          <IconArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleSaveDraft}>
-            <IconDeviceFloppy className="h-4 w-4 mr-2" />
-            Save Draft
-          </Button>
-
-          {currentStep < STEPS.length - 1 ? (
-            <Button onClick={handleNext}>
-              Continue
-            </Button>
-          ) : (
+          {currentStep < STEPS.length - 1 && (
+            <>
+              <Button variant="ghost" onClick={() => toast.success("Draft saved")}>
+                <IconDeviceFloppy className="h-4 w-4 mr-2" />
+                Save Draft
+              </Button>
+              <Button onClick={handleNext}>
+                Continue
+                <IconChevronDown className="h-4 w-4 ml-2 rotate-[-90deg]" />
+              </Button>
+            </>
+          )}
+          {currentStep === STEPS.length - 1 && (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? (
-                <>
-                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
+                <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <>
-                  <IconCheck className="h-4 w-4 mr-2" />
-                  Submit Application
-                </>
+                <IconCircleCheck className="h-4 w-4 mr-2" />
               )}
+              Submit Application
             </Button>
           )}
         </div>
@@ -1050,34 +974,21 @@ export default function PartnerNewApplicationPage() {
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <IconCircleCheck className="h-5 w-5 text-green-600" />
-              Application Submitted Successfully
-            </DialogTitle>
+            <DialogTitle>Application Created!</DialogTitle>
             <DialogDescription>
-              The application has been submitted successfully. The student will be
-              notified about the application status.
+              The application has been created successfully. What would you like to do next?
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSuccessDialog(false)
-                router.push("/partner-v2/applications")
-              }}
-            >
-              Back to Applications
+          <div className="flex flex-col gap-2">
+            <Button asChild>
+              <Link href={`/partner-v2/applications/${applicationId}`}>
+                View Application Details
+              </Link>
             </Button>
-            <Button
-              onClick={() => {
-                setShowSuccessDialog(false)
-                if (applicationId) {
-                  router.push(`/partner-v2/applications/${applicationId}`)
-                }
-              }}
-            >
-              View Application
+            <Button variant="outline" asChild>
+              <Link href="/partner-v2/applications">
+                Back to Applications List
+              </Link>
             </Button>
           </div>
         </DialogContent>

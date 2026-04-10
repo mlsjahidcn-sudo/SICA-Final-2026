@@ -183,12 +183,15 @@ export async function POST(request: NextRequest) {
       student_id, // Required for partners/admins (students.id, not users.id)
       user_id, // Alternative: if partner provides users.id, look up students.id
       program_id,
+      requested_university_program_note, // New field
+      selected_program_ids, // New field (for storing all selected programs)
+      intake,
     } = body;
 
-    // Validate required fields
-    if (!program_id) {
+    // Validate required fields: either program_id OR requested_university_program_note must be present
+    if (!program_id && !requested_university_program_note) {
       return NextResponse.json(
-        { error: 'Program is required' },
+        { error: 'Either program or request note is required' },
         { status: 400 }
       );
     }
@@ -222,19 +225,21 @@ export async function POST(request: NextRequest) {
     // Determine partner ID
     const finalPartnerId: string | null = partnerId;
 
-    // Check if student already has an application for this program
-    const { data: existing } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('student_id', finalStudentId)
-      .eq('program_id', program_id)
-      .single();
+    // If program_id is provided, check if student already has an application for this program
+    if (program_id) {
+      const { data: existing } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('student_id', finalStudentId)
+        .eq('program_id', program_id)
+        .single();
 
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Student has already applied for this program' },
-        { status: 400 }
-      );
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Student has already applied for this program' },
+          { status: 400 }
+        );
+      }
     }
 
     // Store all extra form data in profile_snapshot JSONB column
@@ -264,6 +269,8 @@ export async function POST(request: NextRequest) {
       study_plan: body.study_plan,
       research_interest: body.research_interest,
       career_goals: body.career_goals,
+      requested_university_program_note,
+      selected_program_ids,
     };
 
     const { data: application, error } = await supabase
@@ -273,6 +280,7 @@ export async function POST(request: NextRequest) {
         program_id,
         partner_id: finalPartnerId,
         status: 'draft',
+        intake,
         profile_snapshot: profileSnapshot,
       })
       .select('*')
