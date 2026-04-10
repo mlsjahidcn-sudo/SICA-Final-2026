@@ -70,9 +70,14 @@ export default function ProfilePage() {
         const data = await response.json();
         setProfile(data.profile || DEFAULT_PROFILE);
         setOriginalProfile(data.profile || DEFAULT_PROFILE);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error fetching profile:', errorData);
+        toast.error(errorData.details || errorData.error || 'Failed to load profile');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      toast.error('Failed to load profile');
     } finally {
       setIsLoading(false);
     }
@@ -101,14 +106,29 @@ export default function ProfilePage() {
         body: JSON.stringify(profile),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
-        toast.success('Profile saved successfully');
-        setOriginalProfile(profile);
+        if (data.warning) {
+          toast.warning(data.warning);
+        } else {
+          toast.success('Profile saved successfully');
+        }
+        // Use the updated profile from the server response if available
+        if (data.profile) {
+          setProfile(data.profile);
+          setOriginalProfile(data.profile);
+        } else {
+          setOriginalProfile(profile);
+        }
         setHasChanges(false);
       } else {
-        toast.error('Failed to save profile');
+        const errorMsg = data.details || data.error || 'Failed to save profile';
+        toast.error(errorMsg);
+        console.error('[Profile] Save error:', data);
       }
     } catch (error) {
+      console.error('[Profile] Save error:', error);
       toast.error('Failed to save profile');
     } finally {
       setIsSaving(false);
