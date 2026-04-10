@@ -22,6 +22,7 @@ import {
   IconLanguage,
   IconMapPin,
   IconBriefcase,
+  IconHourglass,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 
@@ -130,6 +131,45 @@ export function ProgramDetailContent({ program }: { program: Program }) {
     }
     fetchRelated()
   }, [program.university_id, program.category, program.id])
+
+  // Deadline Countdown
+  const [countdown, setCountdown] = React.useState<{
+    days: number
+    hours: number
+    minutes: number
+    seconds: number
+    isExpired: boolean
+  } | null>(null)
+
+  React.useEffect(() => {
+    if (!program.application_end_date) {
+      setCountdown(null)
+      return
+    }
+
+    const targetDate = new Date(program.application_end_date)
+    const calculateCountdown = () => {
+      const now = new Date()
+      const diff = targetDate.getTime() - now.getTime()
+      
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true })
+        return
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+      setCountdown({ days, hours, minutes, seconds, isExpired: false })
+    }
+
+    calculateCountdown()
+    const timer = setInterval(calculateCountdown, 1000)
+
+    return () => clearInterval(timer)
+  }, [program.application_end_date])
 
   // Sticky apply button visibility
   React.useEffect(() => {
@@ -387,6 +427,50 @@ export function ProgramDetailContent({ program }: { program: Program }) {
               {/* Application Timeline */}
               <div className="space-y-4 mb-6">
                 <h2 className="text-lg font-semibold">Application Timeline</h2>
+                
+                {/* Countdown Timer */}
+                {countdown && (
+                  <div className={cn(
+                    "p-4 rounded-lg border",
+                    countdown.isExpired 
+                      ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800" 
+                      : "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
+                  )}>
+                    {countdown.isExpired ? (
+                      <div className="text-center">
+                        <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                        <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <IconHourglass className="h-3 w-3" />
+                          Deadline in
+                        </p>
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Timeline Details */}
                 {program.application_start_date && (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground flex items-center gap-2">
@@ -411,7 +495,7 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                     <Badge variant="secondary">{program.start_month}</Badge>
                   </div>
                 )}
-                {!program.application_start_date && !program.application_end_date && !program.start_month && (
+                {!program.application_start_date && !program.application_end_date && !program.start_month && !countdown && (
                   <p className="text-sm text-muted-foreground">Contact for deadline details</p>
                 )}
               </div>
