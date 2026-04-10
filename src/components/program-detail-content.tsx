@@ -25,6 +25,7 @@ import {
   IconHourglass,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
+import { DeadlineTimer } from '@/components/deadline-timer';
 
 interface Program {
   id: string;
@@ -123,52 +124,6 @@ export function ProgramDetailContent({ program }: { program: Program }) {
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Deadline Countdown (only compute after mount)
-  const [countdown, setCountdown] = React.useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-    isExpired: boolean;
-  } | null>(null);
-
-  React.useEffect(() => {
-    if (!isMounted || !program.application_end_date) {
-      setCountdown(null);
-      return;
-    }
-
-    const targetDate = new Date(program.application_end_date);
-    const calculateCountdown = () => {
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-      
-      // Mark as expired if deadline has passed or is less than 1 second away
-      if (diff <= 1000) {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
-      
-      // Don't show countdown if less than 1 minute remaining - just mark as not ready yet
-      // This prevents showing "00:00:00" right before expiration
-      if (diff < 60000) {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setCountdown({ days, hours, minutes, seconds, isExpired: false });
-    };
-
-    calculateCountdown();
-    const timer = setInterval(calculateCountdown, 1000);
-    return () => clearInterval(timer);
-  }, [program.application_end_date, isMounted]);
 
   // Fetch related programs
   React.useEffect(() => {
@@ -444,42 +399,9 @@ export function ProgramDetailContent({ program }: { program: Program }) {
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold">Application Timeline</h2>
                 
-                {/* Only render countdown after mount to prevent hydration issues */}
-                {isMounted && countdown && !countdown.isExpired && (
-                  <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                      <IconHourglass className="h-3 w-3" />
-                      Deadline in
-                    </p>
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="bg-background rounded-md p-2 border shadow-sm">
-                        <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
-                      </div>
-                      <div className="bg-background rounded-md p-2 border shadow-sm">
-                        <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
-                      </div>
-                      <div className="bg-background rounded-md p-2 border shadow-sm">
-                        <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
-                      </div>
-                      <div className="bg-background rounded-md p-2 border shadow-sm">
-                        <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Applications Closed Message */}
-                {isMounted && countdown && countdown.isExpired && (
-                  <div className="p-4 rounded-lg border bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
-                    <div className="text-center">
-                      <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
-                      <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
-                    </div>
-                  </div>
+                {/* Deadline Timer */}
+                {isMounted && program.application_end_date && (
+                  <DeadlineTimer deadline={program.application_end_date} />
                 )}
                 
                 {/* Timeline Dates */}
@@ -507,8 +429,8 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                     <Badge variant="secondary">{program.start_month}</Badge>
                   </div>
                 )}
-                {/* Contact message when no dates */}
-                {isMounted && !countdown && !program.application_start_date && !program.application_end_date && !program.start_month && (
+                {/* Contact message when no deadline */}
+                {isMounted && !program.application_end_date && !program.application_start_date && !program.start_month && (
                   <p className="text-sm text-muted-foreground">Contact for deadline details</p>
                 )}
               </div>
