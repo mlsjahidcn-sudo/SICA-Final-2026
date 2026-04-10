@@ -76,29 +76,19 @@ const classificationTypes = [
 interface AIGeneratedData {
   name_en: string;
   name_cn: string;
-  description_en: string;
-  description_cn: string;
-  facilities_en?: string;
-  facilities_cn?: string;
-  accommodation_info_en?: string;
-  accommodation_info_cn?: string;
-  address_en?: string;
-  address_cn?: string;
+  description: string;
   province: string;
   city: string;
   type: string;
   category: string;
-  founded_year: number | null;
-  website: string | null;
+  established_year: number | null;
+  website_url: string | null;
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string[];
   short_name?: string;
   ranking_national?: number;
-  ranking_international?: number;
-  student_count?: number;
-  international_student_count?: number;
-  teaching_languages?: string[];
+  ranking_world?: number;
   scholarship_available?: boolean;
   scholarship_percentage?: number;
   logo_url?: string;
@@ -123,21 +113,17 @@ export default function NewUniversityPage() {
     category: '',
     tier: '',
     ranking_national: '',
-    ranking_international: '',
-    website: '',
+    ranking_world: '',
+    website_url: '',
     description: '',
-    description_en: '',
-    description_cn: '',
     logo_url: '',
     cover_image_url: '',
-    contact_email: '',
-    contact_phone: '',
     tuition_min: '',
     tuition_max: '',
     tuition_currency: 'CNY',
     scholarship_available: false,
     scholarship_percentage: '',
-    founded_year: '',
+    established_year: '',
     is_active: true,
   })
 
@@ -197,13 +183,11 @@ export default function NewUniversityPage() {
         province: generated.province || formData.province,
         city: generated.city || formData.city,
         category: mapCategory(generated.category) || formData.category,
-        founded_year: generated.founded_year?.toString() || formData.founded_year,
-        website: generated.website || formData.website,
-        description_en: generated.description_en || formData.description_en,
-        description_cn: generated.description_cn || formData.description_cn,
-        description: generated.description_en || formData.description,
+        established_year: generated.established_year?.toString() || formData.established_year,
+        website_url: generated.website_url || formData.website_url,
+        description: generated.description || formData.description,
         ranking_national: generated.ranking_national?.toString() || formData.ranking_national,
-        ranking_international: generated.ranking_international?.toString() || formData.ranking_international,
+        ranking_world: generated.ranking_world?.toString() || formData.ranking_world,
         logo_url: generated.logo_url || formData.logo_url,
         cover_image_url: generated.cover_image_url || formData.cover_image_url,
         scholarship_available: generated.scholarship_available ?? formData.scholarship_available,
@@ -297,8 +281,8 @@ export default function NewUniversityPage() {
         body: JSON.stringify({
           ...formData,
           ranking_national: formData.ranking_national ? parseInt(formData.ranking_national) : null,
-          ranking_international: formData.ranking_international ? parseInt(formData.ranking_international) : null,
-          founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
+          ranking_world: formData.ranking_world ? parseInt(formData.ranking_world) : null,
+          established_year: formData.established_year ? parseInt(formData.established_year) : null,
           tuition_min: formData.tuition_min ? parseFloat(formData.tuition_min) : null,
           tuition_max: formData.tuition_max ? parseFloat(formData.tuition_max) : null,
           scholarship_percentage: formData.scholarship_percentage ? parseInt(formData.scholarship_percentage) : null,
@@ -481,23 +465,23 @@ export default function NewUniversityPage() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="website">Website</Label>
+                      <Label htmlFor="website_url">Website</Label>
                       <Input
-                        id="website"
+                        id="website_url"
                         type="url"
                         placeholder="https://www.example.edu.cn"
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        value={formData.website_url}
+                        onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="founded_year">Founded Year</Label>
+                      <Label htmlFor="established_year">Founded Year</Label>
                       <Input
-                        id="founded_year"
+                        id="established_year"
                         type="number"
                         placeholder="e.g., 1911"
-                        value={formData.founded_year}
-                        onChange={(e) => setFormData({ ...formData, founded_year: e.target.value })}
+                        value={formData.established_year}
+                        onChange={(e) => setFormData({ ...formData, established_year: e.target.value })}
                       />
                     </div>
                   </div>
@@ -620,13 +604,13 @@ export default function NewUniversityPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="ranking_international">International Ranking</Label>
+                      <Label htmlFor="ranking_world">International Ranking</Label>
                       <Input
-                        id="ranking_international"
+                        id="ranking_world"
                         type="number"
                         placeholder="e.g., 20"
-                        value={formData.ranking_international}
-                        onChange={(e) => setFormData({ ...formData, ranking_international: e.target.value })}
+                        value={formData.ranking_world}
+                        onChange={(e) => setFormData({ ...formData, ranking_world: e.target.value })}
                       />
                     </div>
                   </div>
@@ -651,23 +635,13 @@ export default function NewUniversityPage() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="description_en">Description (English)</Label>
+                      <Label htmlFor="description">Description</Label>
                       <Textarea
-                        id="description_en"
-                        placeholder="Description in English..."
+                        id="description"
+                        placeholder="University description..."
                         rows={4}
-                        value={formData.description_en}
-                        onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description_cn">Description (Chinese)</Label>
-                      <Textarea
-                        id="description_cn"
-                        placeholder="中文描述..."
-                        rows={4}
-                        value={formData.description_cn}
-                        onChange={(e) => setFormData({ ...formData, description_cn: e.target.value })}
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       />
                     </div>
                   </div>
@@ -699,37 +673,6 @@ export default function NewUniversityPage() {
                         placeholder="https://example.com/cover.jpg"
                         value={formData.cover_image_url}
                         onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="contact_email">Contact Email</Label>
-                      <Input
-                        id="contact_email"
-                        type="email"
-                        placeholder="admissions@university.edu.cn"
-                        value={formData.contact_email}
-                        onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contact_phone">Contact Phone</Label>
-                      <Input
-                        id="contact_phone"
-                        type="tel"
-                        placeholder="+86 10 1234 5678"
-                        value={formData.contact_phone}
-                        onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
                       />
                     </div>
                   </div>

@@ -23,32 +23,56 @@ import {
   IconSchool,
   IconWorld,
   IconEye,
-  IconTrophy
+  IconTrophy,
+  IconCalendar,
+  IconCurrencyDollar,
+  IconTag,
 } from "@tabler/icons-react"
 
+// Interface matching actual database schema
 interface UniversityDetail {
   id: string
   name_en: string
   name_cn: string | null
-  short_name: string | null
+  slug: string | null
   logo_url: string | null
+  cover_image_url: string | null
   province: string
   city: string
+  country: string | null
+  location: string | null
   type: string | string[]
   category: string | null
+  tier: string | null
   ranking_national: number | null
-  website?: string
-  description?: string
+  ranking_world: number | null
+  established_year: number | null
+  website_url: string | null
+  description: string | null
+  facilities: string | null
+  accommodation_available: boolean | null
   scholarship_available: boolean
+  scholarship_percentage: number | null
+  tuition_min: number | null
+  tuition_max: number | null
+  tuition_currency: string | null
+  default_tuition_per_year: number | null
+  default_tuition_currency: string | null
+  has_application_fee: boolean | null
+  application_deadline: string | null
+  intake_months: number[] | null
+  csca_required: boolean | null
   is_active: boolean
-  view_count: number
+  meta_title: string | null
+  meta_description: string | null
+  tags: string[] | null
   created_at: string
+  updated_at: string | null
   programs?: Array<{
     id: string
-    name_en: string
+    name: string
     degree_level: string
-    status: string
-    _count?: { applications: number }
+    is_active: boolean
   }>
   _count?: {
     programs: number
@@ -104,6 +128,12 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
     )
   }
 
+  const formatIntakeMonths = (months: number[] | null) => {
+    if (!months || months.length === 0) return '—'
+    const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return months.map(m => monthNames[m] || m).join(', ')
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
@@ -114,12 +144,22 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
             Back to Universities
           </Link>
         </Button>
-        <Button asChild>
-          <Link href={`/admin/v2/universities/${university.id}/edit`}>
-            <IconEdit className="mr-2 h-4 w-4" />
-            Edit University
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          {university.website_url && (
+            <Button variant="outline" asChild>
+              <a href={university.website_url} target="_blank" rel="noopener noreferrer">
+                <IconWorld className="mr-2 h-4 w-4" />
+                Visit Website
+              </a>
+            </Button>
+          )}
+          <Button asChild>
+            <Link href={`/admin/v2/universities/${university.id}/edit`}>
+              <IconEdit className="mr-2 h-4 w-4" />
+              Edit University
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -129,7 +169,7 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-start gap-6">
-                <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {university.logo_url ? (
                     <img src={university.logo_url} alt={university.name_en} className="h-16 w-16 object-contain" />
                   ) : (
@@ -142,43 +182,54 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                     {university.ranking_national && (
                       <Badge variant="secondary">
                         <IconTrophy className="mr-1 h-3 w-3" />
-                        #{university.ranking_national}
+                        #{university.ranking_national} National
+                      </Badge>
+                    )}
+                    {university.ranking_world && (
+                      <Badge variant="outline">
+                        #{university.ranking_world} World
                       </Badge>
                     )}
                   </div>
                   {university.name_cn && (
                     <p className="text-lg text-muted-foreground">{university.name_cn}</p>
                   )}
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <IconMapPin className="h-4 w-4" />
                       {university.city}, {university.province}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <IconEye className="h-4 w-4" />
-                      {university.view_count} views
-                    </span>
+                    {university.established_year && (
+                      <span className="flex items-center gap-1">
+                        <IconCalendar className="h-4 w-4" />
+                        Est. {university.established_year}
+                      </span>
+                    )}
                   </div>
+                  {university.slug && (
+                    <p className="text-xs text-muted-foreground mt-1">Slug: {university.slug}</p>
+                  )}
+                </div>
+                <div>
+                  <Badge variant={university.is_active ? 'default' : 'secondary'}>
+                    {university.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Details */}
+          {/* Basic Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <div className="text-sm text-muted-foreground">Short Name</div>
-                  <div className="font-medium">{university.short_name || '—'}</div>
-                </div>
-                <div>
                   <div className="text-sm text-muted-foreground">Type</div>
                   <div className="font-medium">
-                    {Array.isArray(university.type) ? university.type.join(', ') : university.type || '—'}
+                    {Array.isArray(university.type) ? university.type.join(', ') || '—' : university.type || '—'}
                   </div>
                 </div>
                 <div>
@@ -186,22 +237,24 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   <div className="font-medium">{university.category || '—'}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Status</div>
-                  <Badge variant={university.is_active ? 'default' : 'secondary'}>
-                    {university.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <div className="text-sm text-muted-foreground">Tier</div>
+                  <div className="font-medium">{university.tier || '—'}</div>
                 </div>
-                {university.website && (
+                <div>
+                  <div className="text-sm text-muted-foreground">Country</div>
+                  <div className="font-medium">{university.country || 'China'}</div>
+                </div>
+                {university.website_url && (
                   <div className="sm:col-span-2">
                     <div className="text-sm text-muted-foreground">Website</div>
                     <a 
-                      href={university.website} 
+                      href={university.website_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="font-medium text-primary hover:underline flex items-center gap-1"
                     >
                       <IconWorld className="h-4 w-4" />
-                      {university.website}
+                      {university.website_url}
                     </a>
                   </div>
                 )}
@@ -211,10 +264,75 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   <Separator className="my-4" />
                   <div>
                     <div className="text-sm text-muted-foreground mb-2">Description</div>
-                    <p className="text-sm">{university.description}</p>
+                    <p className="text-sm whitespace-pre-wrap">{university.description}</p>
                   </div>
                 </>
               )}
+              {university.facilities && (
+                <>
+                  <Separator className="my-4" />
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-2">Facilities</div>
+                    <p className="text-sm whitespace-pre-wrap">{university.facilities}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tuition & Admissions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tuition & Admissions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="text-sm text-muted-foreground">Tuition Range</div>
+                  <div className="font-medium flex items-center gap-1">
+                    <IconCurrencyDollar className="h-4 w-4" />
+                    {university.tuition_min || university.tuition_max ? (
+                      <>
+                        {university.tuition_min?.toLocaleString() || '—'} - {university.tuition_max?.toLocaleString() || '—'} {university.tuition_currency || 'CNY'}
+                      </>
+                    ) : (
+                      'Contact for details'
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Default Tuition/Year</div>
+                  <div className="font-medium">
+                    {university.default_tuition_per_year 
+                      ? `${university.default_tuition_per_year.toLocaleString()} ${university.default_tuition_currency || 'CNY'}`
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Application Deadline</div>
+                  <div className="font-medium">
+                    {university.application_deadline 
+                      ? new Date(university.application_deadline).toLocaleDateString()
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Intake Months</div>
+                  <div className="font-medium">{formatIntakeMonths(university.intake_months)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Has Application Fee</div>
+                  <Badge variant={university.has_application_fee ? 'default' : 'secondary'}>
+                    {university.has_application_fee ? 'Yes' : 'No'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">CSCA Required</div>
+                  <Badge variant={university.csca_required ? 'default' : 'secondary'}>
+                    {university.csca_required ? 'Yes' : 'No'}
+                  </Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -227,7 +345,7 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   Programs
                 </span>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/v2/programs?university=${university.id}`}>
+                  <Link href={`/admin/v2/programs?university_id=${university.id}`}>
                     View All
                   </Link>
                 </Button>
@@ -243,14 +361,14 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   {university.programs.slice(0, 5).map((program) => (
                     <div key={program.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div>
-                        <div className="font-medium">{program.name_en}</div>
+                        <div className="font-medium">{program.name}</div>
                         <div className="text-xs text-muted-foreground capitalize">
                           {program.degree_level}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {program._count?.applications || 0} applications
+                        <Badge variant={program.is_active ? 'default' : 'secondary'}>
+                          {program.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/admin/v2/programs/${program.id}`}>
@@ -280,8 +398,8 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   <div className="text-xs text-muted-foreground">Programs</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{university.view_count}</div>
-                  <div className="text-xs text-muted-foreground">Views</div>
+                  <div className="text-2xl font-bold">{university.scholarship_percentage || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Scholarship %</div>
                 </div>
               </div>
             </CardContent>
@@ -304,8 +422,58 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                   <Badge variant="secondary">No</Badge>
                 )}
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Accommodation</span>
+                {university.accommodation_available ? (
+                  <Badge className="bg-green-500/10 text-green-600">Yes</Badge>
+                ) : (
+                  <Badge variant="secondary">No</Badge>
+                )}
+              </div>
             </CardContent>
           </Card>
+
+          {/* Tags */}
+          {university.tags && university.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IconTag className="h-4 w-4" />
+                  Tags
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1">
+                  {university.tags.map((tag, i) => (
+                    <Badge key={i} variant="outline">{tag}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* SEO Info */}
+          {(university.meta_title || university.meta_description) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>SEO</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {university.meta_title && (
+                  <div>
+                    <div className="text-muted-foreground">Meta Title</div>
+                    <div className="font-medium">{university.meta_title}</div>
+                  </div>
+                )}
+                {university.meta_description && (
+                  <div>
+                    <div className="text-muted-foreground">Meta Description</div>
+                    <div className="text-muted-foreground line-clamp-3">{university.meta_description}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <Card>
@@ -314,7 +482,7 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href={`/admin/v2/programs/new?university=${university.id}`}>
+                <Link href={`/admin/v2/programs/new?university_id=${university.id}`}>
                   <IconSchool className="mr-2 h-4 w-4" />
                   Add Program
                 </Link>

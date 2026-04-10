@@ -117,11 +117,37 @@ export async function PUT(
 
     // Only allow fields that exist in the external database
     const allowedFields = [
-      'name_en', 'name_cn', 'logo_url',
-      'province', 'city', 'website_url', 'type', 'category',
+      // Basic Info
+      'name_en', 'name_cn', 'short_name', 'slug', 'established_year',
+      'website_url', 'logo_url', 'cover_image_url', 'og_image', 'image_url',
+      // Location
+      'province', 'city', 'country', 'location',
+      // Classification
+      'type', 'category', 'tier',
+      // Rankings
       'ranking_national', 'ranking_world',
-      'scholarship_available', 'accommodation_available',
-      'description', 'facilities'
+      // Stats
+      'is_active',
+      // Description
+      'description',
+      // Facilities
+      'facilities',
+      // Accommodation
+      'accommodation_available',
+      // Scholarship
+      'scholarship_available', 'scholarship_percentage', 'scholarship_by_degree',
+      // Tuition
+      'tuition_min', 'tuition_max', 'tuition_currency',
+      'default_tuition_per_year', 'default_tuition_currency', 'use_default_tuition', 'tuition_by_degree',
+      // Application
+      'has_application_fee', 'application_deadline', 'intake_months',
+      'csca_required', 'acceptance_flexibility',
+      // Media
+      'images', 'video_urls',
+      // SEO
+      'meta_title', 'meta_description', 'meta_keywords',
+      // Tags
+      'tags',
     ];
 
     for (const field of allowedFields) {
