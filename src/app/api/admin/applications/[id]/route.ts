@@ -134,17 +134,82 @@ export async function GET(
         old_status,
         new_status,
         notes,
+        changed_by,
         created_at
       `)
       .eq('application_id', id)
       .order('created_at', { ascending: false });
 
+    // Fetch changed_by user info for status history
+    const historyWithUsers = await Promise.all(
+      (history || []).map(async (h) => {
+        let changedByName: string | null = null;
+        if (h.changed_by) {
+          const { data: changer } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', h.changed_by)
+            .maybeSingle();
+          changedByName = changer?.full_name || null;
+        }
+        return { ...h, changed_by_name: changedByName };
+      })
+    );
+
+    // Fetch documents for this application
+    const { data: documents } = await supabase
+      .from('application_documents')
+      .select(`
+        id,
+        document_type,
+        file_key,
+        file_name,
+        file_size,
+        content_type,
+        status,
+        rejection_reason,
+        uploaded_at,
+        created_at
+      `)
+      .eq('application_id', id)
+      .order('created_at', { ascending: false });
+
+    // Fetch meetings for this application
+    const { data: meetings } = await supabase
+      .from('meetings')
+      .select(`
+        id,
+        title,
+        meeting_date,
+        duration_minutes,
+        platform,
+        meeting_link,
+        meeting_id,
+        password,
+        status,
+        notes,
+        created_at
+      `)
+      .eq('application_id', id)
+      .order('meeting_date', { ascending: true });
+
+    // Extract profile_snapshot fields
+    const snapshot = application.profile_snapshot || {};
+    const personal_statement = snapshot.personal_statement || null;
+    const study_plan = snapshot.study_plan || null;
+    const intake = snapshot.intake || null;
+
     return NextResponse.json({ 
       application: {
         ...application,
+        personal_statement,
+        study_plan,
+        intake,
         partner: partnerInfo,
         reviewer: reviewerInfo,
-        status_history: history || []
+        status_history: historyWithUsers || [],
+        documents: documents || [],
+        meetings: meetings || []
       }
     });
   } catch (error) {

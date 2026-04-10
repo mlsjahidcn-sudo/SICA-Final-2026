@@ -11,9 +11,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Select,
   SelectContent,
@@ -35,8 +37,51 @@ import {
   IconAlertCircle,
   IconSend,
   IconDownload,
-  IconMessage
+  IconMessage,
+  IconBuilding,
+  IconVideo,
+  IconCheck,
+  IconX,
+  IconLoader2,
+  IconExternalLink
 } from "@tabler/icons-react"
+
+interface Document {
+  id: string
+  document_type: string
+  file_key: string
+  file_name: string
+  file_size: number
+  content_type: string
+  status: string
+  rejection_reason: string | null
+  uploaded_at: string
+  created_at: string
+}
+
+interface Meeting {
+  id: string
+  title: string
+  meeting_date: string
+  duration_minutes: number
+  platform: string
+  meeting_link: string | null
+  meeting_id: string | null
+  password: string | null
+  status: string
+  notes: string | null
+  created_at: string
+}
+
+interface StatusHistory {
+  id: string
+  old_status: string | null
+  new_status: string
+  notes: string | null
+  changed_by: string | null
+  changed_by_name: string | null
+  created_at: string
+}
 
 interface ApplicationDetail {
   id: string
@@ -47,6 +92,9 @@ interface ApplicationDetail {
   priority: number | null
   notes: string | null
   profile_snapshot: Record<string, unknown> | null
+  personal_statement: string | null
+  study_plan: string | null
+  intake: string | null
   submitted_at: string | null
   reviewed_at: string | null
   reviewed_by: string | null
@@ -84,6 +132,7 @@ interface ApplicationDetail {
       name_cn: string | null
       city: string
       province: string
+      logo_url?: string | null
     } | null
   } | null
   partner: {
@@ -96,13 +145,9 @@ interface ApplicationDetail {
     id: string
     full_name: string
   } | null
-  status_history: Array<{
-    id: string
-    old_status: string | null
-    new_status: string
-    notes: string | null
-    created_at: string
-  }>
+  status_history: StatusHistory[]
+  documents: Document[]
+  meetings: Meeting[]
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: string }> = {
@@ -114,6 +159,34 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: str
   accepted: { color: 'text-green-600', bgColor: 'bg-green-500/10', label: 'Accepted' },
   rejected: { color: 'text-red-600', bgColor: 'bg-red-500/10', label: 'Rejected' },
   withdrawn: { color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'Withdrawn' },
+}
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  passport: 'Passport',
+  diploma: 'Diploma',
+  transcript: 'Academic Transcript',
+  language_certificate: 'Language Certificate',
+  photo: 'Passport Photo',
+  recommendation: 'Recommendation Letter',
+  cv: 'CV/Resume',
+  study_plan: 'Study Plan',
+  financial_proof: 'Financial Proof',
+  medical_exam: 'Medical Exam',
+  police_clearance: 'Police Clearance',
+  other: 'Other',
+}
+
+const DOCUMENT_STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: string; icon: typeof IconClock }> = {
+  pending: { color: 'text-amber-600', bgColor: 'bg-amber-500/10', label: 'Pending', icon: IconClock },
+  verified: { color: 'text-green-600', bgColor: 'bg-green-500/10', label: 'Verified', icon: IconCheck },
+  rejected: { color: 'text-red-600', bgColor: 'bg-red-500/10', label: 'Rejected', icon: IconX },
+}
+
+const MEETING_STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: string }> = {
+  scheduled: { color: 'text-blue-600', bgColor: 'bg-blue-500/10', label: 'Scheduled' },
+  completed: { color: 'text-green-600', bgColor: 'bg-green-500/10', label: 'Completed' },
+  cancelled: { color: 'text-red-600', bgColor: 'bg-red-500/10', label: 'Cancelled' },
+  rescheduled: { color: 'text-amber-600', bgColor: 'bg-amber-500/10', label: 'Rescheduled' },
 }
 
 function ApplicationDetailContent({ applicationId }: { applicationId: string }) {
@@ -189,6 +262,35 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
     }
   }
 
+  const handleDownloadDocument = async (doc: Document) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch(`/api/documents/${doc.id}/url`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.url) {
+          // Use fetch + blob for cross-origin download
+          const fileResponse = await fetch(data.url);
+          const blob = await fileResponse.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = doc.file_name;
+          link.click();
+          window.URL.revokeObjectURL(blobUrl);
+        }
+      } else {
+        toast.error('Failed to get download URL');
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Failed to download document');
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -205,6 +307,12 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
   if (isLoading) {
@@ -229,185 +337,445 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild className="w-fit">
-          <Link href="/admin/v2/applications">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to Applications
-          </Link>
-        </Button>
-        <Badge className={`${statusConfig.bgColor} ${statusConfig.color} text-sm`}>
-          {statusConfig.label}
-        </Badge>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild className="w-fit">
+            <Link href="/admin/v2/applications">
+              <IconArrowLeft className="mr-2 h-4 w-4" />
+              Back to Applications
+            </Link>
+          </Button>
+        </div>
+        <div className="flex items-center gap-3">
+          {application.priority !== null && application.priority > 0 && (
+            <Badge variant={application.priority >= 2 ? 'destructive' : 'secondary'}>
+              {application.priority === 1 ? 'Low' : application.priority === 2 ? 'High' : 'Urgent'} Priority
+            </Badge>
+          )}
+          <Badge className={`${statusConfig.bgColor} ${statusConfig.color} text-sm`}>
+            {statusConfig.label}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div className="flex items-center gap-4">
+        {application.programs?.universities?.logo_url ? (
+          <Avatar className="h-12 w-12 rounded-lg border">
+            <AvatarImage src={application.programs.universities.logo_url} alt="" className="object-contain p-1" />
+            <AvatarFallback className="rounded-lg"><IconBuilding className="h-6 w-6" /></AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center border">
+            <IconBuilding className="h-6 w-6 text-primary" />
+          </div>
+        )}
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {application.students?.users?.full_name || 
+              `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'Unknown Applicant'}
+          </h1>
+          <p className="text-muted-foreground">
+            {application.programs?.name || 'Unknown Program'} · {application.programs?.universities?.name_en || 'Unknown University'}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Applicant Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconUser className="h-5 w-5" />
-                Applicant Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="text-sm text-muted-foreground">Full Name</div>
-                  <div className="font-medium">
-                    {application.students?.users?.full_name || 
-                      `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Email</div>
-                  <div className="font-medium">{application.students?.users?.email || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Nationality</div>
-                  <div className="font-medium">{application.students?.nationality || 'N/A'}</div>
-                </div>
-                {application.students?.gender && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Gender</div>
-                    <div className="font-medium capitalize">{application.students.gender}</div>
-                  </div>
-                )}
-                {application.students?.users?.phone && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Phone</div>
-                    <div className="font-medium">{application.students.users.phone}</div>
-                  </div>
-                )}
-                {application.students?.highest_education && (
-                  <div>
-                    <div className="text-sm text-muted-foreground">Education</div>
-                    <div className="font-medium">{application.students.highest_education}</div>
-                  </div>
-                )}
-                {application.students?.current_address && (
-                  <div className="sm:col-span-2">
-                    <div className="text-sm text-muted-foreground">Address</div>
-                    <div className="font-medium">{application.students.current_address}</div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Program Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconSchool className="h-5 w-5" />
-                Program Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-medium text-lg">{application.programs?.name || 'N/A'}</div>
-                  </div>
-                  <Badge variant="secondary" className="capitalize">
-                    {application.programs?.degree_level || 'N/A'}
-                  </Badge>
-                </div>
-                <Separator />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center gap-2">
-                    <IconSchool className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">University</div>
-                      <div className="font-medium">{application.programs?.universities?.name_en || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <IconMapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">Location</div>
-                      <div className="font-medium">
-                        {application.programs?.universities?.city || 'N/A'}, {application.programs?.universities?.province || ''}
-                      </div>
-                    </div>
-                  </div>
-                  {application.programs?.duration_years && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">Duration</div>
-                      <div className="font-medium">{application.programs.duration_years} years</div>
-                    </div>
-                  )}
-                  {application.programs?.tuition_fee_per_year && (
-                    <div>
-                      <div className="text-sm text-muted-foreground">Tuition</div>
-                      <div className="font-medium">
-                        {application.programs.currency || 'CNY'} {application.programs.tuition_fee_per_year.toLocaleString()}/year
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconFileText className="h-5 w-5" />
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="documents">
                 Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4 text-muted-foreground">
-                Documents available in the Documents tab
-              </div>
-            </CardContent>
-          </Card>
+                {application.documents.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{application.documents.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="history">Status History</TabsTrigger>
+              <TabsTrigger value="meetings">
+                Meetings
+                {application.meetings.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{application.meetings.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Status History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconClock className="h-5 w-5" />
-                Status History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(application.status_history?.length ?? 0) === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  No status changes yet
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(application.status_history || []).map((history, index) => (
-                    <div key={history.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        {index < (application.status_history?.length ?? 0) - 1 && (
-                          <div className="h-full w-0.5 bg-border" />
-                        )}
-                      </div>
-                      <div className="pb-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {STATUS_CONFIG[history.new_status]?.label || history.new_status}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(history.created_at)}
-                          </span>
-                        </div>
-                        {history.notes && (
-                          <p className="text-sm text-muted-foreground mt-1">{history.notes}</p>
-                        )}
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-4">
+              {/* Applicant Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <IconUser className="h-4 w-4" />
+                    Applicant Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Full Name</div>
+                      <div className="font-medium">
+                        {application.students?.users?.full_name || 
+                          `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'N/A'}
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Email</div>
+                      <div className="font-medium">{application.students?.users?.email || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Nationality</div>
+                      <div className="font-medium">{application.students?.nationality || 'N/A'}</div>
+                    </div>
+                    {application.students?.gender && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Gender</div>
+                        <div className="font-medium capitalize">{application.students.gender}</div>
+                      </div>
+                    )}
+                    {application.students?.users?.phone && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Phone</div>
+                        <div className="font-medium">{application.students.users.phone}</div>
+                      </div>
+                    )}
+                    {application.students?.highest_education && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Education</div>
+                        <div className="font-medium">{application.students.highest_education}</div>
+                      </div>
+                    )}
+                    {application.students?.wechat_id && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">WeChat ID</div>
+                        <div className="font-medium">{application.students.wechat_id}</div>
+                      </div>
+                    )}
+                    {application.intake && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">Intake</div>
+                        <div className="font-medium">{application.intake}</div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Program Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <IconSchool className="h-4 w-4" />
+                    Program Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium text-lg">{application.programs?.name || 'N/A'}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                          <IconMapPin className="h-3 w-3" />
+                          {application.programs?.universities?.name_en || 'N/A'}, {application.programs?.universities?.city || ''}
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="capitalize">
+                        {application.programs?.degree_level || 'N/A'}
+                      </Badge>
+                    </div>
+                    <Separator />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      {application.programs?.duration_years && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Duration</div>
+                          <div className="font-medium">{application.programs.duration_years} years</div>
+                        </div>
+                      )}
+                      {application.programs?.tuition_fee_per_year && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Tuition</div>
+                          <div className="font-medium">
+                            {application.programs.currency || 'CNY'} {application.programs.tuition_fee_per_year.toLocaleString()}/year
+                          </div>
+                        </div>
+                      )}
+                      {application.programs?.language && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Language</div>
+                          <div className="font-medium capitalize">{application.programs.language}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Partner Info */}
+              {application.partner && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IconBuilding className="h-4 w-4" />
+                      Partner Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Partner Name</div>
+                        <div className="font-medium">{application.partner.full_name || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Email</div>
+                        <div className="font-medium">{application.partner.email || 'N/A'}</div>
+                      </div>
+                      {application.partner.company_name && (
+                        <div>
+                          <div className="text-sm text-muted-foreground">Company</div>
+                          <div className="font-medium">{application.partner.company_name}</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+
+              {/* Personal Statement */}
+              {application.personal_statement && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IconFileText className="h-4 w-4" />
+                      Personal Statement
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap">{application.personal_statement}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{application.personal_statement.length} characters</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Study Plan */}
+              {application.study_plan && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IconFileText className="h-4 w-4" />
+                      Study Plan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap">{application.study_plan}</p>
+                    <p className="text-xs text-muted-foreground mt-2">{application.study_plan.length} characters</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Notes */}
+              {application.notes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <IconMessage className="h-4 w-4" />
+                      Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap">{application.notes}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Documents Tab */}
+            <TabsContent value="documents" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span>Application Documents</span>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/v2/applications/${applicationId}/documents`}>
+                        Manage Documents
+                      </Link>
+                    </Button>
+                  </CardTitle>
+                  <CardDescription>
+                    Documents submitted with this application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {application.documents.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <IconFileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No documents uploaded yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {application.documents.map((doc) => {
+                        const docStatus = DOCUMENT_STATUS_CONFIG[doc.status] || DOCUMENT_STATUS_CONFIG.pending
+                        const StatusIcon = docStatus.icon
+                        return (
+                          <div key={doc.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <IconFileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm truncate">{DOCUMENT_TYPE_LABELS[doc.document_type] || doc.document_type}</p>
+                                <Badge className={`${docStatus.bgColor} ${docStatus.color} text-xs`}>
+                                  <StatusIcon className="h-3 w-3 mr-1" />
+                                  {docStatus.label}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {doc.file_name} · {formatFileSize(doc.file_size)}
+                              </p>
+                              {doc.rejection_reason && (
+                                <p className="text-xs text-red-500 mt-1">Reason: {doc.rejection_reason}</p>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
+                              <IconDownload className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Status History Tab */}
+            <TabsContent value="history" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <IconClock className="h-4 w-4" />
+                    Status History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {application.status_history.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <IconClock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No status changes recorded</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      {application.status_history.map((history, index) => (
+                        <div key={history.id} className="flex gap-4 pb-6 last:pb-0">
+                          <div className="flex flex-col items-center">
+                            <div className="h-3 w-3 rounded-full bg-primary" />
+                            {index < application.status_history.length - 1 && (
+                              <div className="flex-1 w-0.5 bg-border" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className={`${STATUS_CONFIG[history.new_status]?.bgColor || 'bg-gray-500/10'} ${STATUS_CONFIG[history.new_status]?.color || 'text-gray-600'}`}>
+                                {STATUS_CONFIG[history.new_status]?.label || history.new_status}
+                              </Badge>
+                              {history.old_status && (
+                                <>
+                                  <span className="text-xs text-muted-foreground">from</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {STATUS_CONFIG[history.old_status]?.label || history.old_status}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <IconClock className="h-3 w-3" />
+                              {formatDateTime(history.created_at)}
+                              {history.changed_by_name && (
+                                <>
+                                  <span>·</span>
+                                  <span>by {history.changed_by_name}</span>
+                                </>
+                              )}
+                            </div>
+                            {history.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
+                                {history.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Meetings Tab */}
+            <TabsContent value="meetings" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span>Scheduled Meetings</span>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/v2/applications/${applicationId}/meeting`}>
+                        <IconCalendar className="mr-2 h-4 w-4" />
+                        Schedule Meeting
+                      </Link>
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {application.meetings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <IconVideo className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No meetings scheduled</p>
+                      <Button variant="outline" size="sm" className="mt-4" asChild>
+                        <Link href={`/admin/v2/applications/${applicationId}/meeting`}>
+                          Schedule a Meeting
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {application.meetings.map((meeting) => {
+                        const meetingStatus = MEETING_STATUS_CONFIG[meeting.status] || MEETING_STATUS_CONFIG.scheduled
+                        return (
+                          <div key={meeting.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <IconVideo className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">{meeting.title}</p>
+                                <Badge className={`${meetingStatus.bgColor} ${meetingStatus.color} text-xs`}>
+                                  {meetingStatus.label}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(meeting.meeting_date)} · {meeting.duration_minutes} min · {meeting.platform}
+                              </p>
+                              {meeting.notes && (
+                                <p className="text-xs text-muted-foreground mt-1">{meeting.notes}</p>
+                              )}
+                            </div>
+                            {meeting.meeting_link && meeting.status === 'scheduled' && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer">
+                                  <IconExternalLink className="h-4 w-4 mr-1" />
+                                  Join
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
@@ -451,23 +819,34 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
             </CardContent>
           </Card>
 
-          {/* Meetings */}
+          {/* Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="text-lg">Meetings</span>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/v2/applications/${applicationId}/meeting`}>
-                    <IconCalendar className="mr-2 h-4 w-4" />
-                    Schedule
-                  </Link>
-                </Button>
-              </CardTitle>
+              <CardTitle className="text-lg">Timeline</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                No meetings scheduled
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Created</span>
+                <span>{formatDate(application.created_at)}</span>
               </div>
+              {application.submitted_at && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Submitted</span>
+                  <span>{formatDate(application.submitted_at)}</span>
+                </div>
+              )}
+              {application.reviewed_at && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Reviewed</span>
+                  <span>{formatDate(application.reviewed_at)}</span>
+                </div>
+              )}
+              {application.reviewer && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Reviewer</span>
+                  <span>{application.reviewer.full_name}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -491,6 +870,18 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                   </Link>
                 </Button>
               )}
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={`/admin/v2/applications/${applicationId}/documents`}>
+                  <IconFileText className="mr-2 h-4 w-4" />
+                  Manage Documents
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={`/admin/v2/applications/${applicationId}/meeting`}>
+                  <IconCalendar className="mr-2 h-4 w-4" />
+                  Schedule Meeting
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>
