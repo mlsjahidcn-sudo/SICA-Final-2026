@@ -24,11 +24,8 @@ export function AuthGuard({
     if (loading) return;
 
     if (!user) {
-      // Not authenticated - redirect to appropriate login
-      const loginPath = pathname.startsWith('/admin') ? '/admin/login' :
-                       pathname.startsWith('/partner') ? '/partner/login' : 
-                       '/login';
-      const redirect = fallbackPath || loginPath;
+      // Not authenticated - redirect to unified login
+      const redirect = fallbackPath || '/login';
       router.push(`${redirect}?redirect=${encodeURIComponent(pathname)}`);
       return;
     }

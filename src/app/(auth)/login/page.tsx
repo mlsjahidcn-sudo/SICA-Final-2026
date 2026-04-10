@@ -8,13 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
 import {
   Mail,
   Lock,
@@ -23,8 +17,7 @@ import {
   Globe,
   GraduationCap,
   Award,
-  Building2,
-  Settings,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -54,7 +47,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPortalDialog, setShowPortalDialog] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -120,12 +112,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Brand Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/80 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 via-slate-800/95 to-slate-900 relative overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
         </div>
 
         {/* Content */}
@@ -157,32 +149,24 @@ export default function LoginPage() {
           <div className="space-y-6">
             {features.map((feature, index) => (
               <div key={index} className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-                  <feature.icon className="h-6 w-6 text-white" />
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/5 backdrop-blur flex items-center justify-center border border-white/10">
+                  <feature.icon className="h-6 w-6 text-white/80" />
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-white/70 text-sm">{feature.description}</p>
+                  <p className="text-white/60 text-sm">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Stats */}
-          <div className="mt-12 pt-8 border-t border-white/20">
-            <div className="grid grid-cols-3 gap-6">
-              <div>
-                <div className="text-3xl font-bold text-white">50K+</div>
-                <div className="text-sm text-white/60">Students Placed</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-white">95%</div>
-                <div className="text-sm text-white/60">Success Rate</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-white">100+</div>
-                <div className="text-sm text-white/60">Countries</div>
-              </div>
+          {/* Security Notice */}
+          <div className="mt-12 pt-8 border-t border-white/10">
+            <div className="flex items-center gap-3 text-white/60">
+              <Shield className="h-5 w-5" />
+              <p className="text-sm">
+                Secure access with role-based permissions for all users
+              </p>
             </div>
           </div>
         </div>
@@ -283,27 +267,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background text-muted-foreground">or continue with</span>
-            </div>
-          </div>
-
-          {/* Other Portals */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-12 text-base"
-            onClick={() => setShowPortalDialog(true)}
-          >
-            <Building2 className="mr-2 h-5 w-5" />
-            Partner or Admin Portal
-          </Button>
-
           {/* Sign Up Link */}
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
@@ -313,46 +276,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-
-      {/* Portal Selection Dialog */}
-      <Dialog open={showPortalDialog} onOpenChange={setShowPortalDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select Portal</DialogTitle>
-            <DialogDescription>
-              Choose the portal you want to access
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Link href="/partner/login" onClick={() => setShowPortalDialog(false)}>
-              <Button variant="outline" className="w-full h-16 justify-start text-left">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Partner Portal</div>
-                    <div className="text-xs text-muted-foreground">For consultancy partners</div>
-                  </div>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/admin/login" onClick={() => setShowPortalDialog(false)}>
-              <Button variant="outline" className="w-full h-16 justify-start text-left">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                    <Settings className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Admin Portal</div>
-                    <div className="text-xs text-muted-foreground">For platform administrators</div>
-                  </div>
-                </div>
-              </Button>
-            </Link>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

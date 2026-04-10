@@ -136,16 +136,10 @@ export function Footer() {
           </p>
           <div className="flex space-x-4">
             <Link
-              href="/partner/login"
+              href="/login"
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
-              Partner Portal
-            </Link>
-            <Link
-              href="/admin/login"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Admin Portal
+              Sign In
             </Link>
           </div>
         </div>

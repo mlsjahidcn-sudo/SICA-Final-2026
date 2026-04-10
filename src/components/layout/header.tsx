@@ -397,17 +397,11 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Portals</DropdownMenuLabel>
+                    <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                      <Link href="/partner/login" className="flex items-center">
+                      <Link href="/login" className="flex items-center">
                         <Building2 className="mr-2 h-4 w-4" />
-                        Partner Portal
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/login" className="flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Admin Portal
+                        Sign In
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

@@ -17,7 +17,7 @@ export function proxy(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password', 
                        '/universities', '/programs', '/compare', '/about', 
-                       '/contact', '/partners', '/partner/login', '/partner/register', '/admin/login',
+                       '/contact', '/partners', '/partner/register',
                        '/unauthorized', '/blog', '/i18n-test'];
   
   const isPublicRoute = publicRoutes.some(route => 
@@ -33,17 +33,17 @@ export function proxy(request: NextRequest) {
 
   // Admin routes require admin role
   const isAdminRoute = pathname.startsWith('/admin');
-  if (isAdminRoute && pathname !== '/admin/login') {
+  if (isAdminRoute) {
     if (!token) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
   // Partner routes require partner role
   const isPartnerRoute = pathname.startsWith('/partner');
-  if (isPartnerRoute && !pathname.includes('/login') && !pathname.includes('/register')) {
+  if (isPartnerRoute && !pathname.includes('/register')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/partner/login', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
