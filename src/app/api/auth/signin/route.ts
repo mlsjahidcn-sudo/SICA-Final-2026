@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch user profile
-    const { data: profile, error: profileError } = await supabase
+    // Fetch user profile using service role client (bypasses RLS)
+    const adminClient = getSupabaseClient();
+    const { data: profile, error: profileError } = await adminClient
       .from('users')
       .select('*')
       .eq('id', authData.user.id)

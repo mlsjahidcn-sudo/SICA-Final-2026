@@ -12,35 +12,22 @@ interface User {
 
 export async function verifyAuthToken(request: NextRequest): Promise<User | null> {
   try {
-    console.log('=== verifyAuthToken called');
-    
     const authHeader = request.headers.get('authorization');
-    console.log('Auth header:', authHeader ? 'exists' : 'missing');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Invalid auth header format');
       return null;
     }
 
     const token = authHeader.replace('Bearer ', '');
-    console.log('Token extracted, length:', token.length);
     
     const supabase = getSupabaseClient(token);
-    console.log('Supabase client with token created');
 
     // Verify the token with Supabase
-    // Must pass the JWT explicitly since persistSession is false and client has no internal session
-    console.log('Calling supabase.auth.getUser(token)');
     const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
 
-    console.log('getUser result - error:', error?.message, 'user:', !!authUser);
-
     if (error || !authUser) {
-      console.log('getUser failed');
       return null;
     }
-
-    console.log('User authenticated, constructing profile from JWT metadata for id:', authUser.id);
     
     // Try to get role from users table first (most reliable), then fall back to JWT metadata
     let role = authUser.user_metadata?.role;
@@ -75,7 +62,6 @@ export async function verifyAuthToken(request: NextRequest): Promise<User | null
       referred_by_partner_id: userProfile?.referred_by_partner_id || authUser.user_metadata?.referred_by_partner_id,
     };
 
-    console.log('Returning constructed user with role:', user.role);
     return user;
   } catch (error) {
     console.error('Error verifying auth token:', error);

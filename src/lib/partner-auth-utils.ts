@@ -33,7 +33,7 @@ export async function verifyPartnerAuth(request: NextRequest): Promise<{ user: P
     .from('users')
     .select('id, email, role, partner_role, partner_id, full_name')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
   
   if (error || !partnerUser) {
     return { error: NextResponse.json({ error: 'Partner user not found' }, { status: 404 }) };

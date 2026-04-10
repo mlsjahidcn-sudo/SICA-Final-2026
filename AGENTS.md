@@ -31,6 +31,18 @@
 
 When running SQL queries against the external Supabase database, **always** use the `exec_sql` tool with `env: "develop"`. This ensures the SQL is executed against the external Supabase at `maqzxlcsgfpwnfyleoga.supabase.co`, NOT a local database.
 
+**⚠️ CRITICAL: exec_sql may return stale data!** The `exec_sql` tool may cache results or read from a replica. For critical data verification (role, partner_role, etc.), **ALWAYS verify via the Supabase REST API** using the service role key, NOT `exec_sql`:
+
+```bash
+# ✅ CORRECT - Real-time verification via REST API
+curl -s "https://maqzxlcsgfpwnfyleoga.supabase.co/rest/v1/users?select=id,email,role,partner_role&id=eq.USER_ID" \
+  -H "apikey: SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer SERVICE_ROLE_KEY"
+
+# ❌ UNRELIABLE - May return stale data
+exec_sql(sql: "SELECT role FROM users WHERE id = 'USER_ID';")
+```
+
 **⚠️ IMPORTANT**: Do NOT use `psql`, `pg_isready`, or any shell-based PostgreSQL client. These may connect to a local PostgreSQL instance if one exists, causing schema/data drift between local and external databases.
 
 ```yaml
@@ -57,6 +69,16 @@ curl -s "https://maqzxlcsgfpwnfyleoga.supabase.co/rest/v1/{table}?select=*&limit
 ```
 
 **Database Connection File**: `src/storage/database/supabase-client.ts`
+
+### ⚠️ RLS on `users` Table — Infinite Recursion
+
+The `users` table has RLS enabled but queries via the **anon key client** result in an infinite recursion error. This is caused by RLS policies on other tables (e.g., `partner_team_activity`) that reference `users` in their policy expressions, creating a circular dependency.
+
+**Impact**: All direct PostgREST queries with the anon key to `users` fail with `42P17: infinite recursion detected`.
+
+**Workaround**: All application code uses the **service role key** (`getSupabaseClient()`) to query `users`, which bypasses RLS entirely. The signin API was updated to use the service role client for profile lookup.
+
+**RLS Helper Functions**: `public.is_partner_admin()` and `public.get_partner_admin_id()` are `SECURITY DEFINER` functions used in RLS policies to avoid referencing `users` directly in policy expressions. When adding new RLS policies that need to check partner roles, always use these helper functions instead of querying `users` directly.
 
 ---
 
