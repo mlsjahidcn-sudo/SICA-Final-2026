@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Use anon key client for auth verification
     const supabase = getSupabaseClient(token);
 
     // Get current user - must pass JWT explicitly since persistSession is false
@@ -25,8 +26,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch user profile
-    const { data: profile, error: profileError } = await supabase
+    // Use service role client for database operations (bypasses RLS)
+    const adminClient = getSupabaseClient();
+    const { data: profile, error: profileError } = await adminClient
       .from('users')
       .select('*')
       .eq('id', authUser.id)
