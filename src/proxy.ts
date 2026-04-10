@@ -18,7 +18,8 @@ export function proxy(request: NextRequest) {
   const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password', 
                        '/universities', '/programs', '/compare', '/about', 
                        '/contact', '/partners', '/partner/register',
-                       '/unauthorized', '/blog', '/i18n-test'];
+                       '/unauthorized', '/blog', '/i18n-test',
+                       '/auth/callback'];
   
   const isPublicRoute = publicRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')

@@ -53,16 +53,49 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching user profile:', profileError);
     }
 
+    // If no profile exists yet (e.g., invited user whose profile insert failed),
+    // auto-create it using the service role client
+    let userProfile = profile;
+    if (!userProfile) {
+      const adminClient = getSupabaseClient();
+      const metaRole = authData.user.user_metadata?.role || 'student';
+      const metaName = authData.user.user_metadata?.full_name || email.split('@')[0];
+      
+      const { data: newProfile, error: createError } = await adminClient
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: authData.user.email!,
+          full_name: metaName,
+          role: metaRole,
+          partner_id: authData.user.user_metadata?.partner_id || null,
+          partner_role: authData.user.user_metadata?.partner_role || null,
+          approval_status: 'approved',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('*')
+        .single();
+
+      if (createError) {
+        console.error('Error auto-creating user profile on signin:', createError);
+        // Non-fatal — continue with auth metadata fallback
+      } else {
+        userProfile = newProfile;
+      }
+    }
+
     const user = {
       id: authData.user.id,
       email: authData.user.email!,
-      role: profile?.role || authData.user.user_metadata?.role || 'student',
-      full_name: profile?.full_name || authData.user.user_metadata?.full_name || 'User',
-      avatar_url: profile?.avatar_url,
-      partner_id: profile?.partner_id,
-      partner_role: profile?.partner_role,
-      approval_status: profile?.approval_status || 'approved',
-      rejection_reason: profile?.rejection_reason,
+      role: userProfile?.role || authData.user.user_metadata?.role || 'student',
+      full_name: userProfile?.full_name || authData.user.user_metadata?.full_name || 'User',
+      avatar_url: userProfile?.avatar_url,
+      partner_id: userProfile?.partner_id,
+      partner_role: userProfile?.partner_role,
+      approval_status: userProfile?.approval_status || 'approved',
+      rejection_reason: userProfile?.rejection_reason,
     };
 
     // Check if partner account is pending approval

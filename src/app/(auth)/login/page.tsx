@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +40,18 @@ const features = [
 ];
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const { user, loading: authLoading, signIn } = useAuth();
   
@@ -47,6 +59,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Show message from auth callback
+  const invited = searchParams.get('invited');
+  const callbackError = searchParams.get('error');
+  const callbackErrorDesc = searchParams.get('error_description');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -196,6 +214,24 @@ export default function LoginPage() {
               Sign in to your account to continue your journey
             </p>
           </div>
+
+          {/* Invite Success Alert */}
+          {invited && (
+            <Alert className="mb-6 border-green-200 bg-green-50 text-green-800">
+              <AlertDescription>
+                Your account has been confirmed! Please log in with your credentials.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Auth Callback Error Alert */}
+          {callbackError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>
+                {callbackErrorDesc || 'Authentication failed. Please try again.'}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Error Alert */}
           {error && (

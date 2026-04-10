@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
     
     const supabase = getSupabaseClient();
     
-    // Check if user already exists
+    // Check if user already exists in users table
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id, email, role, partner_id, full_name')
+      .select('id, email, role, partner_id, full_name, approval_status')
       .eq('email', email)
       .single();
     
@@ -86,15 +86,22 @@ export async function POST(request: NextRequest) {
       }
       
       // User exists but isn't in a team - add them
+      const updatePayload: Record<string, unknown> = {
+        role: 'partner',
+        partner_role: partner_role,
+        partner_id: partnerAdminId,
+        full_name: full_name || existingUser.full_name,
+        is_active: true,
+      };
+
+      // Also approve if they were pending
+      if (existingUser.approval_status === 'pending') {
+        updatePayload.approval_status = 'approved';
+      }
+
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
-        .update({
-          role: 'partner',
-          partner_role: partner_role,
-          partner_id: partnerAdminId,
-          full_name: full_name || existingUser.full_name,
-          is_active: true, // If user exists, activate them
-        })
+        .update(updatePayload)
         .eq('id', existingUser.id)
         .select('id, email, full_name, partner_role, partner_id')
         .single();
@@ -107,6 +114,18 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      // If password provided, also update their auth password
+      if (password) {
+        const { error: updatePassError } = await supabase.auth.admin.updateUserById(
+          existingUser.id,
+          { password }
+        );
+        if (updatePassError) {
+          console.error('Error updating user password:', updatePassError);
+          // Non-fatal — user is already added to team
+        }
+      }
+      
       // Log the activity
       await logPartnerTeamActivity(
         partnerAdminId,
@@ -117,28 +136,28 @@ export async function POST(request: NextRequest) {
           email, 
           full_name: updatedUser.full_name,
           partner_role,
-          action: password ? 'created_user_with_password' : 'added_existing_user'
+          action: password ? 'added_existing_user_with_password' : 'added_existing_user'
         },
         request
       );
       
-      // If password not provided, send invitation email; otherwise, no email needed
-      if (!password) {
-        await sendTeamInvitationEmail(email, updatedUser.full_name || email, partnerUser.full_name || partnerUser.email);
-      }
+      // Send notification email (they already have an account)
+      await sendTeamAddedEmail(email, updatedUser.full_name || email, partnerUser.full_name || partnerUser.email);
       
       return NextResponse.json({
         success: true,
-        message: password ? 'User created and added to team successfully' : 'User added to team successfully',
+        message: password ? 'User added to team with new password' : 'User added to team successfully',
         data: updatedUser
       });
     }
     
-    // User doesn't exist - create new user
+    // User doesn't exist in users table - create new user
     let newUser;
-    
+
     if (password) {
-      // Create user with password directly using service role
+      // ============================================
+      // FLOW A: Create user with email + password
+      // ============================================
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email,
         password,
@@ -151,8 +170,15 @@ export async function POST(request: NextRequest) {
       
       if (authError) {
         console.error('Error creating auth user:', authError);
+        // Check for duplicate auth user
+        if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+          return NextResponse.json(
+            { error: 'A user with this email already has an account. Try adding them as an existing user instead.' },
+            { status: 409 }
+          );
+        }
         return NextResponse.json(
-          { error: 'Failed to create user' },
+          { error: 'Failed to create user account' },
           { status: 500 }
         );
       }
@@ -177,6 +203,8 @@ export async function POST(request: NextRequest) {
       
       if (profileError) {
         console.error('Error creating user profile:', profileError);
+        // Attempt cleanup: delete the auth user since profile creation failed
+        await supabase.auth.admin.deleteUser(authData.user.id);
         return NextResponse.json(
           { error: 'Failed to create user profile' },
           { status: 500 }
@@ -184,57 +212,118 @@ export async function POST(request: NextRequest) {
       }
       
       newUser = profileData;
+
+      // Log the activity
+      await logPartnerTeamActivity(
+        partnerAdminId,
+        partnerUser.id,
+        newUser.id,
+        'invite',
+        { 
+          email, 
+          full_name: newUser.full_name,
+          partner_role,
+          action: 'created_user_with_password'
+        },
+        request
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Team member created successfully. They can now log in with the provided email and password.',
+        data: newUser
+      });
+
     } else {
-      // Create user with invitation (no password)
-      const { data: inviteUser, error: createError } = await supabase
+      // ============================================
+      // FLOW B: Invite user by email (no password)
+      // Uses Supabase admin.inviteUserByEmail() which:
+      // 1. Creates a Supabase Auth account
+      // 2. Sends a confirmation email with a magic link
+      // 3. User clicks link → sets their own password
+      // ============================================
+      const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+        email,
+        {
+          data: {
+            full_name: full_name || email.split('@')[0],
+            role: 'partner',
+          },
+          redirectTo: undefined, // Let Supabase use its default redirect
+        }
+      );
+      
+      if (inviteError) {
+        console.error('Error sending invitation:', inviteError);
+        // Check for duplicate auth user
+        if (inviteError.message?.includes('already been registered') || inviteError.message?.includes('already exists')) {
+          return NextResponse.json(
+            { error: 'A user with this email already has an account. Try adding them as an existing user instead.' },
+            { status: 409 }
+          );
+        }
+        return NextResponse.json(
+          { error: 'Failed to send invitation email' },
+          { status: 500 }
+        );
+      }
+
+      // Create user profile in users table, linked to the auth account
+      const { data: profileData, error: profileError } = await supabase
         .from('users')
         .insert({
+          id: inviteData.user.id,
           email,
           full_name: full_name || email.split('@')[0],
           role: 'partner',
           partner_role: partner_role,
           partner_id: partnerAdminId,
-          is_active: false // Mark as inactive until they accept invite
+          approval_status: 'approved', // Auto-approve partner team members
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .select('id, email, full_name, partner_role, partner_id')
         .single();
       
-      if (createError) {
-        console.error('Error creating new user:', createError);
-        return NextResponse.json(
-          { error: 'Failed to create user invitation' },
-          { status: 500 }
-        );
+      if (profileError) {
+        console.error('Error creating invited user profile:', profileError);
+        // Non-fatal: the auth account exists and the user can still accept the invite.
+        // We'll try to create the profile when they first log in via /api/auth/me
       }
       
-      newUser = inviteUser;
-    }
-    
-    // Log the activity
-    await logPartnerTeamActivity(
-      partnerAdminId,
-      partnerUser.id,
-      newUser.id,
-      'invite',
-      { 
-        email, 
-        full_name: newUser.full_name,
+      newUser = profileData || {
+        id: inviteData.user.id,
+        email,
+        full_name: full_name || email.split('@')[0],
         partner_role,
-        action: password ? 'created_user_with_password' : 'created_new_user'
-      },
-      request
-    );
-    
-    // Send invitation email only if no password was provided
-    if (!password) {
-      await sendTeamInvitationEmail(email, newUser.full_name, partnerUser.full_name || partnerUser.email);
+        partner_id: partnerAdminId,
+      };
+
+      // Also send a custom team invitation email
+      await sendTeamInvitationEmail(email, newUser.full_name || email, partnerUser.full_name || partnerUser.email);
+
+      // Log the activity
+      await logPartnerTeamActivity(
+        partnerAdminId,
+        partnerUser.id,
+        newUser.id,
+        'invite',
+        { 
+          email, 
+          full_name: newUser.full_name,
+          partner_role,
+          action: 'sent_email_invitation'
+        },
+        request
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Invitation sent successfully. The team member will receive an email to set up their account.',
+        data: newUser
+      });
     }
-    
-    return NextResponse.json({
-      success: true,
-      message: password ? 'User created and added to team successfully' : 'Invitation sent successfully',
-      data: newUser
-    });
   } catch (error) {
     console.error('Error inviting team member:', error);
     return NextResponse.json(
@@ -244,27 +333,67 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Email sent when a brand-new user is invited (no account exists yet).
+ * Supabase sends its own confirmation email with a magic link,
+ * so this is a supplementary "welcome" email from the partner.
+ */
 async function sendTeamInvitationEmail(
   toEmail: string,
   toName: string,
   inviterName: string
 ) {
   const projectDomain = process.env.COZE_PROJECT_DOMAIN_DEFAULT;
-  const signupUrl = projectDomain ? `https://${projectDomain}/login` : '/login';
+  const loginUrl = projectDomain ? `https://${projectDomain}/login` : '/login';
   
   const subject = `You've been invited to join ${inviterName}'s team`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Team Invitation</h2>
       <p>Hi ${toName},</p>
-      <p>${inviterName} has invited you to join their partner team on Study in China Academy.</p>
-      <p>Click the button below to accept the invitation and create your account:</p>
+      <p><strong>${inviterName}</strong> has invited you to join their partner team on Study in China Academy.</p>
+      <p>You'll receive a separate email from Supabase to set up your account password. Once you've set your password, you can log in below:</p>
       <p style="text-align: center; margin: 30px 0;">
-        <a href="${signupUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
-          Accept Invitation
+        <a href="${loginUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+          Go to Login
         </a>
       </p>
       <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+      <p>Best regards,<br>The Study in China Academy Team</p>
+    </div>
+  `;
+  
+  await sendEmail({
+    to: toEmail,
+    subject,
+    html
+  });
+}
+
+/**
+ * Email sent when an existing user is added to a partner team.
+ */
+async function sendTeamAddedEmail(
+  toEmail: string,
+  toName: string,
+  adderName: string
+) {
+  const projectDomain = process.env.COZE_PROJECT_DOMAIN_DEFAULT;
+  const loginUrl = projectDomain ? `https://${projectDomain}/login` : '/login';
+  
+  const subject = `You've been added to ${adderName}'s partner team`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Added to Partner Team</h2>
+      <p>Hi ${toName},</p>
+      <p><strong>${adderName}</strong> has added you to their partner team on Study in China Academy.</p>
+      <p>You can now access the partner portal:</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${loginUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+          Go to Partner Portal
+        </a>
+      </p>
+      <p>If you didn't expect this, please contact the partner admin or our support team.</p>
       <p>Best regards,<br>The Study in China Academy Team</p>
     </div>
   `;
