@@ -306,9 +306,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // Only draft applications can be edited by partners/students
-    if (existingApp.status !== 'draft') {
-      return NextResponse.json({ error: 'Only draft applications can be edited' }, { status: 400 });
+    // Terminal statuses cannot be edited
+    const terminalStatuses = ['accepted', 'rejected', 'withdrawn'];
+    if (terminalStatuses.includes(existingApp.status)) {
+      return NextResponse.json({ error: 'Cannot edit applications that are accepted, rejected, or withdrawn' }, { status: 400 });
     }
 
     // Access control check

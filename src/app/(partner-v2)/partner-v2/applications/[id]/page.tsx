@@ -251,19 +251,21 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Edit button visible for all non-terminal statuses */}
+            {!['accepted', 'rejected', 'withdrawn'].includes(application.status) && (
+              <Button variant="outline" asChild>
+                <Link href={`/partner-v2/applications/${application.id}/edit`}>
+                  <IconEdit className="h-4 w-4 mr-2" />
+                  Edit
+                </Link>
+              </Button>
+            )}
+            {/* Submit button only for draft */}
             {application.status === 'draft' && (
-              <>
-                <Button variant="outline" asChild>
-                  <Link href={`/partner-v2/applications/${application.id}/edit`}>
-                    <IconEdit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Link>
-                </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconSend className="h-4 w-4 mr-2" />}
-                  Submit
-                </Button>
-              </>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconSend className="h-4 w-4 mr-2" />}
+                Submit
+              </Button>
             )}
             <Button variant="outline" asChild>
               <Link href={`/partner-v2/applications/${application.id}/documents`}>

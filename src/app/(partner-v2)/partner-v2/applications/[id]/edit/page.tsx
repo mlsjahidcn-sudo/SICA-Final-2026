@@ -283,6 +283,7 @@ export default function EditApplicationPage() {
   if (!application) return null;
 
   const isDraft = application.status === 'draft';
+  const isEditable = !['accepted', 'rejected', 'withdrawn'].includes(application.status);
 
   return (
     <div className="flex flex-col gap-6 px-4 py-4 md:py-6 lg:px-6 max-w-4xl">
@@ -296,15 +297,15 @@ export default function EditApplicationPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">Edit Application</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {getStudentName()} &middot; Draft
+            {getStudentName()} &middot; <span className="capitalize">{application.status.replace('_', ' ')}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={isSaving || !isDraft}>
+          <Button variant="outline" onClick={handleSave} disabled={isSaving || !isEditable}>
             {isSaving ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconDeviceFloppy className="h-4 w-4 mr-2" />}
-            Save Draft
+            Save Changes
           </Button>
-          {isDraft && (
+          {isEditable && (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconSend className="h-4 w-4 mr-2" />}
               Submit
@@ -384,7 +385,7 @@ export default function EditApplicationPage() {
             </div>
           )}
 
-          {isDraft && (
+          {isEditable && (
             <>
               {/* Degree Filter */}
               <div className="flex gap-2">
@@ -479,7 +480,7 @@ export default function EditApplicationPage() {
               onChange={(e) => setPersonalStatement(e.target.value)}
               placeholder="Write a compelling personal statement highlighting the student's goals, achievements, and motivation for studying in China..."
               rows={6}
-              disabled={!isDraft}
+              disabled={!isEditable}
             />
             <p className="text-xs text-muted-foreground">{personalStatement.length} characters</p>
           </div>
@@ -491,7 +492,7 @@ export default function EditApplicationPage() {
               onChange={(e) => setStudyPlan(e.target.value)}
               placeholder="Outline the student's planned course of study, research interests, and academic objectives..."
               rows={6}
-              disabled={!isDraft}
+              disabled={!isEditable}
             />
             <p className="text-xs text-muted-foreground">{studyPlan.length} characters</p>
           </div>
@@ -507,7 +508,7 @@ export default function EditApplicationPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Priority</Label>
-            <Select value={priority} onValueChange={setPriority} disabled={!isDraft}>
+            <Select value={priority} onValueChange={setPriority} disabled={!isEditable}>
               <SelectTrigger>
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
@@ -536,7 +537,7 @@ export default function EditApplicationPage() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add internal notes about this application (visible only to your team)..."
               rows={4}
-              disabled={!isDraft}
+              disabled={!isEditable}
             />
           </div>
         </CardContent>
@@ -548,9 +549,9 @@ export default function EditApplicationPage() {
           <Link href={`/partner-v2/applications/${appId}`}>Cancel</Link>
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={isSaving || !isDraft}>
+          <Button variant="outline" onClick={handleSave} disabled={isSaving || !isEditable}>
             {isSaving ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconDeviceFloppy className="h-4 w-4 mr-2" />}
-            Save Draft
+            Save Changes
           </Button>
           {isDraft && (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
