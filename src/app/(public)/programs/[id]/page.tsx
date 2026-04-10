@@ -1,6 +1,10 @@
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ProgramDetailContent } from '@/components/program-detail-content';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { ProgramSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
+
+const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
 
 // UUID regex pattern for checking
 // Hot reload trigger: 2025-07-28
@@ -131,7 +135,7 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
   return programBySlug;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const program = await getProgramByIdOrSlug(id);
 
@@ -150,10 +154,31 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${program.name} - ${degreeLabel} | ${uniName}`,
     description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160) || `Study ${program.name} at ${uniName} in ${uniCity}. ${degreeLabel} program.`,
+    keywords: [
+      program.name,
+      degreeLabel,
+      uniName,
+      uniCity,
+      'study in china',
+      'chinese program',
+      program.category || '',
+      program.language || '',
+    ].filter(Boolean),
     openGraph: {
       title: `${program.name} at ${uniName}`,
       description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160),
       type: 'article',
+      url: `${baseUrl}/programs/${id}`,
+      images: program.cover_image ? [{ url: program.cover_image, width: 1200, height: 630 }] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${program.name} at ${uniName}`,
+      description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160),
+      images: program.cover_image ? [program.cover_image] : [],
+    },
+    alternates: {
+      canonical: `${baseUrl}/programs/${id}`,
     },
   };
 }
@@ -176,5 +201,30 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
     universities: universityObj || undefined,
   };
 
-  return <ProgramDetailContent program={normalizedProgram} />;
+  // Prepare structured data
+  const programSchemaData = {
+    name: program.name,
+    description: program.description_en || program.description,
+    degree_level: program.degree_level || '',
+    duration_years: program.duration_years,
+    tuition_fee: program.tuition_fee_per_year,
+    currency: program.currency,
+    university_name: universityObj?.name_en || 'University',
+    university_url: universityObj?.website_url || `${baseUrl}/universities/${universityObj?.id}`,
+  };
+
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+    { name: 'Programs', url: '/programs' },
+    { name: program.name, url: `/programs/${id}` },
+  ];
+
+  return (
+    <>
+      {/* Structured Data for SEO */}
+      <ProgramSchema program={programSchemaData} />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      <ProgramDetailContent program={normalizedProgram} />
+    </>
+  );
 }

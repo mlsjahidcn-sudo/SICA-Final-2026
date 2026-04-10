@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import BlogPostContent from './BlogPostContent';
+import { ArticleSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
+
+const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
 
 // Generate static params for popular posts
 export async function generateStaticParams() {
@@ -38,14 +41,24 @@ export async function generateMetadata({
         description: post.seo?.description || post.excerpt,
         type: 'article',
         publishedTime: post.publishedAt,
+        modifiedTime: post.updatedAt,
         authors: [post.author.name],
-        images: post.featuredImage ? [{ url: post.featuredImage }] : [],
+        images: post.featuredImage ? [{ 
+          url: post.featuredImage,
+          width: 1200,
+          height: 630,
+          alt: post.featuredImageAlt || post.title,
+        }] : [],
+        url: `${baseUrl}/blog/${slug}`,
       },
       twitter: {
         card: 'summary_large_image',
         title: post.seo?.title || post.title,
         description: post.seo?.description || post.excerpt,
         images: post.featuredImage ? [post.featuredImage] : [],
+      },
+      alternates: {
+        canonical: `${baseUrl}/blog/${slug}`,
       },
     };
   } catch {
@@ -79,5 +92,30 @@ export default async function BlogPostPage({
     notFound();
   }
 
-  return <BlogPostContent post={post} />;
+  // Prepare structured data
+  const articleSchema = {
+    title: post.seo?.title || post.title,
+    description: post.seo?.description || post.excerpt,
+    url: `${baseUrl}/blog/${slug}`,
+    publishedAt: post.publishedAt,
+    modifiedAt: post.updatedAt,
+    author: post.author.name,
+    image: post.featuredImage || undefined,
+    category: post.category?.name,
+  };
+
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+    { name: 'Blog', url: '/blog' },
+    { name: post.title, url: `/blog/${slug}` },
+  ];
+
+  return (
+    <>
+      {/* Structured Data for SEO */}
+      <ArticleSchema article={articleSchema} />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      <BlogPostContent post={post} />
+    </>
+  );
 }

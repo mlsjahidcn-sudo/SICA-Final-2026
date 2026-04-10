@@ -1260,3 +1260,157 @@ e2e/
 **运行测试**:
 - `pnpm test:e2e` - 运行 E2E 测试
 - `pnpm test:e2e:ui` - 打开 Playwright UI 运行测试
+
+## SEO 优化系统 (SEO Optimization)
+
+项目实现了全面的 SEO 优化，包括元数据管理、结构化数据和搜索引擎友好配置。
+
+### SEO 架构
+
+**核心文件**：
+- `src/lib/seo-config.ts` - SEO 配置和工具函数
+- `src/components/seo/json-ld.tsx` - 结构化数据组件
+- `src/app/sitemap.ts` - 动态站点地图
+- `src/app/robots.ts` - 爬虫配置
+
+### 元数据配置
+
+所有公共页面都有完整的元数据配置：
+
+**根布局 (`src/app/layout.tsx`)**：
+```typescript
+export const metadata: Metadata = {
+  title: { default: '...', template: '%s | SICA' },
+  description: '...',
+  keywords: [...],
+  openGraph: { ... },
+  twitter: { card: 'summary_large_image', ... },
+  alternates: { canonical: '...', languages: {...} },
+  robots: { index: true, follow: true, googleBot: {...} },
+};
+```
+
+**动态元数据生成**：
+- 大学详情页：`/universities/[id]/page.tsx`
+- 项目详情页：`/programs/[id]/page.tsx`
+- 博客文章页：`/blog/[slug]/page.tsx`
+
+### 结构化数据 (JSON-LD)
+
+支持的结构化数据类型：
+
+**组织结构化数据**：
+```tsx
+import { OrganizationSchema } from '@/components/seo/json-ld';
+<OrganizationSchema />
+```
+
+**网站结构化数据**：
+```tsx
+import { WebsiteSchema } from '@/components/seo/json-ld';
+<WebsiteSchema />
+```
+
+**大学结构化数据**：
+```tsx
+import { UniversitySchema } from '@/components/seo/json-ld';
+<UniversitySchema university={{ name_en: '...', city: '...', province: '...' }} />
+```
+
+**项目结构化数据**：
+```tsx
+import { ProgramSchema } from '@/components/seo/json-ld';
+<ProgramSchema program={{ name: '...', degree_level: '...', university_name: '...' }} />
+```
+
+**文章结构化数据**：
+```tsx
+import { ArticleSchema } from '@/components/seo/json-ld';
+<ArticleSchema article={{ title: '...', publishedAt: '...', author: '...' }} />
+```
+
+**面包屑结构化数据**：
+```tsx
+import { BreadcrumbSchema } from '@/components/seo/json-ld';
+<BreadcrumbSchema items={[{ name: 'Home', url: '/' }, { name: 'Blog', url: '/blog' }]} />
+```
+
+**FAQ 结构化数据**：
+```tsx
+import { FAQSchema } from '@/components/seo/json-ld';
+<FAQSchema faqs={[{ question: '...', answer: '...' }]} />
+```
+
+### 站点地图
+
+动态生成的站点地图包含：
+
+**静态页面**：
+- `/` - 首页 (priority: 1, daily)
+- `/about` - 关于页面 (priority: 0.8, monthly)
+- `/universities` - 大学列表 (priority: 0.9, weekly)
+- `/programs` - 项目列表 (priority: 0.9, weekly)
+- `/blog` - 博客列表 (priority: 0.8, daily)
+- `/faq`, `/contact`, `/apply` - 其他页面
+
+**动态页面**：
+- 所有活跃的大学详情页 (priority: 0.7, monthly)
+- 所有活跃的项目详情页 (priority: 0.7, monthly)
+- 所有已发布的博客文章 (priority: 0.6, weekly)
+
+**访问地址**：`/sitemap.xml`
+
+### Robots.txt
+
+爬虫访问控制配置：
+
+**允许访问**：
+- 所有公共页面 (`/`)
+
+**禁止访问**：
+- `/admin/` - 管理后台
+- `/api/` - API 端点
+- `/student/`, `/student-v2/` - 学生门户
+- `/partner/`, `/partner-v2/` - 合作伙伴门户
+- `/assessment/`, `/profile/` - 其他私密页面
+
+**访问地址**：`/robots.txt`
+
+### SEO 工具函数
+
+`src/lib/seo-config.ts` 提供的工具函数：
+
+```typescript
+// 生成 Open Graph 元数据
+generateOpenGraph({ title, description, url, images, type })
+
+// 生成 Twitter Card 元数据
+generateTwitterCard({ title, description, image })
+
+// 生成多语言链接
+generateAlternateLanguages(path)
+
+// 生成面包屑结构化数据
+generateBreadcrumbSchema(items)
+
+// 生成大学结构化数据
+generateUniversitySchema(university)
+
+// 生成项目结构化数据
+generateProgramSchema(program)
+
+// 生成文章结构化数据
+generateArticleSchema(article)
+
+// 生成 FAQ 结构化数据
+generateFAQSchema(faqs)
+```
+
+### 最佳实践
+
+1. **每个页面都应有完整的元数据**：title、description、keywords、openGraph、twitter
+2. **动态内容使用 generateMetadata**：大学、项目、博客等详情页
+3. **添加结构化数据**：使用 JSON-LD 组件增强搜索结果显示
+4. **设置规范链接**：使用 `alternates.canonical` 避免重复内容
+5. **更新站点地图**：新增公共页面时更新 sitemap.ts
+6. **测试 SEO**：使用 Google Rich Results Test 验证结构化数据
