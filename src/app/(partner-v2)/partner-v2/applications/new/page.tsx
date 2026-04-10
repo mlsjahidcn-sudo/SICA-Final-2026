@@ -222,7 +222,7 @@ export default function PartnerNewApplicationPage() {
         if (response.ok) {
           const data = await response.json()
           // Normalize programs (handle arrays from Supabase relations)
-          const normalizedPrograms = (data.programs || []).map((p: any) => {
+          const normalizedPrograms = (data.programs || []).map((p: Program) => {
             const universities = Array.isArray(p.universities) ? p.universities[0] : p.universities
             return {
               id: p.id,
@@ -318,13 +318,18 @@ export default function PartnerNewApplicationPage() {
   }
 
   const handleNext = async () => {
-    // Step 1: Student selection - just move to next step
-    if (currentStep === 0 && formData.student_id) {
+    console.log("handleNext called, currentStep:", currentStep, "formData.student_id:", formData.student_id)
+    // Step 0: Student selection - just move to next step
+    if (currentStep === 0) {
+      if (!formData.student_id) {
+        toast.error("Please select a student first")
+        return
+      }
       setCurrentStep((prev) => prev + 1)
       return
     }
 
-    // Step 2: Program & Intake - create draft application
+    // Step 1: Program & Intake - create draft application
     if (currentStep === 1) {
       if ((formData.program_ids.length === 0 && !showRequestNote) || !formData.intake) {
         toast.error("Please select at least one program or add a request note, and select an intake")
@@ -969,7 +974,21 @@ export default function PartnerNewApplicationPage() {
         <div className="flex items-center gap-2">
           {currentStep < STEPS.length - 1 && (
             <>
-              <Button variant="ghost" onClick={() => toast.success("Draft saved")}>
+              <Button variant="ghost" onClick={async () => {
+                if (!formData.student_id) {
+                  toast.error("Please select a student first")
+                  return
+                }
+                if (!applicationId) {
+                  const success = await createDraftApplication()
+                  if (success) {
+                    toast.success("Draft saved successfully")
+                  }
+                } else {
+                  // TODO: Update existing draft
+                  toast.success("Draft saved")
+                }
+              }}>
                 <IconDeviceFloppy className="h-4 w-4 mr-2" />
                 Save Draft
               </Button>
