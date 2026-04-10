@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/dashboard-v2-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
+import { Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -246,6 +246,7 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGeneratingSeo, setIsGeneratingSeo] = useState(false)
   const [activeTab, setActiveTab] = useState('basic')
   
   const [formData, setFormData] = useState<UniversityFormData>(initialFormData)
@@ -341,6 +342,44 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
         ? prev.intake_months.filter(m => m !== month)
         : [...prev.intake_months, month]
     }))
+  }
+
+  const handleGenerateSeo = async () => {
+    setIsGeneratingSeo(true)
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      
+      const response = await fetch(`/api/admin/universities/${universityId}/seo/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const seo = data.seo
+        
+        setFormData(prev => ({
+          ...prev,
+          meta_title: seo.meta_title || prev.meta_title,
+          meta_description: seo.meta_description || prev.meta_description,
+          meta_keywords: seo.meta_keywords || prev.meta_keywords,
+          tags: seo.tags || prev.tags,
+        }))
+        toast.success('SEO content generated successfully')
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to generate SEO content')
+      }
+    } catch (error) {
+      console.error('Error generating SEO:', error)
+      toast.error('Failed to generate SEO content')
+    } finally {
+      setIsGeneratingSeo(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -973,8 +1012,31 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
           <TabsContent value="seo" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>SEO Settings</CardTitle>
-                <CardDescription>Search engine optimization and meta tags</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>SEO Settings</CardTitle>
+                    <CardDescription>Search engine optimization and meta tags</CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateSeo}
+                    disabled={isGeneratingSeo}
+                    className="gap-2"
+                  >
+                    {isGeneratingSeo ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        AI Generate
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -985,6 +1047,9 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
                     onChange={(e) => handleInputChange('meta_title', e.target.value)}
                     placeholder="SEO title for search engines"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Recommended: 50-60 characters. Current: {formData.meta_title.length} characters
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="meta_description">Meta Description</Label>
@@ -995,6 +1060,9 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
                     placeholder="SEO description for search engines"
                     rows={3}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Recommended: 150-160 characters. Current: {formData.meta_description.length} characters
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="meta_keywords">Meta Keywords (comma separated)</Label>
