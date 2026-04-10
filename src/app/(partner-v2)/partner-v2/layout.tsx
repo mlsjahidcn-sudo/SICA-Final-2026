@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { PartnerSidebar } from '@/components/partner-v2/partner-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SiteHeader } from '@/components/site-header';
+import { PartnerCommandPalette } from '@/components/partner-v2/partner-command-palette';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Clock, XCircle } from 'lucide-react';
@@ -147,6 +148,7 @@ export default function PartnerV2Layout({
           </div>
         </div>
       </SidebarInset>
+      <PartnerCommandPalette />
     </SidebarProvider>
   );
 }

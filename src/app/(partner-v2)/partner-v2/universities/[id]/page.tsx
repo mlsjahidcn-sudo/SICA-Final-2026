@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
+import Image from "next/image"
 import { 
   Card, 
   CardContent, 
@@ -229,11 +230,12 @@ export default function UniversityDetailPage() {
       <Card>
         <div className="relative">
           {university.cover_image_url && university.cover_image_url.trim() !== '' ? (
-            <div className="h-48 w-full rounded-t-lg overflow-hidden">
-              <img
+            <div className="h-48 w-full rounded-t-lg overflow-hidden relative">
+              <Image
                 src={university.cover_image_url}
                 alt={university.name_en}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>
@@ -243,9 +245,11 @@ export default function UniversityDetailPage() {
           
           <div className="absolute bottom-0 left-6 right-6 translate-y-1/2 flex items-end gap-4">
             {university.logo_url ? (
-              <img
+              <Image
                 src={university.logo_url}
                 alt={university.name_en}
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-xl border-4 border-background shadow-lg object-cover bg-white"
               />
             ) : (

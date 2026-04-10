@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -336,10 +337,11 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
                   {/* Preview Area */}
                   <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
                     {getFileType(doc.content_type) === 'image' ? (
-                      <img
+                      <Image
                         src={doc.url}
                         alt={ALLOWED_DOCUMENT_TYPES[doc.document_type] || doc.document_type}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : (
                       <div className="flex flex-col items-center gap-2">

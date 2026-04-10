@@ -41,6 +41,8 @@ import {
   IconCheck,
   IconProgress,
   IconTrash,
+  IconLayoutColumns,
+  IconList,
 } from '@tabler/icons-react';
 import {
   Loader2,
@@ -124,6 +126,7 @@ export default function PartnerTasksPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   // Create task form
   const [newTask, setNewTask] = useState({
@@ -337,10 +340,30 @@ export default function PartnerTasksPage() {
             Tasks assigned to you or related to your applications
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <IconPlus className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border bg-muted/50 p-0.5">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode('list')}
+            >
+              <IconList className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode('kanban')}
+            >
+              <IconLayoutColumns className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <IconPlus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -417,102 +440,207 @@ export default function PartnerTasksPage() {
         </CardContent>
       </Card>
 
-      {/* Tasks List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tasks</CardTitle>
-          <CardDescription>{filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''} found</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-12">
-              <ClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium">No tasks found</p>
-              <p className="text-muted-foreground/70 text-sm mt-1">
-                {tasks.length === 0 ? 'Create a new task to get started' : 'Try adjusting your filters'}
-              </p>
-              {tasks.length === 0 && (
-                <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
-                  <IconPlus className="h-4 w-4 mr-2" /> Create Task
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map(task => {
-                const statusInfo = getStatusInfo(task.status);
-                const priorityInfo = getPriorityInfo(task.priority);
-                const overdue = isOverdue(task.due_date, task.status);
-                const StatusIcon = statusInfo.icon;
-                return (
-                  <Card
-                    key={task.id}
-                    className="hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedTask(task)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <StatusIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <h4 className={`font-semibold truncate ${task.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+      {/* Tasks View */}
+      {viewMode === 'list' ? (
+        /* List View */
+        <Card>
+          <CardHeader>
+            <CardTitle>Tasks</CardTitle>
+            <CardDescription>{filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''} found</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredTasks.length === 0 ? (
+              <div className="text-center py-12">
+                <ClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">No tasks found</p>
+                <p className="text-muted-foreground/70 text-sm mt-1">
+                  {tasks.length === 0 ? 'Create a new task to get started' : 'Try adjusting your filters'}
+                </p>
+                {tasks.length === 0 && (
+                  <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
+                    <IconPlus className="h-4 w-4 mr-2" /> Create Task
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTasks.map(task => {
+                  const statusInfo = getStatusInfo(task.status);
+                  const priorityInfo = getPriorityInfo(task.priority);
+                  const overdue = isOverdue(task.due_date, task.status);
+                  const StatusIcon = statusInfo.icon;
+                  return (
+                    <Card
+                      key={task.id}
+                      className="hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedTask(task)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <StatusIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <h4 className={`font-semibold truncate ${task.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                                {task.title}
+                              </h4>
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+                            )}
+                            <div className="flex items-center flex-wrap gap-3 mt-3">
+                              <Badge variant={getStatusBadgeVariant(task.status)}>{statusInfo.label}</Badge>
+                              <Badge variant={getPriorityBadgeVariant(task.priority)}>{priorityInfo.label}</Badge>
+                              {task.due_date && (
+                                <span className={`inline-flex items-center gap-1 text-xs ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                                  <Calendar className="h-3 w-3" />
+                                  {overdue ? 'Overdue: ' : 'Due: '}{formatDate(task.due_date)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Quick actions */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon-sm" className="shrink-0">
+                                <IconDotsVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {task.status !== 'in_progress' && task.status !== 'done' && (
+                                <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'in_progress'); }}>
+                                  <IconProgress className="h-4 w-4 mr-2" /> Mark In Progress
+                                </DropdownMenuItem>
+                              )}
+                              {task.status !== 'done' && (
+                                <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'done'); }}>
+                                  <IconCheck className="h-4 w-4 mr-2" /> Mark Done
+                                </DropdownMenuItem>
+                              )}
+                              {task.status === 'done' && (
+                                <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'todo'); }}>
+                                  <ListTodo className="h-4 w-4 mr-2" /> Reopen
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                              >
+                                <IconTrash className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        /* Kanban View */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[400px]">
+          {['todo', 'in_progress', 'done'].map((status) => {
+            const statusInfo = getStatusInfo(status);
+            const StatusIcon = statusInfo.icon;
+            const columnTasks = filteredTasks.filter(t => t.status === status);
+            return (
+              <div key={status} className="flex flex-col rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-2 p-3 border-b">
+                  <StatusIcon className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">{statusInfo.label}</h3>
+                  <Badge variant="secondary" className="ml-auto text-xs">{columnTasks.length}</Badge>
+                </div>
+                <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[60vh]">
+                  {columnTasks.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground/50 text-xs">
+                      No tasks
+                    </div>
+                  ) : (
+                    columnTasks.map(task => {
+                      const priorityInfo = getPriorityInfo(task.priority);
+                      const overdue = isOverdue(task.due_date, task.status);
+                      return (
+                        <Card
+                          key={task.id}
+                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          <CardContent className="p-3">
+                            <h4 className={`text-sm font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                               {task.title}
                             </h4>
-                          </div>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
-                          )}
-                          <div className="flex items-center flex-wrap gap-3 mt-3">
-                            <Badge variant={getStatusBadgeVariant(task.status)}>{statusInfo.label}</Badge>
-                            <Badge variant={getPriorityBadgeVariant(task.priority)}>{priorityInfo.label}</Badge>
-                            {task.due_date && (
-                              <span className={`inline-flex items-center gap-1 text-xs ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                <Calendar className="h-3 w-3" />
-                                {overdue ? 'Overdue: ' : 'Due: '}{formatDate(task.due_date)}
-                              </span>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
                             )}
-                          </div>
-                        </div>
-                        {/* Quick actions */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon-sm" className="shrink-0">
-                              <IconDotsVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {task.status !== 'in_progress' && task.status !== 'done' && (
-                              <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'in_progress'); }}>
-                                <IconProgress className="h-4 w-4 mr-2" /> Mark In Progress
-                              </DropdownMenuItem>
-                            )}
-                            {task.status !== 'done' && (
-                              <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'done'); }}>
-                                <IconCheck className="h-4 w-4 mr-2" /> Mark Done
-                              </DropdownMenuItem>
-                            )}
-                            {task.status === 'done' && (
-                              <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'todo'); }}>
-                                <ListTodo className="h-4 w-4 mr-2" /> Reopen
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteTask(task.id); }}
-                            >
-                              <IconTrash className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                            <div className="flex items-center flex-wrap gap-1.5 mt-2">
+                              <Badge variant={getPriorityBadgeVariant(task.priority)} className="text-[10px] px-1.5 py-0">
+                                {priorityInfo.label}
+                              </Badge>
+                              {task.due_date && (
+                                <span className={`inline-flex items-center gap-0.5 text-[10px] ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                                  <Calendar className="h-2.5 w-2.5" />
+                                  {overdue ? 'Overdue' : formatDate(task.due_date)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 mt-2">
+                              {task.status !== 'done' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-1.5 text-[10px]"
+                                  disabled={isUpdating}
+                                  onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    handleUpdateStatus(task.id, task.status === 'todo' ? 'in_progress' : 'done');
+                                  }}
+                                >
+                                  {task.status === 'todo' ? (
+                                    <><IconProgress className="h-3 w-3 mr-0.5" /> Start</>
+                                  ) : (
+                                    <><IconCheck className="h-3 w-3 mr-0.5" /> Done</>
+                                  )}
+                                </Button>
+                              )}
+                              {task.status === 'done' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-1.5 text-[10px]"
+                                  disabled={isUpdating}
+                                  onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    handleUpdateStatus(task.id, 'todo');
+                                  }}
+                                >
+                                  <ListTodo className="h-3 w-3 mr-0.5" /> Reopen
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-[10px] text-destructive hover:text-destructive ml-auto"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  handleDeleteTask(task.id);
+                                }}
+                              >
+                                <IconTrash className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Task Detail Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={(open: boolean) => { if (!open) setSelectedTask(null); }}>

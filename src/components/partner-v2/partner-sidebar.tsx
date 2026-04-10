@@ -45,7 +45,8 @@ import {
   IconCalendar,
   IconBuilding,
   IconUsersGroup,
-  IconClipboardList
+  IconClipboardList,
+  IconArrowsDiff
 } from "@tabler/icons-react"
 import { IconInnerShadowTop } from "@tabler/icons-react"
 
@@ -79,6 +80,11 @@ const navItems = [
     title: "Universities",
     url: "/partner-v2/universities",
     icon: <IconBuilding />,
+  },
+  {
+    title: "Compare",
+    url: "/partner-v2/universities/compare",
+    icon: <IconArrowsDiff />,
   },
   {
     title: "Meetings",

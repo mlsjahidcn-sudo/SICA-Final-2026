@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams, useRouter } from "next/navigation"
 import { 
   Card, 
@@ -48,7 +49,9 @@ import {
   IconLayoutGrid,
   IconList,
   IconRefresh,
-  IconBuilding
+  IconBuilding,
+  IconArrowsDiff,
+  IconCheck
 } from "@tabler/icons-react"
 
 interface University {
@@ -117,6 +120,7 @@ export default function UniversitiesPage() {
   const [loading, setLoading] = React.useState(true)
   const [total, setTotal] = React.useState(0)
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid")
+  const [compareIds, setCompareIds] = React.useState<string[]>([])
   
   // Filter states
   const [search, setSearch] = React.useState(searchParams.get("search") || "")
@@ -184,6 +188,20 @@ export default function UniversitiesPage() {
     setPage(1)
   }
 
+  const toggleCompare = (id: string) => {
+    setCompareIds(prev => {
+      if (prev.includes(id)) return prev.filter(i => i !== id)
+      if (prev.length >= 4) return prev
+      return [...prev, id]
+    })
+  }
+
+  const goToCompare = () => {
+    if (compareIds.length >= 2) {
+      router.push(`/partner-v2/universities/compare?ids=${compareIds.join(',')}`)
+    }
+  }
+
   const totalPages = Math.ceil(total / itemsPerPage)
 
   const getTypeBadges = (uniTags: string[]) => {
@@ -225,6 +243,17 @@ export default function UniversitiesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {compareIds.length >= 2 && (
+            <Button variant="default" size="sm" onClick={goToCompare}>
+              <IconArrowsDiff className="h-4 w-4 mr-1" />
+              Compare ({compareIds.length})
+            </Button>
+          )}
+          {compareIds.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setCompareIds([])}>
+              Clear
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"
@@ -349,82 +378,97 @@ export default function UniversitiesPage() {
         </Card>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {universities.map((university) => (
-            <Link key={university.id} href={`/partner-v2/universities/${university.id}`}>
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      {university.logo_url ? (
-                        <img
-                          src={university.logo_url}
-                          alt={university.name_en}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <IconSchool className="h-6 w-6 text-primary" />
+          {universities.map((university) => {
+            const isSelected = compareIds.includes(university.id)
+            return (
+              <div key={university.id} className="relative">
+                <div
+                  className="absolute top-2 left-2 z-10"
+                  onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); toggleCompare(university.id) }}
+                >
+                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30 bg-card/80 hover:border-primary'}`}>
+                    {isSelected && <IconCheck className="h-3 w-3" />}
+                  </div>
+                </div>
+                <Link href={`/partner-v2/universities/${university.id}`}>
+                  <Card className={`h-full hover:shadow-md transition-shadow cursor-pointer group ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          {university.logo_url ? (
+                            <Image
+                              src={university.logo_url}
+                              alt={university.name_en}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <IconSchool className="h-6 w-6 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base line-clamp-1 group-hover:text-primary transition-colors">
+                              {university.name_en}
+                            </CardTitle>
+                            {university.name_cn && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {university.name_cn}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base line-clamp-1 group-hover:text-primary transition-colors">
-                          {university.name_en}
-                        </CardTitle>
-                        {university.name_cn && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
-                            {university.name_cn}
-                          </p>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {getTypeBadges(university.tags)}
+                        {university.scholarship_available && (
+                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            Scholarship
+                          </Badge>
                         )}
                       </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {getTypeBadges(university.tags)}
-                    {university.scholarship_available && (
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        Scholarship
-                      </Badge>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <IconMapPin className="h-4 w-4" />
-                    {university.city}, {university.province}
-                  </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <IconMapPin className="h-4 w-4" />
+                        {university.city}, {university.province}
+                      </div>
 
-                  {university.ranking_national && (
-                    <div className="flex items-center gap-1 text-sm">
-                      <IconTrophy className="h-4 w-4 text-yellow-600" />
-                      <span>National Rank: #{university.ranking_national}</span>
-                    </div>
-                  )}
+                      {university.ranking_national && (
+                        <div className="flex items-center gap-1 text-sm">
+                          <IconTrophy className="h-4 w-4 text-yellow-600" />
+                          <span>National Rank: #{university.ranking_national}</span>
+                        </div>
+                      )}
 
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <IconCash className="h-4 w-4" />
-                    <span className="text-xs">
-                      {formatTuition(university.tuition_min, university.tuition_max, university.tuition_currency)}/year
-                    </span>
-                  </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <IconCash className="h-4 w-4" />
+                        <span className="text-xs">
+                          {formatTuition(university.tuition_min, university.tuition_max, university.tuition_currency)}/year
+                        </span>
+                      </div>
 
-                  {university.international_student_count && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <IconUsers className="h-4 w-4" />
-                      <span>{university.international_student_count.toLocaleString()} int&apos;l students</span>
-                    </div>
-                  )}
+                      {university.international_student_count && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <IconUsers className="h-4 w-4" />
+                          <span>{university.international_student_count.toLocaleString()} int&apos;l students</span>
+                        </div>
+                      )}
 
-                  {university.application_deadline && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <IconCalendar className="h-4 w-4" />
-                      <span>Deadline: {university.application_deadline}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                      {university.application_deadline && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <IconCalendar className="h-4 w-4" />
+                          <span>Deadline: {university.application_deadline}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
+            )
+          })}
         </div>
       ) : (
         <Card>
@@ -446,9 +490,11 @@ export default function UniversitiesPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {university.logo_url ? (
-                        <img
+                        <Image
                           src={university.logo_url}
                           alt={university.name_en}
+                          width={40}
+                          height={40}
                           className="w-10 h-10 rounded-lg object-cover"
                         />
                       ) : (

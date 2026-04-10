@@ -21,6 +21,7 @@ import {
   IconUsers,
   IconSchool,
   IconRefresh,
+  IconPrinter,
 } from '@tabler/icons-react';
 import { ApplicationsTrendChart } from '@/components/partner-v2/charts/applications-trend-chart';
 import { StatusDistributionChart } from '@/components/partner-v2/charts/status-distribution-chart';
@@ -127,6 +128,33 @@ export default function AnalyticsPage() {
 
   return (
     <>
+      {/* Print-specific styles */}
+      <style jsx global>{`
+        @media print {
+          /* Hide sidebar, header, nav, and interactive elements */
+          [data-slot="sidebar"],
+          [data-slot="sidebar-inset"] > header,
+          [data-slot="site-header"],
+          .no-print,
+          button,
+          select,
+          [role="combobox"] {
+            display: none !important;
+          }
+          /* Make main content full width */
+          [data-slot="sidebar-inset"] {
+            margin-left: 0 !important;
+          }
+          /* Ensure cards print nicely */
+          .print-break-inside-avoid {
+            break-inside: avoid;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
       {/* Header */}
       <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
         <div className="flex flex-col gap-1">
@@ -152,6 +180,10 @@ export default function AnalyticsPage() {
             Refresh
           </Button>
           <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <IconPrinter className="h-4 w-4 mr-2" />
+              Print
+            </Button>
             <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
               <IconDownload className="h-4 w-4 mr-2" />
               Export CSV
@@ -180,7 +212,7 @@ export default function AnalyticsPage() {
           ))
         ) : (
           <>
-            <Card>
+            <Card className="print-break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <IconChartLine className="h-4 w-4" />
@@ -197,7 +229,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="print-break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <IconTrendingUp className="h-4 w-4" />
@@ -214,7 +246,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="print-break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <IconUsers className="h-4 w-4" />
@@ -231,7 +263,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="print-break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   {isPositiveGrowth ? (
@@ -263,7 +295,7 @@ export default function AnalyticsPage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 py-6 lg:grid-cols-2">
         {/* Applications Trend */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 print-break-inside-avoid">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconChartLine className="h-5 w-5" />
@@ -279,7 +311,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Status Distribution */}
-        <Card>
+        <Card className="print-break-inside-avoid">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconChartPie className="h-5 w-5" />
@@ -295,7 +327,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Conversion Funnel */}
-        <Card>
+        <Card className="print-break-inside-avoid">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconTrendingUp className="h-5 w-5" />
@@ -311,7 +343,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* University Ranking */}
-        <Card>
+        <Card className="print-break-inside-avoid">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconSchool className="h-5 w-5" />
@@ -327,7 +359,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Program Analytics */}
-        <Card>
+        <Card className="print-break-inside-avoid">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconChartBar className="h-5 w-5" />

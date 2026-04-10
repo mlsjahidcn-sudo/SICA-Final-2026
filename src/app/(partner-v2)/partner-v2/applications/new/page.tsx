@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { toast } from "sonner"
 import {
   Card,
@@ -682,9 +683,11 @@ export default function PartnerNewApplicationPage() {
                           >
                             {/* University logo */}
                             {program.universities.logo_url ? (
-                              <img 
+                              <Image 
                                 src={program.universities.logo_url} 
                                 alt={program.universities.name_en || program.universities.name} 
+                                width={20}
+                                height={20}
                                 className="h-5 w-5 object-contain rounded" 
                               />
                             ) : (
@@ -730,9 +733,11 @@ export default function PartnerNewApplicationPage() {
                               <div className="flex-1 flex items-start gap-3">
                                 {/* University logo */}
                                 {program.universities.logo_url ? (
-                                  <img 
+                                  <Image 
                                     src={program.universities.logo_url} 
                                     alt={program.universities.name_en || program.universities.name} 
+                                    width={40}
+                                    height={40}
                                     className="h-10 w-10 object-contain rounded border shrink-0" 
                                   />
                                 ) : (
