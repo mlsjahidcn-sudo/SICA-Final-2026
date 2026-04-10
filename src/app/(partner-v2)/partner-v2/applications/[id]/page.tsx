@@ -28,7 +28,19 @@ import {
   IconUser,
   IconEdit,
   IconSend,
+  IconTrash,
 } from '@tabler/icons-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 interface University {
@@ -140,6 +152,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isPartnerAdmin, setIsPartnerAdmin] = useState(false);
 
   useEffect(() => {
     const fetchApplication = async () => {
@@ -172,6 +186,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     }
   }, [user, resolvedParams.id, router]);
 
+  // Check if user is partner admin
+  useEffect(() => {
+    const checkPartnerAdmin = async () => {
+      if (user?.role !== 'partner') return;
+      try {
+        const { getValidToken } = await import('@/lib/auth-token');
+        const token = await getValidToken();
+        const response = await fetch('/api/partner/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const role = data.partner?.role;
+          setIsPartnerAdmin(!role || role === 'partner_admin');
+        }
+      } catch {
+        setIsPartnerAdmin(false);
+      }
+    };
+    checkPartnerAdmin();
+  }, [user]);
+
   const handleSubmit = async () => {
     if (!application) return;
     setIsSubmitting(true);
@@ -190,6 +226,30 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       }
     } catch { toast.error('Failed to submit application'); }
     finally { setIsSubmitting(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!application) return;
+    setIsDeleting(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        toast.success('Application deleted successfully');
+        router.push('/partner-v2/applications');
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to delete application');
+      }
+    } catch {
+      toast.error('Failed to delete application');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -273,6 +333,35 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 Documents
               </Link>
             </Button>
+            {/* Delete button for partner admins only, for allowed statuses */}
+            {isPartnerAdmin && ['draft', 'submitted', 'under_review', 'document_request'].includes(application.status) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={isDeleting}>
+                    {isDeleting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconTrash className="h-4 w-4 mr-2" />}
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Application?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the application for{' '}
+                      <strong>{application.students.first_name} {application.students.last_name}</strong> and all associated documents.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Application
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       </div>

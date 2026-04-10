@@ -411,3 +411,79 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// DELETE /api/applications/[id] - Delete an application (Partner Admin only)
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only partner admins can delete applications
+    if (user.role !== 'partner') {
+      return NextResponse.json({ error: 'Only partners can delete applications' }, { status: 403 });
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Fetch the application to check ownership and status
+    const { data: application, error: fetchError } = await supabase
+      .from('applications')
+      .select('id, status, student_id, partner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !application) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Check if user is partner admin
+    const partnerAuthResult = await verifyPartnerAuth(request);
+    if ('error' in partnerAuthResult) {
+      return partnerAuthResult.error;
+    }
+
+    const partnerUser = partnerAuthResult.user;
+    const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Only partner admins can delete applications' }, { status: 403 });
+    }
+
+    // Verify access via canPartnerAccessApplication
+    const canAccess = await canPartnerAccessApplication(
+      partnerUser,
+      application.student_id,
+      application.partner_id
+    );
+    if (!canAccess) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Only allow deletion for specific statuses
+    const allowedDeletionStatuses = ['draft', 'submitted', 'under_review', 'document_request'];
+    if (!allowedDeletionStatuses.includes(application.status)) {
+      return NextResponse.json({
+        error: 'Cannot delete applications that are accepted, rejected, withdrawn, or have scheduled interviews',
+        status: application.status
+      }, { status: 400 });
+    }
+
+    // Delete the application (cascade will handle related records like documents, status history)
+    const { error: deleteError } = await supabase
+      .from('applications')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Error deleting application:', deleteError);
+      return NextResponse.json({ error: 'Failed to delete application', details: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Application deleted successfully' });
+  } catch (error) {
+    console.error('Error in applications [id] DELETE:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
