@@ -1,42 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyAuthToken } from '@/lib/auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner-auth-utils';
 import crypto from 'node:crypto';
 
-interface User {
-  id: string;
-  email: string;
-  role: string;
-  partner_id?: string;
+/**
+ * Get the list of user IDs whose students the current partner user can see.
+ * - Admin: sees students referred by themselves + all team members
+ * - Member: sees only students referred by themselves
+ */
+async function getVisibleReferrerIds(user: { id: string; partner_role: string | null; partner_id: string | null }): Promise<string[]> {
+  const supabase = getSupabaseClient();
+  const isAdmin = !user.partner_role || user.partner_role === 'partner_admin';
+  
+  if (isAdmin) {
+    // Admin sees students referred by themselves and all their team members
+    const { data: teamMembers } = await supabase
+      .from('users')
+      .select('id')
+      .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
+      .eq('role', 'partner');
+    
+    const ids = (teamMembers || []).map(m => m.id);
+    // Ensure admin's own ID is included (in case team query misses it)
+    if (!ids.includes(user.id)) ids.push(user.id);
+    return ids;
+  } else {
+    // Member sees only students they personally referred
+    return [user.id];
+  }
 }
 
-// Helper to get partner user ID (relaxed - allow any user to test)
-function getPartnerUserId(user: User | null): string | null {
-  if (!user) return null;
-  // For testing/development: if user is logged in at all, allow them
-  // If they are partner, use their id; else just use their user id for test purposes
-  if (user.role === 'partner') {
-    return user.id;
-  }
-  if (user.partner_id) {
-    return user.partner_id;
-  }
-  // For testing: allow any authenticated user
-  return user.id;
-}
-
-// GET /api/partner/students - Get students list for partner (relaxed auth for testing)
+// GET /api/partner/students - Get students list for partner
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== Partner Students GET called ===');
-    const user = await verifyAuthToken(request);
-    console.log('verifyAuthToken returned user:', user ? { id: user.id, role: user.role, partner_id: user.partner_id } : null);
-    if (!user) {
-      console.log('No user - returning 401');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const partnerId = user.id; // For testing: allow any user to use their own ID
-    console.log('Using partnerId:', partnerId);
+    const authResult = await verifyPartnerAuth(request);
+    if ('error' in authResult) return authResult.error;
+    const partnerUser = authResult.user;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -45,40 +44,11 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // Get students who have applications with this partner OR were referred by this partner
-    let appsQuery = supabase
-      .from('applications')
-      .select(`
-        student_id,
-        students (
-          id,
-          user_id,
-          nationality,
-          date_of_birth,
-          gender,
-          users (
-            id,
-            email,
-            full_name,
-            phone,
-            avatar_url,
-            created_at,
-            referred_by_partner_id
-          )
-        )
-      `)
-      .neq('status', 'draft');
+    // Get the list of referrer IDs this user can see
+    const referrerIds = await getVisibleReferrerIds(partnerUser);
 
-    appsQuery = appsQuery.eq('partner_id', partnerId);
-
-    const { data: applications, error: appsError } = await appsQuery;
-
-    if (appsError) {
-      console.error('Error fetching students from applications:', appsError);
-    }
-
-    // Then, get students referred by this partner (from users table)
-    const referredQuery = supabase
+    // Get students referred by any of these partner users
+    const { data: referredUsers, error: referredError } = await supabase
       .from('users')
       .select(`
         id,
@@ -95,64 +65,100 @@ export async function GET(request: NextRequest) {
           gender
         )
       `)
-      .eq('referred_by_partner_id', partnerId)
+      .in('referred_by_partner_id', referrerIds)
       .eq('role', 'student');
-
-    const { data: referredUsers, error: referredError } = await referredQuery;
 
     if (referredError) {
       console.error('Error fetching referred students:', referredError);
+      return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
     }
 
-    // Deduplicate and combine students
-    const studentsMap = new Map();
+    // Build students map from referred users
+    const studentsMap = new Map<string, Record<string, unknown>>();
     
-    // Add students from applications
-    for (const app of applications || []) {
-      const studentData = Array.isArray(app.students) ? app.students[0] : app.students;
-      if (studentData && studentData.users) {
-        const userData = Array.isArray(studentData.users) ? studentData.users[0] : studentData.users;
-        if (userData && !studentsMap.has(userData.id)) {
-          studentsMap.set(userData.id, {
-            id: userData.id, // Keep user id for backwards compatibility
-            student_id: studentData.id, // Actual students table id
-            user_id: userData.id,
-            email: userData.email,
-            full_name: userData.full_name,
-            phone: userData.phone,
-            avatar_url: userData.avatar_url,
-            nationality: studentData.nationality,
-            created_at: userData.created_at,
-            referred_by_partner_id: userData.referred_by_partner_id,
-            application_count: 1,
-          });
-        } else if (userData) {
-          const existing = studentsMap.get(userData.id);
-          if (existing) {
-            existing.application_count += 1;
+    for (const userData of referredUsers || []) {
+      const studentRecords = Array.isArray(userData.students) ? userData.students : [userData.students];
+      const studentRecord = studentRecords.find(Boolean);
+      studentsMap.set(userData.id, {
+        id: userData.id,
+        student_id: studentRecord?.id,
+        user_id: userData.id,
+        email: userData.email,
+        full_name: userData.full_name,
+        phone: userData.phone,
+        avatar_url: userData.avatar_url,
+        nationality: studentRecord?.nationality,
+        created_at: userData.created_at,
+        referred_by_partner_id: userData.referred_by_partner_id,
+        application_count: 0,
+      });
+    }
+
+    // Also get students via applications (where partner_id matches the partner record)
+    const adminId = await getPartnerAdminId(partnerUser.id);
+    if (adminId) {
+      const { data: partnerRecord } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', adminId)
+        .maybeSingle();
+
+      if (partnerRecord) {
+        const { data: applications } = await supabase
+          .from('applications')
+          .select(`
+            student_id,
+            students (
+              id,
+              user_id,
+              nationality,
+              date_of_birth,
+              gender,
+              users (
+                id,
+                email,
+                full_name,
+                phone,
+                avatar_url,
+                created_at,
+                referred_by_partner_id
+              )
+            )
+          `)
+          .eq('partner_id', partnerRecord.id)
+          .neq('status', 'draft');
+
+        for (const app of applications || []) {
+          const studentData = Array.isArray(app.students) ? app.students[0] : app.students;
+          if (studentData && studentData.users) {
+            const userData = Array.isArray(studentData.users) ? studentData.users[0] : studentData.users;
+            if (userData) {
+              if (studentsMap.has(userData.id)) {
+                const existing = studentsMap.get(userData.id)!;
+                existing.application_count = (existing.application_count as number) + 1;
+              } else {
+                // Only add if this partner user can see this student
+                // (student might be referred by a different partner)
+                const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
+                if (isAdmin) {
+                  studentsMap.set(userData.id, {
+                    id: userData.id,
+                    student_id: studentData.id,
+                    user_id: userData.id,
+                    email: userData.email,
+                    full_name: userData.full_name,
+                    phone: userData.phone,
+                    avatar_url: userData.avatar_url,
+                    nationality: studentData.nationality,
+                    created_at: userData.created_at,
+                    referred_by_partner_id: userData.referred_by_partner_id,
+                    application_count: 1,
+                  });
+                }
+              }
+            }
           }
         }
-      }
-    }
-    
-    // Add referred students (if not already in the map)
-    for (const userData of referredUsers || []) {
-      if (!studentsMap.has(userData.id)) {
-        const studentRecords = Array.isArray(userData.students) ? userData.students : [userData.students];
-        const studentRecord = studentRecords.find(Boolean);
-        studentsMap.set(userData.id, {
-          id: userData.id, // Keep user id for backwards compatibility
-          student_id: studentRecord?.id, // Actual students table id
-          user_id: userData.id,
-          email: userData.email,
-          full_name: userData.full_name,
-          phone: userData.phone,
-          avatar_url: userData.avatar_url,
-          nationality: studentRecord?.nationality,
-          created_at: userData.created_at,
-          referred_by_partner_id: userData.referred_by_partner_id,
-          application_count: 0,
-        });
       }
     }
 
@@ -161,17 +167,16 @@ export async function GET(request: NextRequest) {
     // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
-      students = students.filter((s: any) => 
-        s.full_name?.toLowerCase().includes(searchLower) ||
-        s.email?.toLowerCase().includes(searchLower) ||
-        s.nationality?.toLowerCase().includes(searchLower)
+      students = students.filter((s) => 
+        (s.full_name as string)?.toLowerCase().includes(searchLower) ||
+        (s.email as string)?.toLowerCase().includes(searchLower) ||
+        (s.nationality as string)?.toLowerCase().includes(searchLower)
       );
     }
 
     // Get application stats for each student
-    const userIds = students.map((s: any) => s.id);
+    const userIds = students.map((s) => s.id as string);
     
-    // Get student records linked to these users
     const { data: studentRecords } = await supabase
       .from('students')
       .select('id, user_id')
@@ -183,19 +188,31 @@ export async function GET(request: NextRequest) {
     }
     
     const studentIds = Array.from(studentIdByUserId.values());
+
+    // Get app stats for admin (all partner apps), or member (only their referred students' apps)
+    const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
     let appStatsQuery = supabase
       .from('applications')
       .select('student_id, status')
       .in('student_id', studentIds)
       .neq('status', 'draft');
 
-    appStatsQuery = appStatsQuery.eq('partner_id', partnerId);
+    if (isAdmin) {
+      // Admin: all apps for these students with this partner
+      const { data: partnerRecord } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', partnerUser.id)
+        .maybeSingle();
+      if (partnerRecord) {
+        appStatsQuery = appStatsQuery.eq('partner_id', partnerRecord.id);
+      }
+    }
 
     const { data: appStats } = await appStatsQuery;
 
     // Calculate stats per student (user_id)
     const statsMap = new Map<string, { total: number; accepted: number; pending: number }>();
-    // Create reverse map: student_id -> user_id
     const userIdByStudentId = new Map<string, string>();
     for (const sr of studentRecords || []) {
       userIdByStudentId.set(sr.id, sr.user_id);
@@ -213,17 +230,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge stats into students
-    students = students.map((s: any) => ({
+    students = students.map((s) => ({
       ...s,
-      stats: statsMap.get(s.id) || { total: 0, accepted: 0, pending: 0 },
+      stats: statsMap.get(s.id as string) || { total: 0, accepted: 0, pending: 0 },
     }));
 
     // Sort by application count (most active first), then by creation date
-    students.sort((a: any, b: any) => {
-      if (b.application_count !== a.application_count) {
-        return b.application_count - a.application_count;
+    students.sort((a, b) => {
+      if ((b.application_count as number) !== (a.application_count as number)) {
+        return (b.application_count as number) - (a.application_count as number);
       }
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime();
     });
 
     // Pagination
@@ -244,24 +261,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/partner/students - Create a new student (relaxed auth)
+// POST /api/partner/students - Create a new student
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== Partner Students POST called');
-    
-    const user = await verifyAuthToken(request);
-    console.log('Auth user:', user ? { id: user.id, role: user.role, partner_id: user.partner_id } : null);
-    
-    if (!user) {
-      console.log('No user found - returning 401');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const partnerId = user.id; // For testing: allow any user to use their own ID
-    console.log('Partner user ID:', partnerId);
+    const authResult = await verifyPartnerAuth(request);
+    if ('error' in authResult) return authResult.error;
+    const partnerUser = authResult.user;
 
     const body = await request.json();
-    console.log('Request body:', body);
     
     const {
       email,
@@ -318,7 +325,6 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!email || !full_name) {
-      console.log('Missing required fields - email:', !!email, 'full_name:', !!full_name);
       return NextResponse.json(
         { error: 'Email and full name are required' },
         { status: 400 }
@@ -326,39 +332,34 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
-    console.log('Supabase client created');
 
     // Check if user already exists
-    console.log('Checking for existing user with email:', email);
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUser } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
       .maybeSingle();
 
-    console.log('Existing user check - data:', existingUser, 'error:', checkError);
-
     if (existingUser) {
-      console.log('User already exists - returning 409');
       return NextResponse.json(
         { error: 'Student with this email already exists' },
         { status: 409 }
       );
     }
 
+    // Resolve the partner admin's user ID and partner record ID
+    const adminUserId = await getPartnerAdminId(partnerUser.id);
+    const { data: partnerRecord } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('user_id', adminUserId || partnerUser.id)
+      .maybeSingle();
+
     // Generate UUID for user
     const userId = crypto.randomUUID();
-    console.log('Generated user ID:', userId);
 
     // Create user in users table
-    console.log('Creating user in users table with data:', {
-      id: userId,
-      email,
-      full_name,
-      role: 'student',
-      referred_by_partner_id: partnerId,
-    });
-    
+    // referred_by_partner_id = the partner user who added this student (admin or member)
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert({
@@ -367,12 +368,10 @@ export async function POST(request: NextRequest) {
         full_name,
         phone: phone || null,
         role: 'student',
-        referred_by_partner_id: partnerId, // Link student to this partner
+        referred_by_partner_id: partnerUser.id, // Track which partner user added this student
       })
       .select('id, email, full_name, phone, created_at')
       .single();
-
-    console.log('User creation result - data:', newUser, 'error:', userError);
 
     if (userError) {
       console.error('Error creating user:', userError);
@@ -380,19 +379,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (!newUser) {
-      console.error('No user data returned after insert');
       return NextResponse.json({ error: 'Failed to create student - no data returned' }, { status: 500 });
     }
 
     // Create corresponding record in students table
     const studentId = crypto.randomUUID();
-    console.log('Creating student record with ID:', studentId, 'for user:', newUser.id);
     
     // Build student record with all profile fields
     const studentData: Record<string, unknown> = {
       id: studentId,
       user_id: newUser.id,
-      partner_id: partnerId, // Link to partner user id
+      partner_id: partnerRecord?.id || null, // Link to partner organization (partners.id)
       // Personal information
       nationality: nationality || null,
       date_of_birth: date_of_birth || null,
@@ -447,14 +444,59 @@ export async function POST(request: NextRequest) {
       .select('*')
       .single();
 
-    console.log('Student record creation result - data:', !!newStudent, 'error:', studentError);
-
     if (studentError) {
       console.error('Error creating student record:', studentError);
       // Don't fail the whole request if student record fails, just log it
     }
 
-    console.log('=== Student created successfully:', newUser.id);
+    // If password provided, create Supabase Auth account
+    if (password && typeof password === 'string' && password.length >= 8) {
+      try {
+        const { url, serviceKey } = { 
+          url: process.env.COZE_SUPABASE_URL || '', 
+          serviceKey: process.env.COZE_SUPABASE_SERVICE_ROLE_KEY || '' 
+        };
+        // Use admin API to create user with password
+        const createRes = await fetch(`${url}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: {
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              role: 'student',
+              full_name,
+            },
+          }),
+        });
+        
+        if (!createRes.ok) {
+          const errData = await createRes.json();
+          console.error('Auth account creation failed:', errData.msg);
+        }
+      } catch (authErr) {
+        console.error('Auth account creation error:', authErr);
+      }
+    }
+
+    // Log activity
+    try {
+      await supabase.from('partner_team_activity').insert({
+        user_id: partnerUser.id,
+        action: 'add_student',
+        entity_type: 'student',
+        entity_id: newUser.id,
+        details: { student_email: email, student_name: full_name },
+      });
+    } catch {
+      // Non-critical
+    }
+
     return NextResponse.json({ 
       student: {
         ...newUser,

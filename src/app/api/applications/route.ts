@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner-auth-utils';
 
 interface User {
   id: string;
   email: string;
   role: string;
   partner_id?: string;
-}
-
-// Helper to get partner ID for the current user.
-// applications.partner_id stores users.id (not partners.id), so we return user.id for partners.
-function getPartnerIdForUser(user: User | null): string | null {
-  if (!user) return null;
-  
-  // If user is a partner, use their users.id (that's what applications.partner_id stores)
-  if (user.role === 'partner') {
-    return user.id;
-  }
-  
-  // If user has partner_id (team member scenario), use that
-  if (user.partner_id) {
-    return user.partner_id;
-  }
-  
-  return null;
+  partner_role?: string;
 }
 
 // GET /api/applications - List user's applications (student) or managed applications (partner/admin)
@@ -36,7 +20,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
-    const partnerId = getPartnerIdForUser(user);
     
     const { searchParams } = new URL(request.url);
     
@@ -83,23 +66,74 @@ export async function GET(request: NextRequest) {
           users (
             id,
             full_name,
-            email
+            email,
+            referred_by_partner_id
           )
         )
       `, { count: 'exact' });
 
     // Role-based filters
     if (user.role === 'student') {
-      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
+      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).maybeSingle();
       if (studentRec) {
         query = query.eq('student_id', studentRec.id);
-      }
-    } else if (user.role === 'partner' || user.partner_id) {
-      if (partnerId) {
-        query = query.eq('partner_id', partnerId);
       } else {
         return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
       }
+    } else if (user.role === 'partner') {
+      // Partner access control: member sees own students' apps, admin sees all team's
+      const authResult = await verifyPartnerAuth(request);
+      if ('error' in authResult) {
+        return authResult.error;
+      }
+      const partnerUser = authResult.user;
+      const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
+
+      // Get the list of referrer IDs this partner user can see
+      let referrerIds: string[];
+      if (isAdmin) {
+        // Admin sees applications from students referred by themselves + all team members
+        const { data: teamMembers } = await supabase
+          .from('users')
+          .select('id')
+          .or(`id.eq.${partnerUser.id},partner_id.eq.${partnerUser.id}`)
+          .eq('role', 'partner');
+        
+        referrerIds = (teamMembers || []).map(m => m.id);
+        if (!referrerIds.includes(partnerUser.id)) referrerIds.push(partnerUser.id);
+      } else {
+        // Member sees only students they referred
+        referrerIds = [partnerUser.id];
+      }
+
+      // Find students referred by these partner users
+      const { data: referredStudents } = await supabase
+        .from('users')
+        .select('id')
+        .in('referred_by_partner_id', referrerIds)
+        .eq('role', 'student');
+
+      const referredUserIds = (referredStudents || []).map(s => s.id);
+
+      if (referredUserIds.length === 0) {
+        return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
+      }
+
+      // Get student record IDs for these users
+      const { data: studentRecs } = await supabase
+        .from('students')
+        .select('id')
+        .in('user_id', referredUserIds);
+
+      const studentIds = (studentRecs || []).map(s => s.id);
+
+      if (studentIds.length === 0) {
+        return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
+      }
+
+      query = query.in('student_id', studentIds);
+    } else if (user.role === 'admin') {
+      // Admin sees all applications — no filter
     }
 
     // Status filter
@@ -193,73 +227,93 @@ export async function GET(request: NextRequest) {
 
 // POST /api/applications - Create a new application (student or partner)
 export async function POST(request: NextRequest) {
-  console.log("POST /api/applications called")
   try {
     const user = await verifyAuthToken(request);
-    console.log("verifyAuthToken user:", user)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = getSupabaseClient();
-    const partnerId = getPartnerIdForUser(user);
-    console.log("partnerId:", partnerId)
-    if (!user || !['student', 'partner', 'admin'].includes(user.role) && !partnerId) {
-      console.log("Unauthorized!")
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+    // For partner users, verify access and resolve partner record
+    let partnerRecordId: string | null = null;
+    if (user.role === 'partner') {
+      const authResult = await verifyPartnerAuth(request);
+      if ('error' in authResult) return authResult.error;
+      const partnerUser = authResult.user;
+      
+      // Member can only create applications for students they referred
+      // Admin can create applications for any student in their team
+      const adminId = await getPartnerAdminId(partnerUser.id);
+      const { data: partnerRec } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', adminId || partnerUser.id)
+        .maybeSingle();
+      partnerRecordId = partnerRec?.id || null;
     }
 
     const body = await request.json();
-    console.log("request body:", body)
     const {
       student_id, // Required for partners/admins (students.id, not users.id)
       user_id, // Alternative: if partner provides users.id, look up students.id
       program_id,
-      requested_university_program_note, // New field
-      selected_program_ids, // New field (for storing all selected programs)
+      requested_university_program_note,
+      selected_program_ids,
       intake,
     } = body;
 
-    // Validate required fields: either program_id OR requested_university_program_note must be present
+    // Validate required fields
     if (!program_id && !requested_university_program_note) {
-      console.log("Missing program_id and requested_university_program_note")
       return NextResponse.json(
         { error: 'Either program or request note is required' },
         { status: 400 }
       );
     }
-
-    console.log("supabase client initialized")
     
     // Determine student ID (students.id, not users.id)
     let finalStudentId: string;
     if (user.role === 'student') {
-      // For students, get their student record id via user_id
-      console.log("User is student, getting student record via user_id:", user.id)
-      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
-      console.log("studentRec from user.id:", studentRec)
+      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).maybeSingle();
       if (!studentRec) {
-        console.log("Student record not found")
         return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
       }
       finalStudentId = studentRec.id;
     } else {
       // Partner or admin: use student_id if provided, else look up via user_id
-      console.log("User is partner/admin, student_id from body:", student_id)
       if (student_id) {
         finalStudentId = student_id;
       } else if (user_id) {
-        const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user_id).single();
+        const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user_id).maybeSingle();
         if (!studentRec) {
           return NextResponse.json({ error: 'Student record not found for this user' }, { status: 404 });
         }
         finalStudentId = studentRec.id;
       } else {
-        console.log("Missing student_id or user_id")
         return NextResponse.json({ error: 'Either student_id or user_id is required' }, { status: 400 });
       }
-    }
-    console.log("finalStudentId:", finalStudentId)
 
-    // Determine partner ID
-    const finalPartnerId: string | null = partnerId;
-    console.log("finalPartnerId:", finalPartnerId)
+      // For partner members: verify they can access this student
+      if (user.role === 'partner') {
+        const authResult = await verifyPartnerAuth(request);
+        if ('error' in authResult) return authResult.error;
+        const partnerUser = authResult.user;
+        const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
+
+        if (!isAdmin) {
+          // Member can only create apps for students they referred
+          const { data: studentUser } = await supabase
+            .from('users')
+            .select('referred_by_partner_id')
+            .eq('id', user_id || '')
+            .maybeSingle();
+          
+          if (!studentUser || studentUser.referred_by_partner_id !== partnerUser.id) {
+            return NextResponse.json({ error: 'You can only create applications for students you referred' }, { status: 403 });
+          }
+        }
+      }
+    }
 
     // Store all extra form data in profile_snapshot JSONB column
     const profileSnapshot = {
@@ -299,8 +353,6 @@ export async function POST(request: NextRequest) {
         ? selected_program_ids
         : [null]; // Request note only, no program
 
-    console.log("programIdsToCreate:", programIdsToCreate)
-
     // Create one application per program
     const createdApplications = [];
     for (const pid of programIdsToCreate) {
@@ -315,7 +367,6 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (existing) {
-          console.log("Skipping program_id:", pid, "- student already has a non-draft application");
           continue;
         }
       }
@@ -325,7 +376,7 @@ export async function POST(request: NextRequest) {
         .insert({
           student_id: finalStudentId,
           program_id: pid,
-          partner_id: finalPartnerId,
+          partner_id: partnerRecordId,
           status: 'draft',
           profile_snapshot: profileSnapshot,
         })
@@ -334,7 +385,6 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error creating application for program_id:', pid, error);
-        // Continue creating other applications even if one fails
         continue;
       }
       
@@ -347,9 +397,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create any applications' }, { status: 500 });
     }
 
-    // Return the first application as the primary one (for backward compatibility)
-    // Also return all created applications
-    console.log("Created", createdApplications.length, "applications")
     return NextResponse.json({ 
       application: createdApplications[0],
       applications: createdApplications,
