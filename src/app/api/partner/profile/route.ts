@@ -35,10 +35,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
     }
     
-    // Get partner profile extension
+    // Get partner profile extension (from partners table)
     const { data: partnerProfile, error: profileError } = await supabase
-      .from('partner_profiles')
-      .select('company_name, position, address, website')
+      .from('partners')
+      .select('company_name, position, company_address, website')
       .eq('user_id', user.id)
       .single();
     
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       avatar_url: userData.avatar_url,
       company_name: partnerProfile?.company_name || null,
       position: partnerProfile?.position || null,
-      address: partnerProfile?.address || null,
+      address: partnerProfile?.company_address || null,
       website: partnerProfile?.website || null,
     };
     
@@ -90,9 +90,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
     }
     
-    // Update or create partner profile
+    // Update or create partner profile (in partners table)
     const { data: existingProfile } = await supabase
-      .from('partner_profiles')
+      .from('partners')
       .select('id')
       .eq('user_id', user.id)
       .single();
@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
       user_id: user.id,
       company_name: body.company_name,
       position: body.position,
-      address: body.address,
+      company_address: body.address,
       website: body.website,
       updated_at: new Date().toISOString(),
     };
@@ -109,13 +109,13 @@ export async function PUT(request: NextRequest) {
     let profileError;
     if (existingProfile) {
       const result = await supabase
-        .from('partner_profiles')
+        .from('partners')
         .update(profileData)
         .eq('id', existingProfile.id);
       profileError = result.error;
     } else {
       const result = await supabase
-        .from('partner_profiles')
+        .from('partners')
         .insert(profileData);
       profileError = result.error;
     }
