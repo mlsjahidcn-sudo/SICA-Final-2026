@@ -9,7 +9,7 @@ export default function ProfileRedirectPage() {
 
   useEffect(() => {
     // Redirect to student profile
-    router.replace('/student/profile');
+    router.replace('/student-v2/profile');
   }, [router]);
 
   return (

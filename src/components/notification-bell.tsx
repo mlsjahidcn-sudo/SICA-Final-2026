@@ -232,7 +232,7 @@ export function NotificationBell() {
         {notifications.length > 0 && (
           <div className="p-3 border-t">
             <Button variant="outline" size="sm" className="w-full" asChild>
-              <Link href="/student/notifications" onClick={() => setIsOpen(false)}>
+              <Link href="/student-v2/notifications" onClick={() => setIsOpen(false)}>
                 View All Notifications
               </Link>
             </Button>
