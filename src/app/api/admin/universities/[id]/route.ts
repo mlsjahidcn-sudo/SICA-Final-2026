@@ -18,10 +18,11 @@ export async function GET(
       );
     }
 
-    const supabase = getSupabaseClient(token);
-
-    // Verify admin role
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    // Use anon key client for auth verification
+    const supabaseAuth = getSupabaseClient(token);
+    
+    // Verify user token
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !authUser) {
       return NextResponse.json(
@@ -30,6 +31,9 @@ export async function GET(
       );
     }
 
+    // Use service role key client for database operations (bypasses RLS)
+    const supabase = getSupabaseClient();
+    
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -83,10 +87,11 @@ export async function PUT(
       );
     }
 
-    const supabase = getSupabaseClient(token);
-
-    // Verify admin role
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    // Use anon key client for auth verification
+    const supabaseAuth = getSupabaseClient(token);
+    
+    // Verify user token
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !authUser) {
       return NextResponse.json(
@@ -95,6 +100,9 @@ export async function PUT(
       );
     }
 
+    // Use service role key client for database operations (bypasses RLS)
+    const supabase = getSupabaseClient();
+    
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -197,10 +205,11 @@ export async function PATCH(
       );
     }
 
-    const supabase = getSupabaseClient(token);
-
-    // Verify admin role
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+    // Use anon key client for auth verification
+    const supabaseAuth = getSupabaseClient(token);
+    
+    // Verify user token
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !authUser) {
       return NextResponse.json(
@@ -209,6 +218,9 @@ export async function PATCH(
       );
     }
 
+    // Use service role key client for database operations (bypasses RLS)
+    const supabase = getSupabaseClient();
+    
     const { data: profile } = await supabase
       .from('users')
       .select('role')
