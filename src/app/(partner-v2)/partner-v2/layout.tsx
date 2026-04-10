@@ -77,6 +77,8 @@ export default function PartnerV2Layout({
             <button
               onClick={() => {
                 localStorage.removeItem('sica_auth_token');
+                localStorage.removeItem('sica_refresh_token');
+                localStorage.removeItem('sica_token_expires_at');
                 localStorage.removeItem('sica_user_data');
                 router.push('/login');
               }}
@@ -117,6 +119,8 @@ export default function PartnerV2Layout({
             <button
               onClick={() => {
                 localStorage.removeItem('sica_auth_token');
+                localStorage.removeItem('sica_refresh_token');
+                localStorage.removeItem('sica_token_expires_at');
                 localStorage.removeItem('sica_user_data');
                 router.push('/login');
               }}

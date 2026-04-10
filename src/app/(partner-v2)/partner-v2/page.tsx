@@ -77,7 +77,7 @@ export default function PartnerV2DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const statsResponse = await fetch(`/api/partner/dashboard?days=${timeRange}`, {
         headers: { 'Authorization': `Bearer ${token}` },

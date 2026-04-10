@@ -101,7 +101,7 @@ export default function PartnersPage() {
   const fetchPartners = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: ITEMS_PER_PAGE.toString(),
@@ -149,7 +149,7 @@ export default function PartnersPage() {
     
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/partners/${selectedPartner.id}/${actionType}`, {
         method: 'POST',
         headers: {

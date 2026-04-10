@@ -97,7 +97,7 @@ export default function UniversityComparePage() {
     }
     setLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/universities?limit=200`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -127,7 +127,7 @@ export default function UniversityComparePage() {
     if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/universities?search=${encodeURIComponent(searchQuery)}&limit=10`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

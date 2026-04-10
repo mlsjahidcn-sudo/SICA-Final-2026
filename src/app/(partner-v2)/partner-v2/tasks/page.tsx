@@ -142,7 +142,7 @@ export default function PartnerTasksPage() {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
 
       if (filterStatus !== 'all') params.append('status', filterStatus);
@@ -183,7 +183,7 @@ export default function PartnerTasksPage() {
 
     setIsCreating(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch('/api/partner/tasks', {
         method: 'POST',
         headers: {
@@ -213,7 +213,7 @@ export default function PartnerTasksPage() {
   const handleUpdateStatus = async (taskId: string, status: string) => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/partner/tasks/${taskId}`, {
         method: 'PATCH',
         headers: {
@@ -243,7 +243,7 @@ export default function PartnerTasksPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/partner/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },

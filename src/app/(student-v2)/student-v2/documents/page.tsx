@@ -94,7 +94,7 @@ export default function DocumentsPage() {
     setLoading(true)
     
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams()
       if (filter !== "all") {
         params.append('status', filter)
@@ -125,7 +125,7 @@ export default function DocumentsPage() {
 
   const fetchApplications = React.useCallback(async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/student/applications', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -194,7 +194,7 @@ export default function DocumentsPage() {
     if (!confirm("Are you sure you want to delete this document?")) return
     
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/documents?id=${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -214,7 +214,7 @@ export default function DocumentsPage() {
 
   const handleDownload = async (documentId: string, fileName: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/documents/${documentId}/url`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -245,7 +245,7 @@ export default function DocumentsPage() {
       return
     }
 
-    const token = localStorage.getItem('sica_auth_token')
+    const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
     const formData = new FormData()
     formData.append('application_id', selectedApplication)
     formData.append('document_type', selectedDocType)

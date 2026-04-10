@@ -54,7 +54,7 @@ export default function MeetingsCalendarPage() {
   const fetchMeetings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/partner/meetings', {
         headers: { 'Authorization': `Bearer ${token}` },

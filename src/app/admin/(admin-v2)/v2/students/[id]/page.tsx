@@ -119,7 +119,7 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
   useEffect(() => {
     async function fetchStudent() {
       try {
-        const token = localStorage.getItem('sica_auth_token')
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch(`/api/admin/students/${studentId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,

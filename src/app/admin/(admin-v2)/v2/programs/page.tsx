@@ -234,7 +234,7 @@ export default function ProgramsPage() {
   const fetchPrograms = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams()
       params.append('page', page.toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
@@ -271,7 +271,7 @@ export default function ProgramsPage() {
 
   const fetchUniversities = useCallback(async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities?limit=200', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -286,7 +286,7 @@ export default function ProgramsPage() {
 
   const fetchProgramStats = useCallback(async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/programs/stats', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -351,7 +351,7 @@ export default function ProgramsPage() {
     const { action, count } = bulkActionDialog
     setBulkActionLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/programs/bulk', {
         method: 'POST',
         headers: {
@@ -382,7 +382,7 @@ export default function ProgramsPage() {
   // Duplicate program
   const handleDuplicate = async (programId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}/duplicate`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -403,7 +403,7 @@ export default function ProgramsPage() {
   // Archive program
   const handleArchive = async (programId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },

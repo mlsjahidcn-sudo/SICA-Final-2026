@@ -180,7 +180,7 @@ export default function PartnerV2AddStudentPage() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         toast.error('Please sign in first');
         router.push('/signin');

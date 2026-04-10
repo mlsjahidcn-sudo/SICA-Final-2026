@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
   const fetchAnalytics = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch(`/api/partner/analytics?days=${timeRange}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
 
   const handleExport = async (format: 'csv' | 'json') => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/partner/export?format=${format}&type=analytics&days=${timeRange}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });

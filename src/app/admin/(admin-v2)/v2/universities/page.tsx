@@ -438,7 +438,7 @@ export default function UniversitiesPage() {
   const fetchUniversities = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams()
       params.append('page', page.toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
@@ -474,7 +474,7 @@ export default function UniversitiesPage() {
   const fetchStatsData = useCallback(async () => {
     setIsLoadingStats(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -512,7 +512,7 @@ export default function UniversitiesPage() {
   const handleExport = async (format: 'csv' | 'json') => {
     setIsExporting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/export?format=${format}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -572,7 +572,7 @@ export default function UniversitiesPage() {
     if (!bulkAction || selectedIds.length === 0) return
     setIsBulkOperating(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities/bulk', {
         method: 'POST',
         headers: {
@@ -617,7 +617,7 @@ export default function UniversitiesPage() {
     if (!selectedUniversity) return
     setIsToggling(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${selectedUniversity.id}`, {
         method: 'PUT',
         headers: {
@@ -647,7 +647,7 @@ export default function UniversitiesPage() {
     if (!selectedUniversity) return
     setIsDeleting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${selectedUniversity.id}`, {
         method: 'DELETE',
         headers: {

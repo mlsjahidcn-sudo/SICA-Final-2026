@@ -128,7 +128,7 @@ export default function PartnerV2ApplicationsPage() {
   useEffect(() => {
     const fetchUniversities = async () => {
       try {
-        const token = localStorage.getItem('sica_auth_token');
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
         const response = await fetch('/api/universities?limit=200', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
@@ -146,7 +146,7 @@ export default function PartnerV2ApplicationsPage() {
   const fetchApplications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
       params.append('page', pageNum.toString());
       params.append('pageSize', '20');
@@ -209,7 +209,7 @@ export default function PartnerV2ApplicationsPage() {
   const handleExport = async (format: 'csv' | 'json') => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
       params.append('format', format);
       if (statusFilter !== 'all') params.append('status', statusFilter);

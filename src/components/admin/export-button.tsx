@@ -31,7 +31,7 @@ export function ExportButton({ className }: ExportButtonProps) {
   const handleExport = async (type: 'students' | 'applications' | 'partners', format: 'csv' | 'json') => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/admin/export?type=${type}&format=${format}`, {
         headers: {
           'Authorization': `Bearer ${token}`,

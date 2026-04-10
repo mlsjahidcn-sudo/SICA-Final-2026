@@ -117,7 +117,7 @@ export default function AdminTasksPage() {
     if (!user) return;
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       let url = '/api/admin/tasks';
       const params = new URLSearchParams();
       
@@ -148,7 +148,7 @@ export default function AdminTasksPage() {
 
     try {
       setLoadingApplications(true);
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch('/api/admin/applications?limit=100', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -205,7 +205,7 @@ export default function AdminTasksPage() {
     if (!confirm('Are you sure you want to delete this task?')) return;
     
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/admin/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
@@ -226,7 +226,7 @@ export default function AdminTasksPage() {
     setSubmitting(true);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const url = editingTask 
         ? `/api/admin/tasks/${editingTask.id}`
         : '/api/admin/tasks';

@@ -1518,7 +1518,7 @@ function ProfileDocumentsTab() {
   const fetchData = React.useCallback(async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
       const [docsRes, appsRes] = await Promise.all([
@@ -1551,7 +1551,7 @@ function ProfileDocumentsTab() {
 
     setUploading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const formData = new FormData()
       formData.append('application_id', uploadAppId)
       formData.append('document_type', uploadDocType)
@@ -1582,7 +1582,7 @@ function ProfileDocumentsTab() {
     if (!confirm('Are you sure you want to delete this document?')) return
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const res = await fetch(`/api/documents?id=${docId}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},

@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       // Add cache-busting query param
       const response = await fetch(`/api/partner/profile?t=${Date.now()}`, {
@@ -99,7 +99,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/partner/profile', {
         method: 'PUT',
@@ -171,7 +171,7 @@ export default function ProfilePage() {
 
     setIsUploading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const formData = new FormData();
       formData.append('avatar', file);
 

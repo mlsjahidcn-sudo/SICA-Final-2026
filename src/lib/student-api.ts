@@ -2,24 +2,21 @@
  * Student API Client - Helper functions for authenticated API calls
  */
 
-const TOKEN_KEY = 'sica_auth_token';
-
-// Get auth token from localStorage
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
+import { getValidToken } from './auth-token';
 
 // Set auth token
 export function setAuthToken(token: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem('sica_auth_token', token);
 }
 
 // Clear auth token
 export function clearAuthToken(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('sica_auth_token');
+  localStorage.removeItem('sica_refresh_token');
+  localStorage.removeItem('sica_token_expires_at');
+  localStorage.removeItem('sica_user_data');
 }
 
 // Base fetch with auth
@@ -27,7 +24,7 @@ export async function authFetch<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<{ data: T | null; error: string | null; status: number }> {
-  const token = getAuthToken();
+  const token = await getValidToken();
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -45,7 +42,8 @@ export async function authFetch<T>(
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expired or invalid - could redirect to login
+        // Token expired — getValidToken() already handles refresh on next call
+        // Clear stale session so next interaction redirects to login
         clearAuthToken();
       }
       return { data: null, error: data.error || 'Request failed', status: response.status };
@@ -127,7 +125,7 @@ export const studentApi = {
     }),
 
   uploadDocument: async (applicationId: string, documentType: string, file: File) => {
-    const token = getAuthToken();
+    const token = await getValidToken();
     const formData = new FormData();
     formData.append('application_id', applicationId);
     formData.append('document_type', documentType);

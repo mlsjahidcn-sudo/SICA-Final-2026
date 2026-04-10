@@ -71,7 +71,7 @@ export default function PartnerV2StudentsPage() {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         toast.error('Please sign in first');
         return;
@@ -107,7 +107,7 @@ export default function PartnerV2StudentsPage() {
   const fetchStudents = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         toast.error('Please sign in first');
         return;

@@ -61,7 +61,7 @@ export function NotificationBell() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/notifications?limit=10', {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -89,7 +89,7 @@ export function NotificationBell() {
   const markAsRead = async (notificationIds?: string[]) => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/notifications', {
         method: 'PUT',

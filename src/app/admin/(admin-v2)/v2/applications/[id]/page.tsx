@@ -127,7 +127,7 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
   useEffect(() => {
     async function fetchApplication() {
       try {
-        const token = localStorage.getItem('sica_auth_token')
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch(`/api/admin/applications/${applicationId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -159,7 +159,7 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
 
     setIsUpdating(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/applications/${applicationId}`, {
         method: 'PUT',
         headers: {

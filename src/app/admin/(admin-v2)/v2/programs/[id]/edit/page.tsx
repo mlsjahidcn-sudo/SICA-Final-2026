@@ -252,7 +252,7 @@ export default function EditProgramPage() {
   const fetchProgram = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -320,7 +320,7 @@ export default function EditProgramPage() {
 
   const fetchUniversities = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities?limit=200', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -458,7 +458,7 @@ export default function EditProgramPage() {
 
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}`, {
         method: 'PUT',
         headers: {
@@ -493,7 +493,7 @@ export default function EditProgramPage() {
 
   const handleDelete = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -513,7 +513,7 @@ export default function EditProgramPage() {
 
   const handleDuplicate = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}/duplicate`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },

@@ -94,7 +94,7 @@ export default function MeetingsPage() {
   const fetchMeetings = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: ITEMS_PER_PAGE.toString(),

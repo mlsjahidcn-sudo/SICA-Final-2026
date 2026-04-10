@@ -212,8 +212,11 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
   React.useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('sica_auth_token') : null;
-        if (!token || !user) return;
+        if (!user) return;
+
+        const { getValidToken } = await import('@/lib/auth-token');
+        const token = await getValidToken();
+        if (!token) return;
 
         const response = await fetch('/api/partner/notifications/unread-count', {
           headers: { 'Authorization': `Bearer ${token}` },

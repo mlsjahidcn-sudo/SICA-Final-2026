@@ -168,7 +168,7 @@ export default function ApplyPage() {
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       if (!token) {
         toast.error('Please login again');
@@ -230,7 +230,7 @@ export default function ApplyPage() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       if (!token) {
         toast.error('Please login again');

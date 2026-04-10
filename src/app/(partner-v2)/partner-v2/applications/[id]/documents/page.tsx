@@ -128,7 +128,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
   const fetchApplicationAndDocuments = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       // Fetch application
       const appResponse = await fetch(`/api/applications/${resolvedParams.id}`, {
@@ -168,7 +168,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
 
     setIsUploading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const formData = new FormData();
       formData.append('application_id', resolvedParams.id);
       formData.append('document_type', selectedDocType);

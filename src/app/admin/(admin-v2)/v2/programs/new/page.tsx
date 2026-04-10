@@ -279,7 +279,7 @@ export default function NewProgramPage() {
 
   const fetchUniversities = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities?limit=200', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -451,7 +451,7 @@ export default function NewProgramPage() {
 
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/programs', {
         method: 'POST',
         headers: {

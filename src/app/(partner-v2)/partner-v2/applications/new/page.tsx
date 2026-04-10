@@ -190,7 +190,7 @@ export default function PartnerNewApplicationPage() {
     const fetchStudents = async () => {
       setIsLoadingStudents(true)
       try {
-        const token = localStorage.getItem("sica_auth_token")
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch("/api/partner/students?pageSize=100", {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -217,7 +217,7 @@ export default function PartnerNewApplicationPage() {
     const fetchPrograms = async () => {
       setIsLoadingPrograms(true)
       try {
-        const token = localStorage.getItem("sica_auth_token")
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch("/api/programs?limit=500", {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -292,7 +292,7 @@ export default function PartnerNewApplicationPage() {
     }
 
     try {
-      const token = localStorage.getItem("sica_auth_token")
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       
       const requestBody = {
         student_id: formData.student_id,
@@ -386,7 +386,7 @@ export default function PartnerNewApplicationPage() {
 
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem("sica_auth_token")
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/applications/${applicationId}`, {
         method: "POST",
         headers: {

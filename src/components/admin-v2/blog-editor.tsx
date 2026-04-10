@@ -216,7 +216,7 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
     setGenerationStep('Generating complete blog post package...');
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch('/api/admin/blog/ai/generate', {
         method: 'POST',
         headers: {
@@ -309,7 +309,7 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
     setIsGeneratingLinks(true);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch('/api/admin/blog/ai/suggest-links', {
         method: 'POST',
         headers: {
@@ -346,7 +346,7 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const tagsArray = formData.seo_keywords ? formData.seo_keywords.split(',').map(t => t.trim()).filter(t => t) : [];
       
       const payload = {

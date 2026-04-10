@@ -310,7 +310,7 @@ function ProgramsManagement({ universityId }: { universityId: string }) {
   const fetchPrograms = async () => {
     try {
       setIsLoading(true)
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${universityId}/programs?status=all`, {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -351,7 +351,7 @@ function ProgramsManagement({ universityId }: { universityId: string }) {
     }
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${universityId}/programs`, {
         method: 'POST',
         headers: {
@@ -387,7 +387,7 @@ function ProgramsManagement({ universityId }: { universityId: string }) {
     }
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${editingProgram.id}`, {
         method: 'PUT',
         headers: {
@@ -463,7 +463,7 @@ function ProgramsManagement({ universityId }: { universityId: string }) {
     }
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${universityId}/programs`, {
         method: 'PUT',
         headers: {
@@ -493,7 +493,7 @@ function ProgramsManagement({ universityId }: { universityId: string }) {
     if (!confirm('Are you sure you want to delete this program?')) return
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/programs/${programId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -809,7 +809,7 @@ function ScholarshipsManagement({ universityId }: { universityId: string }) {
   const fetchScholarships = async () => {
     try {
       setIsLoading(true)
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${universityId}/scholarships`, {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -853,7 +853,7 @@ function ScholarshipsManagement({ universityId }: { universityId: string }) {
     }
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const url = editingScholarship
         ? `/api/admin/universities/${universityId}/scholarships/${editingScholarship.id}`
         : `/api/admin/universities/${universityId}/scholarships`
@@ -913,7 +913,7 @@ function ScholarshipsManagement({ universityId }: { universityId: string }) {
     if (!confirm('Are you sure you want to delete this scholarship?')) return
 
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(`/api/admin/universities/${universityId}/scholarships/${scholarshipId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -1185,7 +1185,7 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
   useEffect(() => {
     async function fetchUniversity() {
       try {
-        const token = localStorage.getItem('sica_auth_token')
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch(`/api/admin/universities/${universityId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1306,7 +1306,7 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
 
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       
       const submitData = {
         ...formData,

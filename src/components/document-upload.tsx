@@ -135,7 +135,7 @@ export function DocumentUpload({
     setUploadProgress(0);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const formData = new FormData();
       formData.append('application_id', applicationId);
       formData.append('document_type', documentType);
@@ -178,7 +178,7 @@ export function DocumentUpload({
     if (!currentDoc || readOnly) return;
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch(`/api/documents?id=${currentDoc.id}`, {
         method: 'DELETE',
         headers: {

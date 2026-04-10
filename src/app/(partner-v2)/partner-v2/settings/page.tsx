@@ -101,7 +101,7 @@ export default function SettingsPage() {
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/partner/settings', {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -141,7 +141,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/partner/settings', {
         method: 'PUT',
@@ -182,7 +182,7 @@ export default function SettingsPage() {
     
     setIsChangingPassword(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {

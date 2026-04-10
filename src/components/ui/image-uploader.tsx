@@ -61,7 +61,7 @@ export function ImageUploader({
       formData.append('type', 'photo')
       formData.append('category', 'program_cover')
 
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch(uploadEndpoint, {
         method: 'POST',
         headers: {
@@ -253,7 +253,7 @@ export function AvatarUploader({
       formData.append('type', 'photo')
       formData.append('category', 'avatar')
 
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: {

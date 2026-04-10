@@ -36,7 +36,7 @@ export function FavoriteButton({
 
   const checkFavoriteStatus = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         setIsChecking(false);
         return;
@@ -64,7 +64,7 @@ export function FavoriteButton({
   };
 
   const toggleFavorite = async () => {
-    const token = localStorage.getItem('sica_auth_token');
+    const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
     if (!token) {
       toast.error('Please login to add favorites');
       return;

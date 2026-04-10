@@ -134,7 +134,8 @@ export default function PartnerV2TeamPage() {
   const fetchTeam = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const response = await fetch('/api/partner/team', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -156,7 +157,8 @@ export default function PartnerV2TeamPage() {
   const fetchActivities = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setIsLoadingActivity(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const params = new URLSearchParams();
       params.append('page', pageNum.toString());
       params.append('limit', '20');
@@ -210,7 +212,8 @@ export default function PartnerV2TeamPage() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       // Prepare request body - only include password if createWithPassword is true
       const requestBody: {
         email: string;
@@ -266,7 +269,8 @@ export default function PartnerV2TeamPage() {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const response = await fetch(`/api/partner/team/${editingMember.id}`, {
         method: 'PUT',
         headers: {
@@ -298,7 +302,8 @@ export default function PartnerV2TeamPage() {
 
   const handleRemove = async (memberId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const response = await fetch(`/api/partner/team/${memberId}`, {
         method: 'DELETE',
         headers: {

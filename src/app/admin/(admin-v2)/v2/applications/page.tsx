@@ -130,7 +130,7 @@ function ApplicationsListContent() {
 
   const fetchUniversities = useCallback(async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const response = await fetch('/api/admin/universities?limit=100', {
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -146,7 +146,7 @@ function ApplicationsListContent() {
   const fetchApplications = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('sica_auth_token')
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const params = new URLSearchParams()
       if (statusFilter !== 'all') params.append('status', statusFilter)
       if (universityFilter !== 'all') params.append('university_id', universityFilter)

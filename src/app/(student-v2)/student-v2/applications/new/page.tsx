@@ -344,7 +344,7 @@ export default function NewApplicationPage() {
     const fetchChecklist = async () => {
       setLoadingDocs(true)
       try {
-        const token = localStorage.getItem("sica_auth_token")
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const res = await fetch(`/api/student/applications/${applicationId}/documents/checklist`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
@@ -687,7 +687,7 @@ export default function NewApplicationPage() {
           uploadData.append("application_id", applicationId)
           uploadData.append("document_type", docType)
           uploadData.append("file", file)
-          const token = localStorage.getItem("sica_auth_token")
+          const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
           await fetch("/api/student/documents", {
             method: "POST",
             headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -697,7 +697,7 @@ export default function NewApplicationPage() {
       }
 
       // Submit the application
-      const token = localStorage.getItem("sica_auth_token")
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
       const submitRes = await fetch(`/api/student/applications/${applicationId}/submit`, {
         method: "POST",
         headers: {

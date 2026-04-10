@@ -61,7 +61,7 @@ export default function Page() {
       if (!user) return
       
       try {
-        const token = localStorage.getItem('sica_auth_token')
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
         const response = await fetch('/api/admin/dashboard-v2', {
           headers: {
             'Authorization': `Bearer ${token}`,

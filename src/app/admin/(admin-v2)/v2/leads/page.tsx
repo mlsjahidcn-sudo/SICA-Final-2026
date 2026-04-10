@@ -206,7 +206,7 @@ export default function LeadsPage() {
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
       params.set('page', page.toString());
       params.set('limit', ITEMS_PER_PAGE.toString());
@@ -242,7 +242,7 @@ export default function LeadsPage() {
 
   const fetchLeadActivities = async (leadId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/admin/leads/${leadId}/activities`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -273,7 +273,7 @@ export default function LeadsPage() {
     const data = Object.fromEntries(formData);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
 
       const payload: Record<string, unknown> = {
         type: newLeadType,
@@ -322,7 +322,7 @@ export default function LeadsPage() {
     const data = Object.fromEntries(formData);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
 
       const payload: Record<string, unknown> = {
         ...data,
@@ -362,7 +362,7 @@ export default function LeadsPage() {
     if (!user) return;
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/admin/leads/${leadId}`, {
         method: 'PUT',
         headers: {
@@ -390,7 +390,7 @@ export default function LeadsPage() {
     if (!confirm('Are you sure you want to delete this lead?')) return;
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/admin/leads/${leadId}`, {
         method: 'DELETE',
         headers: {
@@ -414,7 +414,7 @@ export default function LeadsPage() {
     setIsAddingActivity(true);
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const res = await fetch(`/api/admin/leads/${selectedLead.id}/activities`, {
         method: 'POST',
         headers: {
@@ -444,7 +444,7 @@ export default function LeadsPage() {
     if (!user) return;
 
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
       if (activeTab !== 'all') params.set('type', activeTab);
       if (statusFilter !== 'all') params.set('status', statusFilter);

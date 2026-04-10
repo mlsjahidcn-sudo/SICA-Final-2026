@@ -147,7 +147,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
     const fetchStudent = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('sica_auth_token');
+        const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
         if (!token) {
           toast.error('Please sign in first');
           router.push('/signin');
@@ -255,7 +255,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         toast.error('Please sign in first');
         router.push('/signin');
@@ -330,7 +330,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       if (!token) {
         toast.error('Please sign in first');
         return;

@@ -54,7 +54,7 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch(`/api/partner/notifications?type=${activeFilter}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -81,7 +81,7 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch(`/api/partner/notifications/${notificationId}/read`, {
         method: 'POST',
@@ -104,7 +104,7 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('sica_auth_token');
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       
       const response = await fetch('/api/partner/notifications/read-all', {
         method: 'POST',
