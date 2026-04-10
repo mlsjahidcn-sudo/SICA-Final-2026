@@ -46,6 +46,9 @@ export async function GET(request: NextRequest) {
     const degreeType = searchParams.get('degreeType') || '';
     const search = searchParams.get('search') || '';
     const sort = searchParams.get('sort') || 'submitted_desc';
+    const universityId = searchParams.get('universityId') || '';
+    const dateFrom = searchParams.get('dateFrom') || '';
+    const dateTo = searchParams.get('dateTo') || '';
     
     const offset = (page - 1) * pageSize;
 
@@ -120,6 +123,19 @@ export async function GET(request: NextRequest) {
         programs.name.ilike.%${search}%,
         programs.universities.name_en.ilike.%${search}%
       `);
+    }
+
+    // University filter
+    if (universityId) {
+      query = query.eq('programs.university_id', universityId);
+    }
+
+    // Date range filter
+    if (dateFrom) {
+      query = query.gte('submitted_at', dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte('submitted_at', dateTo);
     }
 
     // Sorting

@@ -15,6 +15,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   IconEye,
   IconBuilding,
   IconCalendar,
@@ -31,6 +36,8 @@ import {
   IconSortAscending,
   IconSortDescending,
   IconPlus,
+  IconCalendarEvent,
+  IconX as IconClear,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -108,9 +115,33 @@ export default function PartnerV2ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [degreeFilter, setDegreeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('submitted_desc');
+  const [universityFilter, setUniversityFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [universities, setUniversities] = useState<{ id: string; name_en: string; name_cn: string | null }[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+
+  // Fetch universities for filter dropdown
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      try {
+        const token = localStorage.getItem('sica_auth_token');
+        const response = await fetch('/api/universities?limit=200', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUniversities(data.universities || []);
+        }
+      } catch {
+        // Non-critical
+      }
+    };
+    fetchUniversities();
+  }, []);
 
   const fetchApplications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setIsLoading(true);
@@ -123,6 +154,9 @@ export default function PartnerV2ApplicationsPage() {
       if (degreeFilter !== 'all') params.append('degreeType', degreeFilter);
       if (searchQuery) params.append('search', searchQuery);
       if (sortBy) params.append('sort', sortBy);
+      if (universityFilter !== 'all') params.append('universityId', universityFilter);
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
 
       const response = await fetch(`/api/applications?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -147,14 +181,14 @@ export default function PartnerV2ApplicationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, degreeFilter, searchQuery, sortBy]);
+  }, [statusFilter, degreeFilter, searchQuery, sortBy, universityFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     if (user?.role === 'partner') {
       setPage(1);
       fetchApplications(1, false);
     }
-  }, [user, statusFilter, degreeFilter, sortBy]);
+  }, [user, statusFilter, degreeFilter, sortBy, universityFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -181,6 +215,7 @@ export default function PartnerV2ApplicationsPage() {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (degreeFilter !== 'all') params.append('degreeType', degreeFilter);
       if (searchQuery) params.append('search', searchQuery);
+      if (universityFilter !== 'all') params.append('universityId', universityFilter);
 
       const response = await fetch(`/api/partner/export?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -207,6 +242,18 @@ export default function PartnerV2ApplicationsPage() {
       setIsExporting(false);
     }
   };
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setDegreeFilter('all');
+    setUniversityFilter('all');
+    setSearchQuery('');
+    setDateFrom('');
+    setDateTo('');
+    setSortBy('submitted_desc');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || degreeFilter !== 'all' || universityFilter !== 'all' || dateFrom || dateTo;
 
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
@@ -236,7 +283,7 @@ export default function PartnerV2ApplicationsPage() {
             </p>
           </div>
           
-          {/* Export Buttons */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <Button asChild>
               <Link href="/partner-v2/applications/new">
@@ -255,7 +302,7 @@ export default function PartnerV2ApplicationsPage() {
               ) : (
                 <IconDownload className="h-4 w-4 mr-2" />
               )}
-              Export CSV
+              CSV
             </Button>
             <Button 
               variant="outline" 
@@ -268,69 +315,135 @@ export default function PartnerV2ApplicationsPage() {
               ) : (
                 <IconDownload className="h-4 w-4 mr-2" />
               )}
-              Export JSON
+              JSON
             </Button>
           </div>
         </div>
         
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or nationality..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <IconFilter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
-              <SelectItem value="under_review">Under Review</SelectItem>
-              <SelectItem value="document_request">Document Request</SelectItem>
-              <SelectItem value="interview_scheduled">Interview</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={degreeFilter} onValueChange={setDegreeFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Degree" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEGREE_TYPES.map((degree) => (
-                <SelectItem key={degree.value} value={degree.value}>
-                  {degree.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[180px]">
-              {sortBy.includes('desc') ? (
-                <IconSortDescending className="h-4 w-4 mr-2 text-muted-foreground" />
-              ) : (
-                <IconSortAscending className="h-4 w-4 mr-2 text-muted-foreground" />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or nationality..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]">
+                <IconFilter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="submitted">Submitted</SelectItem>
+                <SelectItem value="under_review">Under Review</SelectItem>
+                <SelectItem value="document_request">Document Request</SelectItem>
+                <SelectItem value="interview_scheduled">Interview</SelectItem>
+                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={degreeFilter} onValueChange={setDegreeFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Degree" />
+              </SelectTrigger>
+              <SelectContent>
+                {DEGREE_TYPES.map((degree) => (
+                  <SelectItem key={degree.value} value={degree.value}>
+                    {degree.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px]">
+                {sortBy.includes('desc') ? (
+                  <IconSortDescending className="h-4 w-4 mr-2 text-muted-foreground" />
+                ) : (
+                  <IconSortAscending className="h-4 w-4 mr-2 text-muted-foreground" />
+                )}
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant={showAdvanced ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="gap-2"
+            >
+              <IconCalendarEvent className="h-4 w-4" />
+              More Filters
+              {hasActiveFilters && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
               )}
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </Button>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                <IconClear className="h-3 w-3" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvanced && (
+            <div className="flex flex-wrap gap-3 p-4 rounded-lg border bg-muted/30">
+              <Select value={universityFilter} onValueChange={setUniversityFilter}>
+                <SelectTrigger className="w-[220px]">
+                  <IconBuilding className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="All Universities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Universities</SelectItem>
+                  {universities.map((uni) => (
+                    <SelectItem key={uni.id} value={uni.id}>
+                      {uni.name_en || uni.name_cn}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Submitted:</span>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-[150px]"
+                  placeholder="From"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-[150px]"
+                  placeholder="To"
+                />
+                {(dateFrom || dateTo) && (
+                  <Button variant="ghost" size="icon-sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                    <IconClear className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -363,9 +476,10 @@ export default function PartnerV2ApplicationsPage() {
               <>
                 <div className="divide-y">
                   {applications.map((app) => (
-                    <div
+                    <Link
                       key={app.id}
-                      className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      href={`/partner-v2/applications/${app.id}`}
+                      className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -388,13 +502,9 @@ export default function PartnerV2ApplicationsPage() {
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {getStatusBadge(app.status)}
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={`/partner-v2/applications/${app.id}`}>
-                            <IconEye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        <IconEye className="h-4 w-4 text-muted-foreground" />
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
                 

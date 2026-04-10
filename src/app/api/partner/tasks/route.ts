@@ -88,3 +88,54 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (user.role !== 'partner' && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const supabase = getSupabaseClient();
+    const body = await request.json();
+
+    const { title, description, priority, due_date, assignee_id, related_to_type, related_to_id } = body;
+
+    if (!title?.trim()) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    }
+
+    const { data: task, error } = await supabase
+      .from('admin_tasks')
+      .insert({
+        title: title.trim(),
+        description: description?.trim() || null,
+        status: 'todo',
+        priority: priority || 'medium',
+        due_date: due_date || null,
+        creator_id: user.id,
+        creator_role: user.role,
+        assignee_id: assignee_id || null,
+        assignee_role: assignee_id ? 'partner' : null,
+        related_to_type: related_to_type || null,
+        related_to_id: related_to_id || null,
+        partner_id: user.role === 'partner' ? user.id : null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating task:', error);
+      return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+    }
+
+    return NextResponse.json({ task }, { status: 201 });
+  } catch (error) {
+    console.error('Partner tasks POST error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -48,7 +48,7 @@ const DEFAULT_PROFILE: PartnerProfile = {
 };
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const [profile, setProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [originalProfile, setOriginalProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [isLoading, setIsLoading] = useState(true);
@@ -191,7 +191,7 @@ export default function ProfilePage() {
       } else {
         toast.error('Failed to upload avatar');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to upload avatar');
     } finally {
       setIsUploading(false);

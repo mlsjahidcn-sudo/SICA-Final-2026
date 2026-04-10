@@ -97,7 +97,7 @@ export default function NotificationsPage() {
         setUnreadCount(prev => Math.max(0, prev - 1));
         toast.success('Marked as read');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to mark as read');
     }
   };
@@ -118,7 +118,7 @@ export default function NotificationsPage() {
         setUnreadCount(0);
         toast.success('All notifications marked as read');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to mark all as read');
     }
   };

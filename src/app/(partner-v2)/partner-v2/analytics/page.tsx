@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
   const handleExport = async (format: 'csv' | 'json') => {
     try {
       const token = localStorage.getItem('sica_auth_token');
-      const response = await fetch(`/api/partner/export?format=${format}&type=analytics`, {
+      const response = await fetch(`/api/partner/export?format=${format}&type=analytics&days=${timeRange}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
@@ -110,12 +110,15 @@ export default function AnalyticsPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `analytics-report.${format}`;
+        a.download = `analytics-${timeRange}d-report.${format}`;
         a.click();
         window.URL.revokeObjectURL(url);
         toast.success(`Exported as ${format.toUpperCase()}`);
+      } else {
+        const result = await response.json().catch(() => ({}));
+        toast.error(result.error || 'Export failed');
       }
-    } catch (error) {
+    } catch {
       toast.error('Export failed');
     }
   };
