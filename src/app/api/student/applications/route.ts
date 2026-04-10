@@ -219,61 +219,22 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    // Build profile snapshot for application reference
-    // This auto-populates application data from the student profile
-    const profileSnapshot = studentProfile ? {
-      nationality: studentProfile.nationality,
-      passport_number: studentProfile.passport_number,
-      passport_expiry_date: studentProfile.passport_expiry_date,
-      passport_issuing_country: studentProfile.passport_issuing_country,
-      date_of_birth: studentProfile.date_of_birth,
-      gender: studentProfile.gender,
-      current_address: studentProfile.current_address,
-      postal_code: studentProfile.postal_code,
-      permanent_address: studentProfile.permanent_address,
-      chinese_name: studentProfile.chinese_name,
-      marital_status: studentProfile.marital_status,
-      religion: studentProfile.religion,
-      emergency_contact_name: studentProfile.emergency_contact_name,
-      emergency_contact_phone: studentProfile.emergency_contact_phone,
-      emergency_contact_relationship: studentProfile.emergency_contact_relationship,
-      highest_education: studentProfile.highest_education,
-      gpa: studentProfile.gpa,
-      hsk_level: studentProfile.hsk_level,
-      ielts_score: studentProfile.ielts_score,
-      toefl_score: studentProfile.toefl_score,
-      study_mode: studentProfile.study_mode,
-      funding_source: studentProfile.funding_source,
-      wechat_id: studentProfile.wechat_id,
-      education_history: studentProfile.education_history,
-      work_experience: studentProfile.work_experience,
-      family_members: studentProfile.family_members,
-      extracurricular_activities: studentProfile.extracurricular_activities,
-      awards: studentProfile.awards,
-      publications: studentProfile.publications,
-      research_experience: studentProfile.research_experience,
-      scholarship_application: studentProfile.scholarship_application,
-      financial_guarantee: studentProfile.financial_guarantee,
-    } : null;
-
-    // Build profile snapshot with all form data (only id, student_id, program_id, partner_id, status, 
-    // priority, notes, profile_snapshot columns exist in the external Supabase applications table)
-    const profileSnapshotWithExtras = {
-      ...(profileSnapshot || {}),
-      intake: targetIntake,
-      university_id: targetUniversityId,
+    // Build the application record - personal_statement/study_plan/intake go into profile_snapshot
+    const profileSnapshot = {
       personal_statement: personal_statement || '',
       study_plan: study_plan || '',
+      intake: targetIntake,
+      university_id: targetUniversityId,
     };
 
-    // Build the application record - only use columns that exist in the external DB
     const applicationData: Record<string, unknown> = {
       student_id: studentId,
+      user_id: user.id,
       program_id,
+      university_id: targetUniversityId,
       partner_id: partner_id || null,
       status: 'draft',
-      // Store all extra data in profile_snapshot since those columns don't exist in the DB
-      profile_snapshot: profileSnapshotWithExtras,
+      profile_snapshot: profileSnapshot,
     };
 
     const { data: application, error } = await supabase

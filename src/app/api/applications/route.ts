@@ -330,35 +330,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Store all extra form data in profile_snapshot JSONB column
-    const profileSnapshot = {
-      passport_number: body.passport_number,
-      first_name: body.passport_first_name || body.first_name,
-      last_name: body.passport_last_name || body.last_name,
-      nationality: body.nationality,
-      date_of_birth: body.date_of_birth,
-      gender: body.gender,
-      email: body.email,
-      phone: body.phone,
-      current_address: body.current_address,
-      permanent_address: body.permanent_address,
-      highest_degree: body.highest_degree,
-      graduation_school: body.graduation_school,
-      graduation_date: body.graduation_date,
-      gpa: body.gpa,
-      chinese_level: body.chinese_level,
-      chinese_test_score: body.chinese_test_score,
-      chinese_test_date: body.chinese_test_date,
-      english_level: body.english_level,
-      english_test_type: body.english_test_type,
-      english_test_score: body.english_test_score,
-      english_test_date: body.english_test_date,
-      study_plan: body.study_plan,
-      research_interest: body.research_interest,
-      career_goals: body.career_goals,
+    // Store personal_statement, study_plan, intake in profile_snapshot JSONB
+    const profileSnapshot: Record<string, unknown> = {
+      personal_statement: body.personal_statement || '',
+      study_plan: body.study_plan || '',
+      intake: intake || body.intake || null,
       requested_university_program_note,
       selected_program_ids,
-      intake,
     };
 
     // Determine which program IDs to create applications for
@@ -394,6 +372,7 @@ export async function POST(request: NextRequest) {
           partner_id: partnerRecordId,
           status: 'draft',
           profile_snapshot: profileSnapshot,
+          notes: requested_university_program_note || null,
         })
         .select('*')
         .single();

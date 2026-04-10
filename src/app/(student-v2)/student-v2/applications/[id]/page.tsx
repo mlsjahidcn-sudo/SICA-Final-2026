@@ -103,59 +103,24 @@ export default function ApplicationDetailPage() {
 
   const fetchApplication = React.useCallback(async () => {
     try {
-      const response = await fetch(`/api/student/applications/${applicationId}`)
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/student/applications/${applicationId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (response.ok) {
         const data = await response.json()
         setApplication(data.application)
       } else {
-        // Mock data for development
-        setApplication({
-          id: applicationId,
-          status: "under_review",
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          intake: "September 2025",
-          personal_statement: "I am passionate about computer science and want to pursue advanced studies in this field...",
-          study_plan: "My research interests include machine learning and artificial intelligence...",
-          notes: null,
-          programs: {
-            id: "prog1",
-            name: "Computer Science and Technology",
-            degree_level: "Master",
-            discipline: "Engineering",
-            teaching_language: "English",
-            duration_months: 24,
-            tuition_per_year: 35000,
-            tuition_currency: "CNY",
-            intake_months: ["September"],
-            universities: {
-              id: "uni1",
-              name_en: "Tsinghua University",
-              city: "Beijing",
-              province: "Beijing",
-              logo_url: null,
-              website_url: "https://www.tsinghua.edu.cn"
-            }
-          },
-          documents: [
-            { id: "d1", document_type: "Passport", status: "verified", file_url: "/files/passport.pdf", created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: "d2", document_type: "Academic Transcript", status: "verified", file_url: "/files/transcript.pdf", created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: "d3", document_type: "Degree Certificate", status: "pending", file_url: "/files/degree.pdf", created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: "d4", document_type: "Language Test (IELTS)", status: "rejected", file_url: "/files/ielts.pdf", created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() }
-          ],
-          timeline: [
-            { status: "draft", created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), notes: "Application created" },
-            { status: "submitted", created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), notes: "Application submitted for review" },
-            { status: "under_review", created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), notes: "Application is being reviewed by the university" }
-          ]
-        })
+        toast.error("Failed to load application")
+        router.push("/student-v2/applications")
       }
     } catch (error) {
       console.error("Error fetching application:", error)
     } finally {
       setLoading(false)
     }
-  }, [applicationId])
+  }, [applicationId, router])
 
   React.useEffect(() => {
     if (applicationId) {
@@ -166,8 +131,11 @@ export default function ApplicationDetailPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/student/applications/${applicationId}/submit`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
       

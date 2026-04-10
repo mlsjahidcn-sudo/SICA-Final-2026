@@ -63,10 +63,13 @@ export function useAutosave({
     setState((prev) => ({ ...prev, isSaving: true, error: null }))
 
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/student/applications/${applicationId}/autosave`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(data),
       })

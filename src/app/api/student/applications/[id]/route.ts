@@ -39,9 +39,7 @@ export async function GET(
         created_at,
         updated_at,
         submitted_at,
-        intake,
-        personal_statement,
-        study_plan,
+        profile_snapshot,
         notes,
         programs (
           id,
@@ -87,9 +85,15 @@ export async function GET(
       .eq('application_id', id)
       .order('created_at', { ascending: true });
 
+    // Extract personal_statement, study_plan, intake from profile_snapshot for frontend convenience
+    const snapshot = (application.profile_snapshot || {}) as Record<string, unknown>;
+
     return NextResponse.json({ 
       application: {
         ...application,
+        personal_statement: snapshot.personal_statement || '',
+        study_plan: snapshot.study_plan || '',
+        intake: snapshot.intake || '',
         timeline: timeline || []
       }
     });

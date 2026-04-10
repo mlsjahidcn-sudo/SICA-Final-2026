@@ -109,10 +109,8 @@ interface Application {
   intake?: string;
   personal_statement?: string;
   study_plan?: string;
-  research_interest?: string;
-  career_goals?: string;
   notes?: string;
-  priority?: number | string;
+  priority?: number;
   profile_snapshot?: Record<string, string> | null;
   programs: Program;
   students: Student;
@@ -425,11 +423,20 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       {application.profile_snapshot?.study_plan || application.study_plan || 'Not provided'}
                     </p>
                   </div>
+                  {(application.profile_snapshot?.intake || application.intake) && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-medium mb-2">Intake</p>
+                        <p className="text-sm text-muted-foreground">{application.profile_snapshot?.intake || application.intake}</p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Application Notes & Priority */}
-              {(application.notes || (application.priority !== undefined && application.priority !== null && application.priority !== 0)) && (
+              {(application.notes || (application.priority !== undefined && application.priority !== 0)) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -438,19 +445,16 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {application.priority !== undefined && application.priority !== null && application.priority !== 0 && (
+                    {application.priority !== undefined && application.priority !== 0 && (
                       <div>
                         <p className="text-sm text-muted-foreground">Priority</p>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                          (application.priority === 'urgent' || application.priority === 3) ? 'bg-red-500/10 text-red-600' :
-                          (application.priority === 'high' || application.priority === 2) ? 'bg-amber-500/10 text-amber-600' :
-                          (application.priority === 'low' || application.priority === 1) ? 'bg-muted text-muted-foreground' :
+                          application.priority === 3 ? 'bg-red-500/10 text-red-600' :
+                          application.priority === 2 ? 'bg-amber-500/10 text-amber-600' :
+                          application.priority === 1 ? 'bg-muted text-muted-foreground' :
                           'bg-primary/10 text-primary'
                         }`}>
-                          {typeof application.priority === 'number'
-                            ? ['Normal', 'Low', 'High', 'Urgent'][application.priority] || `P${application.priority}`
-                            : application.priority.charAt(0).toUpperCase() + application.priority.slice(1)
-                          }
+                          {['Normal', 'Low', 'High', 'Urgent'][application.priority] || `P${application.priority}`}
                         </span>
                       </div>
                     )}

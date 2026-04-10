@@ -76,7 +76,11 @@ export default function EditApplicationPage() {
   React.useEffect(() => {
     const fetchApplication = async () => {
       try {
-        const response = await fetch(`/api/student/applications/${applicationId}`)
+        const { getValidToken } = await import('@/lib/auth-token')
+        const token = await getValidToken()
+        const response = await fetch(`/api/student/applications/${applicationId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (response.ok) {
           const data = await response.json()
           setFormData({
@@ -87,31 +91,19 @@ export default function EditApplicationPage() {
           setProgram(data.application.programs)
           setStatus(data.application.status)
         } else {
-          // Mock data for development
-          setProgram({
-            id: "prog1",
-            name_en: "Computer Science and Technology",
-            name_cn: "计算机科学与技术",
-            degree_type: "Master",
-            intake_months: ["September 2024", "March 2025", "September 2025"],
-            universities: { name_en: "Tsinghua University", city: "Beijing" }
-          })
-          setFormData({
-            personal_statement: "I am passionate about computer science...",
-            study_plan: "My research interests include machine learning...",
-            intake: "September 2025",
-          })
-          setStatus("draft")
+          toast.error("Failed to load application")
+          router.push("/student-v2/applications")
         }
       } catch (error) {
         console.error("Error fetching application:", error)
+        toast.error("Failed to load application")
       } finally {
         setFetching(false)
       }
     }
 
     if (applicationId) fetchApplication()
-  }, [applicationId])
+  }, [applicationId, router])
 
   // Handle manual save (for Save button)
   const handleSave = async () => {

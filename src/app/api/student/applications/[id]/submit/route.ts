@@ -33,9 +33,7 @@ export async function POST(
       .select(`
         id,
         status,
-        personal_statement,
-        study_plan,
-        intake,
+        profile_snapshot,
         application_documents (
           id,
           status
@@ -57,11 +55,12 @@ export async function POST(
       );
     }
 
-    // Check required fields (only fields that exist in the database)
+    // Check required fields from profile_snapshot
+    const snapshot = (application.profile_snapshot || {}) as Record<string, unknown>;
     const missingFields: string[] = [];
-    if (!application.personal_statement) missingFields.push('personal_statement');
-    if (!application.study_plan) missingFields.push('study_plan');
-    if (!application.intake) missingFields.push('intake');
+    if (!snapshot.personal_statement) missingFields.push('personal_statement');
+    if (!snapshot.study_plan) missingFields.push('study_plan');
+    if (!snapshot.intake) missingFields.push('intake');
 
     if (missingFields.length > 0) {
       return NextResponse.json(

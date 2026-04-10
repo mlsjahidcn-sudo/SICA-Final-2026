@@ -38,8 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Handle applications export type (default)
 
-    // Build query - applications table has: student_id, program_id, partner_id, status, etc.
-    // Extra profile data is in profile_snapshot JSONB column
+    // Build query - applications table stores personal_statement/study_plan/intake in profile_snapshot JSONB
     let query = supabase
       .from('applications')
       .select(`
@@ -48,6 +47,8 @@ export async function GET(request: NextRequest) {
         submitted_at,
         created_at,
         profile_snapshot,
+        notes,
+        priority,
         students (
           id,
           first_name,

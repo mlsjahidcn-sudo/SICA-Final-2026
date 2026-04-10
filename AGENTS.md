@@ -239,8 +239,32 @@ The `users` table has RLS enabled but queries via the **anon key client** result
 
 **用户角色**：
 - **学生**：创建、编辑、提交申请；查看申请状态
-- **合作伙伴**：查看申请列表和详情
+- **合作伙伴**：查看申请列表和详情、编辑草稿申请（program、personal statement、study plan、notes、priority）
 - **管理员**：审核申请、更新状态、添加评论
+
+**🔴 CRITICAL: `profile_snapshot` JSONB Architecture**:
+The `applications` table uses a `profile_snapshot` JSONB column to store flexible application content. Key fields stored inside `profile_snapshot`:
+- `personal_statement` - Personal statement text
+- `study_plan` - Study plan text
+- `intake` - Intake/semester selection
+- `university_id` - Target university ID
+- Other dynamic fields from the application form
+
+**Direct columns on `applications` table**: `id`, `student_id`, `program_id`, `partner_id`, `status`, `priority` (integer: 0=normal, 1=low, 2=high, 3=urgent), `notes`, `submitted_at`, `reviewed_at`, `reviewed_by`, `created_at`, `updated_at`, `profile_snapshot`
+
+**API Response Convention**: All GET APIs extract `personal_statement`, `study_plan`, and `intake` from `profile_snapshot` and return them as top-level fields for frontend convenience. PUT APIs accept these as top-level body fields and merge them into `profile_snapshot` automatically.
+
+**⚠️ Database Schema Verification**: The `exec_sql` tool may return stale/different schema data compared to the actual Supabase database. ALWAYS verify column existence via the PostgREST REST API (`/rest/v1/applications?select=*&limit=1`), not `exec_sql` or `information_schema`.
+
+**Partner Access Control**:
+- Partner admin: Can access all applications from their partner organization + team members' referrals
+- Partner member: Can only access applications for students they referred
+- Uses `canPartnerAccessApplication()` function which checks `partners.id` (not `users.id`) for org-level access
+- A partner user may have multiple `partners` records (use `select` instead of `maybeSingle` when querying by `user_id`)
+
+**Edit Restrictions**:
+- Only `draft` applications can be edited (PUT returns 400 for non-draft)
+- Only `draft` applications can be submitted (POST returns 400 for non-draft)
 
 **API 端点**：
 - `POST /api/applications` - 创建申请

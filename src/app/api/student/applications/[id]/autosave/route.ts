@@ -83,8 +83,8 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     };
 
-    // Autosave fields - text content and application-specific data
-    const autosaveFields = [
+    // Autosave fields - text content goes into profile_snapshot JSONB
+    const snapshotFields = [
       'personal_statement',
       'study_plan',
       'intake',
@@ -97,10 +97,24 @@ export async function PATCH(
       'financial_guarantee',
     ];
 
-    for (const field of autosaveFields) {
+    // Check if any snapshot fields need updating
+    const snapshotUpdates: Record<string, unknown> = {};
+    for (const field of snapshotFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        snapshotUpdates[field] = body[field];
       }
+    }
+
+    // If there are snapshot updates, merge with existing profile_snapshot
+    if (Object.keys(snapshotUpdates).length > 0) {
+      const { data: existingApp } = await supabase
+        .from('applications')
+        .select('profile_snapshot')
+        .eq('id', id)
+        .maybeSingle();
+
+      const existingSnapshot = (existingApp?.profile_snapshot || {}) as Record<string, unknown>;
+      updateData.profile_snapshot = { ...existingSnapshot, ...snapshotUpdates };
     }
 
     const { data: application, error } = await supabase

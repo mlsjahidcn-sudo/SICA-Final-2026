@@ -17,14 +17,14 @@ async function canPartnerAccessApplication(
   const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
 
   if (isAdmin) {
-    // Admin can access apps from their partner org (applications.partner_id matches partners.id)
+    // Admin can access apps from their partner org (applications.partner_id matches any partners.id for this user)
     if (applicationPartnerId) {
-      const { data: partnerRecord } = await supabase
+      const { data: partnerRecords } = await supabase
         .from('partners')
         .select('id')
-        .eq('user_id', partnerUser.id)
-        .maybeSingle();
-      if (partnerRecord && partnerRecord.id === applicationPartnerId) {
+        .eq('user_id', partnerUser.id);
+      const partnerIds = (partnerRecords || []).map(r => r.id);
+      if (partnerIds.includes(applicationPartnerId)) {
         return true;
       }
     }
@@ -58,17 +58,36 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { data: application, error } = await supabase
       .from('applications')
       .select(`
-        *,
+        id,
+        status,
+        profile_snapshot,
+        notes,
+        priority,
+        submitted_at,
+        reviewed_at,
+        created_at,
+        updated_at,
+        program_id,
+        student_id,
+        partner_id,
         programs (
           id,
           name,
           degree_level,
+          category,
+          language,
+          duration_years,
+          tuition_fee_per_year,
+          currency,
+          scholarship_coverage,
           universities (
             id,
             name_en,
             name_cn,
             city,
-            logo_url
+            province,
+            logo_url,
+            website_url
           )
         ),
         students (
@@ -77,7 +96,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           first_name,
           last_name,
           nationality,
+          date_of_birth,
+          gender,
           email,
+          phone,
+          current_address,
+          highest_education,
+          institution_name,
+          gpa,
+          hsk_level,
+          ielts_score,
+          toefl_score,
+          passport_number,
           users (
             id,
             full_name,
@@ -114,15 +144,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       if ('error' in authResult) return authResult.error;
       const partnerUser = authResult.user;
 
-      // Get the student's user_id (the referrer target)
+      // Get the student's referrer info for partner access control
       const studentData = Array.isArray(application.students) ? application.students[0] : application.students;
-      const studentUserId = studentData?.users?.referred_by_partner_id
-        ? await getReferrerUserId(application.student_id, supabase)
-        : studentData?.user_id;
+      const studentUserData = studentData?.users
+        ? (Array.isArray(studentData.users) ? studentData.users[0] : studentData.users)
+        : null;
+      
+      // Determine the student's referrer partner user ID
+      let referrerUserId = '';
+      if (studentUserData?.referred_by_partner_id) {
+        const referrerResult = await getReferrerUserId(application.student_id, supabase);
+        referrerUserId = referrerResult || '';
+      } else {
+        referrerUserId = studentData?.user_id || '';
+      }
 
       const canAccess = await canPartnerAccessApplication(
         partnerUser,
-        studentUserId || '',
+        referrerUserId,
         application.partner_id
       );
       if (!canAccess) {
@@ -132,8 +171,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Admin role: no restrictions
 
     // Fix relations (Supabase returns arrays for has-many)
+    // Extract personal_statement, study_plan, intake from profile_snapshot for convenience
+    const snapshot = application.profile_snapshot || {};
     const normalizedApplication = {
       ...application,
+      personal_statement: snapshot.personal_statement || null,
+      study_plan: snapshot.study_plan || null,
+      intake: snapshot.intake || null,
       programs: Array.isArray(application.programs) ? application.programs[0] : application.programs,
       students: Array.isArray(application.students) ? application.students[0] : application.students,
       application_documents: Array.isArray(application.application_documents) ? application.application_documents : [],
@@ -187,6 +231,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (fetchError || !existingApp) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Only draft applications can be submitted
+    if (existingApp.status !== 'draft') {
+      return NextResponse.json({ error: 'Only draft applications can be submitted' }, { status: 400 });
     }
 
     // Access control check
@@ -286,11 +335,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const body = await request.json();
 
-    // Build update data - only allow specific fields
-    const allowedFields = ['program_id', 'notes'];
+    // Build update data - only allow specific fields that exist in the DB
+    // program_id and notes are direct columns; personal_statement/study_plan/intake go into profile_snapshot
+    const allowedDirectFields = ['program_id', 'notes'];
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
-    for (const field of allowedFields) {
+    for (const field of allowedDirectFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field];
       }
@@ -306,12 +356,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    // Profile snapshot stores personal_statement, study_plan, etc.
-    if (body.profile_snapshot !== undefined) {
-      updateData.profile_snapshot = body.profile_snapshot;
+    // Store personal_statement, study_plan, intake in profile_snapshot JSONB
+    if (body.personal_statement !== undefined || body.study_plan !== undefined || body.intake !== undefined) {
+      // Get existing profile_snapshot to merge
+      const { data: existingApp } = await supabase
+        .from('applications')
+        .select('profile_snapshot')
+        .eq('id', id)
+        .maybeSingle();
+
+      const existingSnapshot = (existingApp?.profile_snapshot || {}) as Record<string, unknown>;
+      const newSnapshot = { ...existingSnapshot };
+
+      if (body.personal_statement !== undefined) newSnapshot.personal_statement = body.personal_statement;
+      if (body.study_plan !== undefined) newSnapshot.study_plan = body.study_plan;
+      if (body.intake !== undefined) newSnapshot.intake = body.intake;
+
+      updateData.profile_snapshot = newSnapshot;
     }
 
-    // If program_id is changing, validate it exists and update partner_id if needed
+    // If program_id is changing, validate it exists
     if (body.program_id && body.program_id !== existingApp.program_id) {
       const { data: program } = await supabase
         .from('programs')

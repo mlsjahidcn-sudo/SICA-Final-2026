@@ -200,18 +200,13 @@ export default function EditApplicationPage() {
       const body: Record<string, unknown> = {
         notes,
         priority: parseInt(priority, 10),
+        personal_statement: personalStatement,
+        study_plan: studyPlan,
       };
 
       if (selectedProgramId && selectedProgramId !== application.program_id) {
         body.program_id = selectedProgramId;
       }
-
-      // Save profile_snapshot with personal_statement and study_plan
-      body.profile_snapshot = {
-        ...(application.profile_snapshot || {}),
-        personal_statement: personalStatement,
-        study_plan: studyPlan,
-      };
 
       const res = await fetch(`/api/applications/${application.id}`, {
         method: 'PUT',

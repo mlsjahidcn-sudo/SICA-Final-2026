@@ -44,7 +44,7 @@ interface ApplicationDetail {
   program_id: string
   partner_id: string | null
   status: string
-  priority: string | null
+  priority: number | null
   notes: string | null
   profile_snapshot: Record<string, unknown> | null
   submitted_at: string | null
