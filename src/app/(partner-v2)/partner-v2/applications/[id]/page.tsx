@@ -219,12 +219,6 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 Documents
               </Link>
             </Button>
-            <Button asChild>
-              <a href={`mailto:${application.students.email}`}>
-                <IconMail className="h-4 w-4 mr-2" />
-                Contact
-              </a>
-            </Button>
           </div>
         </div>
       </div>
