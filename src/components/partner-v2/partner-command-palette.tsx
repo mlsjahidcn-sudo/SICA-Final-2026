@@ -46,7 +46,7 @@ const partnerNavItems: NavItem[] = [
   { label: 'Meetings', href: '/partner-v2/meetings', icon: <IconCalendar className="size-4" />, group: 'Navigation' },
   { label: 'Analytics', href: '/partner-v2/analytics', icon: <IconChartBar className="size-4" />, group: 'Navigation' },
   { label: 'Notifications', href: '/partner-v2/notifications', icon: <IconBell className="size-4" />, group: 'Navigation' },
-  { label: 'Settings', href: '/partner-v2/settings', icon: <IconSettings className="size-4" />, group: 'Navigation', adminOnly: true },
+  { label: 'Settings', href: '/partner-v2/settings', icon: <IconSettings className="size-4" />, group: 'Navigation' },
   { label: 'Profile', href: '/partner-v2/profile', icon: <IconUserCircle className="size-4" />, group: 'Account' },
 ];
 

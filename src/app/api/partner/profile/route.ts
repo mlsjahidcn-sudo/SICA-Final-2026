@@ -97,7 +97,16 @@ export async function PUT(request: NextRequest) {
     const supabase = getSupabaseClient();
     const body = await request.json();
     
-    // Update user basic info
+    // Get user's partner_role to determine if they can edit org info
+    const { data: userRecord } = await supabase
+      .from('users')
+      .select('partner_role, partner_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    const isPartnerAdmin = !userRecord?.partner_role || userRecord.partner_role === 'partner_admin';
+    
+    // Update user basic info (all users can do this)
     const userUpdateData = {
       full_name: emptyToNull(body.full_name),
       email: emptyToNull(body.email),
@@ -116,45 +125,48 @@ export async function PUT(request: NextRequest) {
       return addNoCacheHeaders(NextResponse.json({ error: 'Failed to update user profile', details: updateUserError.message }, { status: 500 }));
     }
     
-    // Update or create partner profile in partners table
-    const { data: existingProfile, error: findError } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    
-    if (findError) {
-      console.log('[PUT /api/partner/profile] Find error:', findError);
-    }
-    
-    const profileData: Record<string, unknown> = {
-      company_name: emptyToNull(body.company_name),
-      contact_person: emptyToNull(body.position),
-      company_address: emptyToNull(body.address),
-      website: emptyToNull(body.website),
-      updated_at: new Date().toISOString(),
-    };
-    
-    let profileError;
-    if (existingProfile) {
-      const result = await supabase
+    // Only update partner org info for admins
+    if (isPartnerAdmin) {
+      // Update or create partner profile in partners table
+      const { data: existingProfile, error: findError } = await supabase
         .from('partners')
-        .update(profileData)
-        .eq('id', existingProfile.id);
-      profileError = result.error;
-    } else {
-      const result = await supabase
-        .from('partners')
-        .insert({ ...profileData, user_id: user.id });
-      profileError = result.error;
-    }
-    
-    if (profileError) {
-      return addNoCacheHeaders(NextResponse.json({ 
-        success: true, 
-        warning: 'User profile updated but partner details failed to save',
-        partnerError: profileError.message,
-      }));
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (findError) {
+        console.log('[PUT /api/partner/profile] Find error:', findError);
+      }
+      
+      const profileData: Record<string, unknown> = {
+        company_name: emptyToNull(body.company_name),
+        contact_person: emptyToNull(body.position),
+        company_address: emptyToNull(body.address),
+        website: emptyToNull(body.website),
+        updated_at: new Date().toISOString(),
+      };
+      
+      let profileError;
+      if (existingProfile) {
+        const result = await supabase
+          .from('partners')
+          .update(profileData)
+          .eq('id', existingProfile.id);
+        profileError = result.error;
+      } else {
+        const result = await supabase
+          .from('partners')
+          .insert({ ...profileData, user_id: user.id });
+        profileError = result.error;
+      }
+      
+      if (profileError) {
+        return addNoCacheHeaders(NextResponse.json({ 
+          success: true, 
+          warning: 'User profile updated but partner details failed to save',
+          partnerError: profileError.message,
+        }));
+      }
     }
     
     // Fetch the actual saved data from the database to return
@@ -168,7 +180,7 @@ export async function PUT(request: NextRequest) {
       .from('partners')
       .select('company_name, contact_person, company_address, website')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     
     const updatedProfile: ProfileResponse = {
       id: user.id,

@@ -46,9 +46,9 @@ import {
   IconBuilding,
   IconUsersGroup,
   IconClipboardList,
-  IconArrowsDiff
+  IconArrowsDiff,
+  IconInnerShadowTop
 } from "@tabler/icons-react"
-import { IconInnerShadowTop } from "@tabler/icons-react"
 
 const navItems = [
   {
@@ -104,10 +104,14 @@ const navItems = [
     showBadge: true,
   },
   {
+    title: "Profile",
+    url: "/partner-v2/profile",
+    icon: <IconUserCircle />,
+  },
+  {
     title: "Settings",
     url: "/partner-v2/settings",
     icon: <IconSettings />,
-    adminOnly: true,
   },
 ]
 

@@ -19,6 +19,7 @@ import {
   IconRefresh,
   IconCheck,
   IconLoader2,
+  IconShield,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
@@ -48,7 +49,8 @@ const DEFAULT_PROFILE: PartnerProfile = {
 };
 
 export default function ProfilePage() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, user: authUser } = useAuth();
+  const isPartnerAdmin = !(authUser as unknown as Record<string, unknown>)?.partner_role || (authUser as unknown as Record<string, unknown>)?.partner_role === 'partner_admin';
   const [profile, setProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [originalProfile, setOriginalProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [isLoading, setIsLoading] = useState(true);
@@ -213,7 +215,7 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">Profile</h1>
           <p className="text-muted-foreground text-sm">
-            Manage your personal and organization information
+            {isPartnerAdmin ? 'Manage your personal and organization information' : 'Manage your personal information'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -363,7 +365,8 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Organization Information */}
+        {/* Organization Information — Admin only */}
+        {isPartnerAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -441,11 +444,13 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Account Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
+              <IconShield className="h-5 w-5" />
               Account Status
             </CardTitle>
             <CardDescription>
@@ -455,7 +460,7 @@ export default function ProfilePage() {
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Badge variant="default">Partner</Badge>
+                <Badge variant="default">{isPartnerAdmin ? 'Partner Admin' : 'Team Member'}</Badge>
                 <span className="text-sm text-muted-foreground">Account Type</span>
               </div>
               <Separator orientation="vertical" className="h-6" />
