@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,14 +8,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, ArrowLeft, Clipboard, FileSpreadsheet, X } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/dashboard-v2-sidebar';
 import { SiteHeader } from '@/components/dashboard-v2-header';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 
 interface University {
   id: string;
@@ -93,6 +108,13 @@ export default function BulkAddProgramsPage() {
     { ...emptyRow, id: generateTempId() },
     { ...emptyRow, id: generateTempId() },
   ]);
+  
+  // Paste functionality state
+  const [pasteDialogOpen, setPasteDialogOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [parsedPreview, setParsedPreview] = useState<ProgramRow[]>([]);
+  const [isParsing, setIsParsing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchUniversities();
@@ -121,6 +143,160 @@ export default function BulkAddProgramsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Column mapping for parsing
+  const columnMappings: Record<string, keyof ProgramRow> = {
+    'name': 'name',
+    'program name': 'name',
+    'program': 'name',
+    'name_en': 'name',
+    'code': 'code',
+    'program code': 'code',
+    'degree': 'degree_level',
+    'degree level': 'degree_level',
+    'degree_level': 'degree_level',
+    'language': 'language',
+    'teaching language': 'language',
+    'duration': 'duration_years',
+    'duration_years': 'duration_years',
+    'years': 'duration_years',
+    'tuition': 'tuition_fee_per_year',
+    'tuition_fee_per_year': 'tuition_fee_per_year',
+    'fee': 'tuition_fee_per_year',
+    'category': 'category',
+    'description': 'description',
+  };
+
+  // Parse pasted TSV/CSV data
+  const parsePastedData = (text: string): ProgramRow[] => {
+    const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line);
+    if (lines.length === 0) return [];
+
+    // Detect delimiter (tab or comma)
+    const firstLine = lines[0];
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const delimiter = tabCount >= commaCount ? '\t' : ',';
+
+    const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
+    
+    // Try to detect header row
+    const firstRow = rows[0];
+    const headerKeywords = ['name', 'program', 'code', 'degree', 'language', 'duration', 'tuition', 'category', 'description'];
+    const hasHeader = firstRow.some(cell => 
+      headerKeywords.some(keyword => cell.toLowerCase().includes(keyword))
+    );
+
+    let headerRow: string[] = [];
+    let dataRows: string[][] = [];
+
+    if (hasHeader) {
+      headerRow = firstRow.map(h => h.toLowerCase());
+      dataRows = rows.slice(1);
+    } else {
+      // No header, use default order
+      headerRow = ['name', 'code', 'degree_level', 'language', 'duration_years', 'tuition_fee_per_year', 'category', 'description'].slice(0, firstRow.length);
+      dataRows = rows;
+    }
+
+    // Map columns to ProgramRow fields
+    const mappedColumns = headerRow.map(h => {
+      const normalizedHeader = h.toLowerCase().replace(/[_\s]+/g, ' ').trim();
+      for (const [key, field] of Object.entries(columnMappings)) {
+        if (normalizedHeader.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedHeader)) {
+          return field;
+        }
+      }
+      return null;
+    });
+
+    // Parse data rows
+    return dataRows.map(row => {
+      const programRow: ProgramRow = { 
+        ...emptyRow, 
+        id: generateTempId() 
+      };
+      
+      row.forEach((cell, index) => {
+        const field = mappedColumns[index];
+        if (field && cell) {
+          // Validate and convert values
+          if (field === 'degree_level') {
+            const validDegrees = DEGREE_LEVELS.map(d => d.value.toLowerCase());
+            if (validDegrees.includes(cell.toLowerCase())) {
+              programRow[field] = cell.charAt(0).toUpperCase() + cell.slice(1).toLowerCase();
+            }
+          } else if (field === 'language') {
+            const validLangs = LANGUAGES.map(l => l.value.toLowerCase());
+            if (validLangs.includes(cell.toLowerCase())) {
+              programRow[field] = cell.charAt(0).toUpperCase() + cell.slice(1).toLowerCase();
+            }
+          } else if (field === 'category') {
+            const validCats = CATEGORIES.map(c => c.value.toLowerCase());
+            if (validCats.includes(cell.toLowerCase())) {
+              programRow[field] = cell.charAt(0).toUpperCase() + cell.slice(1).toLowerCase();
+            }
+          } else {
+            (programRow as unknown as Record<string, string>)[field] = cell;
+          }
+        }
+      });
+      
+      return programRow;
+    }).filter(row => row.name.trim() !== ''); // Filter out rows without name
+  };
+
+  // Handle paste button click
+  const handlePaste = async () => {
+    setIsParsing(true);
+    try {
+      // Try to read from clipboard first
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText) {
+          setPasteText(clipboardText);
+        }
+      }
+    } catch {
+      // Clipboard access denied, user will paste manually
+    }
+    setIsParsing(false);
+    setPasteDialogOpen(true);
+  };
+
+  // Preview parsed data
+  const handlePreview = () => {
+    if (!pasteText.trim()) {
+      toast.error('Please paste some data first');
+      return;
+    }
+    
+    const parsed = parsePastedData(pasteText);
+    if (parsed.length === 0) {
+      toast.error('Could not parse any valid program data. Please check the format.');
+      return;
+    }
+    
+    setParsedPreview(parsed);
+    toast.success(`Parsed ${parsed.length} program(s) from pasted data`);
+  };
+
+  // Apply parsed data to table
+  const handleApplyParsed = () => {
+    if (parsedPreview.length > 0) {
+      setProgramRows(parsedPreview);
+      setPasteDialogOpen(false);
+      setPasteText('');
+      setParsedPreview([]);
+      toast.success(`Added ${parsedPreview.length} program(s) to the table`);
+    }
+  };
+
+  // Clear paste data
+  const handleClearPaste = () => {
+    setPasteText('');
+    setParsedPreview([]);
   };
 
   const addRow = () => {
@@ -277,6 +453,10 @@ export default function BulkAddProgramsPage() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePaste}>
+                    <Clipboard className="mr-1 h-4 w-4" />
+                    Paste from Excel
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => addMultipleRows(5)}>
                     <Plus className="mr-1 h-4 w-4" />
                     Add 5 Rows
@@ -416,6 +596,114 @@ export default function BulkAddProgramsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Paste from Excel Dialog */}
+          <Dialog open={pasteDialogOpen} onOpenChange={setPasteDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Paste Table Data
+                </DialogTitle>
+                <DialogDescription>
+                  Copy data from Excel, Google Sheets, or any table format and paste below. 
+                  The first row should be headers (e.g., Name, Degree Level, Language, Duration, Tuition, Category).
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Tabs defaultValue="paste" className="flex-1 overflow-hidden flex flex-col">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="paste">Paste Data</TabsTrigger>
+                  <TabsTrigger value="preview">Preview ({parsedPreview.length} rows)</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="paste" className="flex-1 overflow-hidden mt-4">
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        placeholder={`Paste your table data here (Tab or Comma separated)...
+
+Example format:
+Name	Degree Level	Language	Duration	Tuition	Category
+Computer Science	Bachelor	English	4	15000	Engineering
+Business Administration	Master	English	2	18000	Business
+Data Science	Master	English	2	20000	Engineering`}
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                        className="min-h-[300px] font-mono text-sm"
+                      />
+                      {pasteText && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearPaste}
+                          className="absolute top-2 right-2"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button onClick={handlePreview} disabled={!pasteText.trim()}>
+                        Preview Parsed Data
+                      </Button>
+                      <Button variant="outline" onClick={handleClearPaste} disabled={!pasteText.trim()}>
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="preview" className="flex-1 overflow-auto mt-4">
+                  {parsedPreview.length > 0 ? (
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[200px]">Name</TableHead>
+                            <TableHead>Degree</TableHead>
+                            <TableHead>Language</TableHead>
+                            <TableHead>Duration</TableHead>
+                            <TableHead>Tuition</TableHead>
+                            <TableHead>Category</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {parsedPreview.map((row, index) => (
+                            <TableRow key={row.id || index}>
+                              <TableCell className="font-medium">{row.name || '-'}</TableCell>
+                              <TableCell>{row.degree_level || '-'}</TableCell>
+                              <TableCell>{row.language || '-'}</TableCell>
+                              <TableCell>{row.duration_years ? `${row.duration_years} years` : '-'}</TableCell>
+                              <TableCell>{row.tuition_fee_per_year ? `$${row.tuition_fee_per_year}` : '-'}</TableCell>
+                              <TableCell>{row.category || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <FileSpreadsheet className="h-12 w-12 mb-4 opacity-50" />
+                      <p>No data preview yet</p>
+                      <p className="text-sm">Paste data in the "Paste Data" tab and click "Preview Parsed Data"</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+              
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setPasteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleApplyParsed} disabled={parsedPreview.length === 0}>
+                  Apply to Table ({parsedPreview.length} programs)
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between">
