@@ -1,6 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+
+/**
+ * Check if a partner user can access a specific application.
+ * - Admin: can access any application belonging to their partner org OR students referred by team members
+ * - Member: can only access applications for students they personally referred
+ */
+async function canPartnerAccessApplication(
+  partnerUser: { id: string; partner_role: string | null; partner_id: string | null },
+  applicationStudentId: string,
+  applicationPartnerId: string | null,
+  supabase: ReturnType<typeof getSupabaseClient>
+): Promise<boolean> {
+  const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
+
+  if (isAdmin) {
+    // Admin can access apps from their partner org (applications.partner_id matches any partners.id for this user)
+    if (applicationPartnerId) {
+      const { data: partnerRecords } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', partnerUser.id);
+      const partnerIds = (partnerRecords || []).map(r => r.id);
+      if (partnerIds.includes(applicationPartnerId)) {
+        return true;
+      }
+    }
+    // Admin can also access apps for students referred by any team member
+    // Get student's user_id to check referrer
+    const { data: studentRec } = await supabase
+      .from('students')
+      .select('user_id')
+      .eq('id', applicationStudentId)
+      .maybeSingle();
+    
+    if (studentRec?.user_id) {
+      const { data: userRec } = await supabase
+        .from('users')
+        .select('referred_by_partner_id')
+        .eq('id', studentRec.user_id)
+        .maybeSingle();
+      
+      if (userRec?.referred_by_partner_id) {
+        // Check if referrer is this partner or a team member
+        const { data: teamMembers } = await supabase
+          .from('users')
+          .select('id')
+          .or(`id.eq.${partnerUser.id},partner_id.eq.${partnerUser.id}`)
+          .eq('role', 'partner');
+        const teamIds = (teamMembers || []).map(m => m.id);
+        if (!teamIds.includes(partnerUser.id)) teamIds.push(partnerUser.id);
+        return teamIds.includes(userRec.referred_by_partner_id);
+      }
+    }
+    return false;
+  } else {
+    // Member can only access apps for students they personally referred
+    const { data: studentRec } = await supabase
+      .from('students')
+      .select('user_id')
+      .eq('id', applicationStudentId)
+      .maybeSingle();
+    
+    if (studentRec?.user_id) {
+      const { data: userRec } = await supabase
+        .from('users')
+        .select('referred_by_partner_id')
+        .eq('id', studentRec.user_id)
+        .maybeSingle();
+      return userRec?.referred_by_partner_id === partnerUser.id;
+    }
+    return false;
+  }
+}
 
 // Allowed document types and their MIME types
 const ALLOWED_DOCUMENT_TYPES: Record<string, { label: string; mimeTypes: string[] }> = {
@@ -90,8 +164,17 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
         isOwner = studentRecord?.id === application.student_id;
       } else if (authUser.role === 'partner') {
-        // applications.partner_id stores users.id
-        isOwner = application.partner_id === authUser.id;
+        // Use proper partner access control
+        const partnerAuthResult = await verifyPartnerAuth(request);
+        if ('error' in partnerAuthResult) {
+          return partnerAuthResult.error;
+        }
+        isOwner = await canPartnerAccessApplication(
+          partnerAuthResult.user,
+          application.student_id,
+          application.partner_id,
+          supabase
+        );
       }
 
       if (!isOwner && authUser.role !== 'admin') {
@@ -246,8 +329,17 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       isOwner = studentRecord?.id === application.student_id;
     } else if (authUser.role === 'partner') {
-      // applications.partner_id stores users.id
-      isOwner = application.partner_id === authUser.id;
+      // Use proper partner access control
+      const partnerAuthResult = await verifyPartnerAuth(request);
+      if ('error' in partnerAuthResult) {
+        return partnerAuthResult.error;
+      }
+      isOwner = await canPartnerAccessApplication(
+        partnerAuthResult.user,
+        application.student_id,
+        application.partner_id,
+        supabase
+      );
     }
 
     if (!isOwner && authUser.role !== 'admin') {
@@ -408,8 +500,17 @@ export async function DELETE(request: NextRequest) {
         .maybeSingle();
       isOwner = studentRecord?.id === appData.student_id;
     } else if (authUser.role === 'partner') {
-      // applications.partner_id stores users.id
-      isOwner = appData.partner_id === authUser.id;
+      // Use proper partner access control
+      const partnerAuthResult = await verifyPartnerAuth(request);
+      if ('error' in partnerAuthResult) {
+        return partnerAuthResult.error;
+      }
+      isOwner = await canPartnerAccessApplication(
+        partnerAuthResult.user,
+        appData.student_id,
+        appData.partner_id,
+        supabase
+      );
     }
 
     if (!isOwner && authUser.role !== 'admin') {
