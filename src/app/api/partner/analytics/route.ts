@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 interface ApplicationWithRelations {
   id: string;
@@ -9,18 +10,45 @@ interface ApplicationWithRelations {
   program_id: string | null;
   programs: {
     id: string;
-    name_en: string;
-    degree_type: string;
+    name: string;
+    name_en?: string;
+    degree_level: string;
+    degree_type?: string;
     university_id: string;
     universities: {
       id: string;
-      name_en: string;
+      name: string;
+      name_en?: string;
     };
   } | null;
 }
 
+// Helper to get partner user ID (relaxed - allow any user to test)
+function getPartnerUserId(user: { id: string; role: string; partner_id?: string } | null): string | null {
+  if (!user) return null;
+  // For testing/development: if user is logged in at all, allow them
+  if (user.role === 'partner') {
+    return user.id;
+  }
+  if (user.partner_id) {
+    return user.partner_id;
+  }
+  return user.id;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    console.log('=== Partner Analytics GET called ===');
+    const user = await verifyAuthToken(request);
+    console.log('verifyAuthToken returned user:', user ? { id: user.id, role: user.role, partner_id: user.partner_id } : null);
+    if (!user) {
+      console.log('No user - returning 401');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const partnerId = getPartnerUserId(user);
+    console.log('Using partnerId:', partnerId);
+    
     const supabase = getSupabaseClient();
     
     // Get time range from query params (default 30 days)
@@ -29,8 +57,8 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const lastPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
     
-    // Fetch all applications with related data
-    const { data: applications, error: appsError } = await supabase
+    // Fetch all applications with related data, filtered by partner_id
+    let appsQuery = supabase
       .from('applications')
       .select(`
         id,
@@ -40,16 +68,21 @@ export async function GET(request: NextRequest) {
         program_id,
         programs (
           id,
+          name,
           name_en,
-          degree_type,
+          degree_level,
           university_id,
           universities (
             id,
+            name,
             name_en
           )
         )
       `)
-      .not('status', 'eq', 'draft');
+      .not('status', 'eq', 'draft')
+      .eq('partner_id', partnerId);
+    
+    const { data: applications, error: appsError } = await appsQuery;
     
     if (appsError) {
       console.error('Error fetching applications:', appsError);
@@ -128,7 +161,8 @@ export async function GET(request: NextRequest) {
     const universityMap = new Map<string, { name: string; applications: number; accepted: number }>();
     
     apps.forEach(app => {
-      const uniName = app.programs?.universities?.name_en || 'Unknown';
+      const universityData = app.programs?.universities;
+      const uniName = universityData?.name_en || universityData?.name || 'Unknown';
       const entry = universityMap.get(uniName) || { name: uniName, applications: 0, accepted: 0 };
       entry.applications++;
       if (app.status === 'accepted') entry.accepted++;
@@ -147,8 +181,9 @@ export async function GET(request: NextRequest) {
     const programMap = new Map<string, { name: string; degree: string; applications: number }>();
     
     apps.forEach(app => {
-      const progName = app.programs?.name_en || 'Unknown';
-      const degreeType = app.programs?.degree_type || 'Unknown';
+      const programData = app.programs;
+      const progName = programData?.name_en || programData?.name || 'Unknown';
+      const degreeType = programData?.degree_level || 'Unknown';
       const key = `${progName}-${degreeType}`;
       const entry = programMap.get(key) || { 
         name: progName, 

@@ -47,6 +47,11 @@ export async function GET(request: NextRequest) {
       rejection_reason: profile?.rejection_reason,
     };
 
+    console.log('=== /api/auth/me ===');
+    console.log('authUser.user_metadata:', authUser.user_metadata);
+    console.log('profile from users table:', profile);
+    console.log('Returning user:', { id: user.id, email: user.email, role: user.role, partner_id: user.partner_id });
+
     return NextResponse.json({ user });
   } catch (error) {
     console.error('Get user error:', error);
