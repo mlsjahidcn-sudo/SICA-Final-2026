@@ -8,6 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '@/contexts/auth-context';
 import { ApplicationStatusBadge } from '@/components/partner-v2/application-status-badge';
 import { ApplicationTimeline } from '@/components/partner-v2/application-timeline';
@@ -26,6 +44,8 @@ import {
   IconLoader2,
   IconBuilding,
   IconUser,
+  IconEdit,
+  IconSend,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -109,6 +129,8 @@ interface Application {
   study_plan?: string;
   research_interest?: string;
   career_goals?: string;
+  notes?: string;
+  priority?: number | string;
   programs: Program;
   students: Student;
   application_documents: Document[];
@@ -136,6 +158,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [application, setApplication] = useState<Application | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editNotes, setEditNotes] = useState('');
+  const [editPriority, setEditPriority] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchApplication = async () => {
@@ -167,6 +194,58 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       fetchApplication();
     }
   }, [user, resolvedParams.id, router]);
+
+  const handleEditSave = async () => {
+    if (!application) return;
+    setIsSaving(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: editNotes,
+          priority: editPriority || undefined,
+        }),
+      });
+      if (response.ok) {
+        toast.success('Application updated');
+        setEditOpen(false);
+        // Refresh
+        const refetch = await fetch(`/api/applications/${application.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (refetch.ok) {
+          const data = await refetch.json();
+          setApplication(data.application);
+        }
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to update');
+      }
+    } catch { toast.error('Failed to update application'); }
+    finally { setIsSaving(false); }
+  };
+
+  const handleSubmit = async () => {
+    if (!application) return;
+    setIsSubmitting(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        toast.success('Application submitted successfully');
+        router.push('/partner-v2/applications');
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to submit');
+      }
+    } catch { toast.error('Failed to submit application'); }
+    finally { setIsSubmitting(false); }
+  };
 
   if (isLoading) {
     return (
@@ -227,6 +306,68 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {application.status === 'draft' && (
+              <>
+                <Dialog open={editOpen} onOpenChange={(open) => {
+                  setEditOpen(open);
+                  if (open) {
+                    setEditNotes(application.notes || '');
+                    setEditPriority(String(application.priority ?? ''));
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <IconEdit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Edit Application</DialogTitle>
+                      <DialogDescription>
+                        Update notes and priority for this draft application.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Priority</Label>
+                        <Select value={editPriority} onValueChange={setEditPriority}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Notes</Label>
+                        <Textarea
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          placeholder="Add internal notes about this application..."
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                      <Button onClick={handleEditSave} disabled={isSaving}>
+                        {isSaving && <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Save Changes
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconSend className="h-4 w-4 mr-2" />}
+                  Submit
+                </Button>
+              </>
+            )}
             <Button variant="outline" asChild>
               <Link href={`/partner-v2/applications/${application.id}/documents`}>
                 <IconFile className="h-4 w-4 mr-2" />
@@ -393,11 +534,45 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     </p>
                   </div>
                 </CardContent>
-              </Card>
+	              </Card>
+
+              {/* Application Notes & Priority */}
+              {(application.notes || (application.priority !== undefined && application.priority !== null && application.priority !== 0)) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <IconTarget className="h-4 w-4" />
+                      Notes & Priority
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {application.priority !== undefined && application.priority !== null && application.priority !== 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Priority</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                          (application.priority === 'urgent' || application.priority === 3) ? 'bg-red-500/10 text-red-600' :
+                          (application.priority === 'high' || application.priority === 2) ? 'bg-amber-500/10 text-amber-600' :
+                          (application.priority === 'low' || application.priority === 1) ? 'bg-muted text-muted-foreground' :
+                          'bg-primary/10 text-primary'
+                        }`}>
+                          {typeof application.priority === 'number'
+                            ? ['Normal', 'Low', 'High', 'Urgent'][application.priority] || `P${application.priority}`
+                            : application.priority.charAt(0).toUpperCase() + application.priority.slice(1)
+                          }
+                        </span>
+                      </div>
+                    )}
+                    {application.notes && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Notes</p>
+                        <p className="text-sm whitespace-pre-wrap mt-1">{application.notes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
-
-          {/* Education Tab */}
           <TabsContent value="education" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               {/* Education Background */}

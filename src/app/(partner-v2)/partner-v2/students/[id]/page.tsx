@@ -278,6 +278,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const p = student.profile || {};
+  const stats = student.stats || { totalApplications: 0, accepted: 0, rejected: 0, pending: 0 };
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
@@ -347,10 +348,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><IconFileText className="h-4 w-4 text-primary" /></div><div><p className="text-2xl font-bold">{student.stats.totalApplications}</p><p className="text-xs text-muted-foreground">Applications</p></div></div></CardContent></Card>
-          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center"><IconCheck className="h-4 w-4 text-green-600" /></div><div><p className="text-2xl font-bold">{student.stats.accepted}</p><p className="text-xs text-muted-foreground">Accepted</p></div></div></CardContent></Card>
-          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center"><IconClock className="h-4 w-4 text-amber-600" /></div><div><p className="text-2xl font-bold">{student.stats.pending}</p><p className="text-xs text-muted-foreground">Pending</p></div></div></CardContent></Card>
-          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center"><IconX className="h-4 w-4 text-red-600" /></div><div><p className="text-2xl font-bold">{student.stats.rejected}</p><p className="text-xs text-muted-foreground">Rejected</p></div></div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center"><IconFileText className="h-4 w-4 text-primary" /></div><div><p className="text-2xl font-bold">{stats.totalApplications}</p><p className="text-xs text-muted-foreground">Applications</p></div></div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center"><IconCheck className="h-4 w-4 text-green-600" /></div><div><p className="text-2xl font-bold">{stats.accepted}</p><p className="text-xs text-muted-foreground">Accepted</p></div></div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center"><IconClock className="h-4 w-4 text-amber-600" /></div><div><p className="text-2xl font-bold">{stats.pending}</p><p className="text-xs text-muted-foreground">Pending</p></div></div></CardContent></Card>
+          <Card><CardContent className="pt-4"><div className="flex items-center gap-2"><div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center"><IconX className="h-4 w-4 text-red-600" /></div><div><p className="text-2xl font-bold">{stats.rejected}</p><p className="text-xs text-muted-foreground">Rejected</p></div></div></CardContent></Card>
         </div>
       </div>
 

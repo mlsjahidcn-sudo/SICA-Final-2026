@@ -233,3 +233,121 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// PUT /api/applications/[id] - Update an application (partner/student edit)
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const user = await verifyAuthToken(request);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Get the existing application
+    const { data: existingApp, error: fetchError } = await supabase
+      .from('applications')
+      .select('id, student_id, partner_id, status, program_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingApp) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Only draft applications can be edited by partners/students
+    if (existingApp.status !== 'draft') {
+      return NextResponse.json({ error: 'Only draft applications can be edited' }, { status: 400 });
+    }
+
+    // Access control check
+    if (user.role === 'student') {
+      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).maybeSingle();
+      if (!studentRec || existingApp.student_id !== studentRec.id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+    } else if (user.role === 'partner') {
+      const authResult = await verifyPartnerAuth(request);
+      if ('error' in authResult) return authResult.error;
+      const partnerUser = authResult.user;
+
+      const referrerId = await getReferrerUserId(existingApp.student_id, supabase);
+      const canAccess = await canPartnerAccessApplication(
+        partnerUser,
+        referrerId || '',
+        existingApp.partner_id
+      );
+      if (!canAccess) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+    }
+
+    const body = await request.json();
+
+    // Build update data - only allow specific fields
+    const allowedFields = ['program_id', 'notes'];
+    const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field];
+      }
+    }
+
+    // Priority is an integer field (0=normal, 1=low, 2=high, 3=urgent)
+    if (body.priority !== undefined) {
+      const priorityMap: Record<string, number> = {
+        'low': 1,
+        'normal': 0,
+        'high': 2,
+        'urgent': 3,
+      };
+      if (typeof body.priority === 'string') {
+        updateData.priority = priorityMap[body.priority] ?? 0;
+      } else {
+        updateData.priority = body.priority;
+      }
+    }
+
+    // If program_id is changing, validate it exists and update partner_id if needed
+    if (body.program_id && body.program_id !== existingApp.program_id) {
+      const { data: program } = await supabase
+        .from('programs')
+        .select('id, university_id')
+        .eq('id', body.program_id)
+        .maybeSingle();
+
+      if (!program) {
+        return NextResponse.json({ error: 'Program not found' }, { status: 400 });
+      }
+    }
+
+    // If partner is editing, also allow updating student profile snapshot
+    if (user.role === 'partner' && body.profile_snapshot !== undefined) {
+      updateData.profile_snapshot = body.profile_snapshot;
+    }
+
+    if (Object.keys(updateData).length <= 1) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    const { data: updatedApp, error: updateError } = await supabase
+      .from('applications')
+      .update(updateData)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('Error updating application:', updateError);
+      return NextResponse.json({ error: 'Failed to update application', details: updateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ application: updatedApp });
+  } catch (error) {
+    console.error('Error in applications [id] PUT:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

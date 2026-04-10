@@ -97,11 +97,29 @@ export async function GET(
       .neq('status', 'draft')
       .order('created_at', { ascending: false });
 
+    // Get all applications including drafts for stats
+    const { data: allApplications } = await supabase
+      .from('applications')
+      .select('id, status')
+      .eq('student_id', student?.id);
+
+    const stats = {
+      totalApplications: allApplications?.length || 0,
+      accepted: allApplications?.filter(a => a.status === 'accepted').length || 0,
+      rejected: allApplications?.filter(a => a.status === 'rejected').length || 0,
+      pending: allApplications?.filter(a => ['submitted', 'under_review', 'document_request', 'interview_scheduled'].includes(a.status)).length || 0,
+    };
+
+    // Get last sign in
+    const { data: authUser } = await supabase.auth.admin.getUserById(id);
+
     return NextResponse.json({
       student: {
         ...user,
         ...student,
+        last_sign_in_at: authUser?.user?.last_sign_in_at || null,
         applications: applications || [],
+        stats,
       },
     });
   } catch (error) {
