@@ -64,6 +64,7 @@ interface University {
   address_en: string | null;
   address_cn: string | null;
   website: string | null;
+  slug: string | null;
   tags: string[];
   category: string | null;
   ranking_national: number | null;
@@ -120,6 +121,7 @@ interface Program {
   id: string;
   name: string;
   name_fr: string | null;
+  slug: string | null;
   degree_level: string;
   language: string;
   tuition_fee_per_year: number | null;
@@ -866,7 +868,14 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                     <ItemGroup>
                       {programs.map((program) => (
                         <Item key={program.id} variant="outline" className="py-4" asChild>
-                          <Link href={`/programs/${program.id}`} className="hover:bg-muted/50">
+                          <Link 
+                            href={
+                              university.slug && program.slug 
+                                ? `/universities/${university.slug}/programs/${program.slug}` 
+                                : `/programs/${program.id}`
+                            } 
+                            className="hover:bg-muted/50"
+                          >
                             {/* Left: Degree Badge */}
                             <ItemMedia variant="icon" className="self-start mt-1">
                               <Badge variant="outline" className="font-semibold px-2 py-1 text-xs">
