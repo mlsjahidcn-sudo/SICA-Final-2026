@@ -641,8 +641,18 @@ export default function PartnerNewApplicationPage() {
                         {selectedProgramsList.map((program) => (
                           <div 
                             key={program.id}
-                            className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
+                            className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm"
                           >
+                            {/* University logo */}
+                            {program.universities.logo_url ? (
+                              <img 
+                                src={program.universities.logo_url} 
+                                alt={program.universities.name_en || program.universities.name} 
+                                className="h-5 w-5 object-contain rounded" 
+                              />
+                            ) : (
+                              <IconBuilding className="h-4 w-4" />
+                            )}
                             <IconCheck className="h-3 w-3" />
                             <span className="truncate max-w-[250px]">
                               {program.universities.name_en || program.universities.name} - {program.name}
@@ -680,13 +690,24 @@ export default function PartnerNewApplicationPage() {
                                 onCheckedChange={() => handleProgramToggle(program.id)} 
                                 className="mt-1"
                               />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <IconSchool className="h-4 w-4 text-primary" />
+                              <div className="flex-1 flex items-start gap-3">
+                                {/* University logo */}
+                                {program.universities.logo_url ? (
+                                  <img 
+                                    src={program.universities.logo_url} 
+                                    alt={program.universities.name_en || program.universities.name} 
+                                    className="h-10 w-10 object-contain rounded border shrink-0" 
+                                  />
+                                ) : (
+                                  <div className="h-10 w-10 rounded border flex items-center justify-center shrink-0">
+                                    <IconBuilding className="h-5 w-5 text-primary" />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium">{program.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <IconBuilding className="h-3 w-3" />
                                   <span>{program.universities.name_en || program.universities.name}</span>
                                   <span>•</span>
                                   <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
@@ -700,7 +721,8 @@ export default function PartnerNewApplicationPage() {
                                   )}
                                 </div>
                               </div>
-                            </CommandItem>
+                            </div>
+                          </CommandItem>
                           ))}
                         </CommandGroup>
                       </CommandList>
