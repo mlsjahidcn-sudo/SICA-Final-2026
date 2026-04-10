@@ -168,20 +168,51 @@ export default function BulkAddProgramsPage() {
     'description': 'description',
   };
 
-  // Parse pasted TSV/CSV data
+  // Parse pasted TSV/CSV/Markdown table data
   const parsePastedData = (text: string): ProgramRow[] => {
-    const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line);
+    let lines = text.trim().split('\n').map(line => line.trim()).filter(line => line);
     if (lines.length === 0) return [];
 
-    // Detect delimiter (tab or comma)
     const firstLine = lines[0];
+    
+    // Detect format: Markdown table, TSV, or CSV
+    const pipeCount = (firstLine.match(/\|/g) || []).length;
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
-    const delimiter = tabCount >= commaCount ? '\t' : ',';
-
-    const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
     
-    // Try to detect header row
+    let delimiter = '\t';
+    let isMarkdownTable = false;
+    
+    if (pipeCount >= 2) {
+      // Markdown table format (| col1 | col2 |)
+      isMarkdownTable = true;
+      delimiter = '|';
+    } else if (tabCount >= commaCount && tabCount > 0) {
+      delimiter = '\t';
+    } else if (commaCount > 0) {
+      delimiter = ',';
+    }
+
+    // Parse rows
+    let rows: string[][] = [];
+    
+    if (isMarkdownTable) {
+      // Parse Markdown table format
+      rows = lines
+        .map(line => {
+          // Remove leading and trailing pipes, then split
+          const cleaned = line.replace(/^\|?\s*/, '').replace(/\s*\|?$/, '');
+          return cleaned.split('|').map(cell => cell.trim());
+        })
+        .filter(row => {
+          // Filter out separator rows (like | :--- | :--- |)
+          return !row.every(cell => cell.match(/^:?-+:?$/));
+        });
+    } else {
+      rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
+    }
+    
+    if (rows.length === 0) return [];
     const firstRow = rows[0];
     const headerKeywords = ['name', 'program', 'code', 'degree', 'language', 'duration', 'tuition', 'category', 'description'];
     const hasHeader = firstRow.some(cell => 
@@ -606,8 +637,8 @@ export default function BulkAddProgramsPage() {
                   Paste Table Data
                 </DialogTitle>
                 <DialogDescription>
-                  Copy data from Excel, Google Sheets, or any table format and paste below. 
-                  The first row should be headers (e.g., Name, Degree Level, Language, Duration, Tuition, Category).
+                  Supports Markdown tables, Excel, Google Sheets, or any tab/comma-separated format. 
+                  First row should be headers (Name, Degree Level, Language, Duration, Tuition, Category).
                 </DialogDescription>
               </DialogHeader>
               
@@ -622,13 +653,17 @@ export default function BulkAddProgramsPage() {
                     <div className="relative">
                       <Textarea
                         ref={textareaRef}
-                        placeholder={`Paste your table data here (Tab or Comma separated)...
+                        placeholder={`Paste your table data here (supports multiple formats)...
 
-Example format:
+Markdown Table Format:
+| Name | Degree Level | Language | Duration | Tuition | Category |
+| International Economic and Trade | Bachelor | English | 4 | 10000 | Business |
+| Business Administration | Bachelor | English | 4 | 10000 | Business |
+
+Excel/Sheets Format (Tab-separated):
 Name	Degree Level	Language	Duration	Tuition	Category
 Computer Science	Bachelor	English	4	15000	Engineering
-Business Administration	Master	English	2	18000	Business
-Data Science	Master	English	2	20000	Engineering`}
+Business Administration	Master	English	2	18000	Business`}
                         value={pasteText}
                         onChange={(e) => setPasteText(e.target.value)}
                         className="min-h-[300px] font-mono text-sm"
