@@ -671,6 +671,12 @@ export default function ProgramsPage() {
                           Add Program
                         </Link>
                       </Button>
+                      <Button variant="outline" asChild>
+                        <Link href="/admin/v2/programs/bulk">
+                          <IconPlus className="mr-2 h-4 w-4" />
+                          Bulk Add
+                        </Link>
+                      </Button>
                     </div>
                   </div>
 
