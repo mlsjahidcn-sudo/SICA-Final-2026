@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       full_name: profile?.full_name || authData.user.user_metadata?.full_name || 'User',
       avatar_url: profile?.avatar_url,
       partner_id: profile?.partner_id,
+      partner_role: profile?.partner_role,
       approval_status: profile?.approval_status || 'approved',
       rejection_reason: profile?.rejection_reason,
     };

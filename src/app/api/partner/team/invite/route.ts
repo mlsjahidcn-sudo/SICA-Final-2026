@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (password && password.length < 6) {
+    if (password && password.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Password must be at least 8 characters long' },
         { status: 400 }
       );
     }
@@ -250,7 +250,7 @@ async function sendTeamInvitationEmail(
   inviterName: string
 ) {
   const projectDomain = process.env.COZE_PROJECT_DOMAIN_DEFAULT;
-  const signupUrl = projectDomain ? `https://${projectDomain}/auth/signup` : '/auth/signup';
+  const signupUrl = projectDomain ? `https://${projectDomain}/login` : '/login';
   
   const subject = `You've been invited to join ${inviterName}'s team`;
   const html = `

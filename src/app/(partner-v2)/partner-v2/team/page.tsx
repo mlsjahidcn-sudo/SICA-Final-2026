@@ -203,8 +203,8 @@ export default function PartnerV2TeamPage() {
       return;
     }
 
-    if (inviteForm.createWithPassword && !inviteForm.password) {
-      toast.error('Password is required');
+    if (inviteForm.createWithPassword && (!inviteForm.password || inviteForm.password.length < 8)) {
+      toast.error('Password must be at least 8 characters long');
       return;
     }
 
@@ -387,12 +387,14 @@ export default function PartnerV2TeamPage() {
           </div>
           {isCurrentUserAdmin && (
             <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <IconPlus className="h-4 w-4 mr-2" />
-                  Invite Member
-                </Button>
-              </DialogTrigger>
+              {isCurrentUserAdmin && (
+                <DialogTrigger asChild>
+                  <Button>
+                    <IconPlus className="h-4 w-4 mr-2" />
+                    Add Member
+                  </Button>
+                </DialogTrigger>
+              )}
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Invite Team Member</DialogTitle>
@@ -469,7 +471,7 @@ export default function PartnerV2TeamPage() {
                         minLength={6}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Must be at least 6 characters long
+                        Must be at least 8 characters long. We recommend using a mix of letters, numbers, and symbols.
                       </p>
                     </div>
                   )}
@@ -486,7 +488,7 @@ export default function PartnerV2TeamPage() {
                     {isSubmitting ? (
                       <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : null}
-                    Send Invitation
+                    {inviteForm.createWithPassword ? 'Create Account' : 'Send Invitation'}
                   </Button>
                 </DialogFooter>
               </DialogContent>

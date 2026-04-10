@@ -75,6 +75,7 @@ const navItems = [
     title: "Team",
     url: "/partner-v2/team",
     icon: <IconUsersGroup />,
+    adminOnly: true,
   },
   {
     title: "Universities",
@@ -106,10 +107,11 @@ const navItems = [
     title: "Settings",
     url: "/partner-v2/settings",
     icon: <IconSettings />,
+    adminOnly: true,
   },
 ]
 
-function NavUser({ user }: { user: { full_name: string; email: string; avatar_url?: string | null } | null }) {
+function NavUser({ user, isPartnerAdmin }: { user: { full_name: string; email: string; avatar_url?: string | null; partner_role?: string } | null; isPartnerAdmin: boolean }) {
   const { isMobile } = useSidebar()
   const { signOut } = useAuth()
   const router = useRouter()
@@ -142,7 +144,7 @@ function NavUser({ user }: { user: { full_name: string; email: string; avatar_ur
               <div className="grid flex-1 text-start text-sm leading-tight">
                 <span className="truncate font-medium">{user?.full_name || "Partner"}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user?.email || "partner@sica.com"}
+                  {isPartnerAdmin ? "Admin" : "Member"} · {user?.email || "partner@sica.com"}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -199,6 +201,7 @@ function NavUser({ user }: { user: { full_name: string; email: string; avatar_ur
 export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const isPartnerAdmin = (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin'
   const [unreadCount, setUnreadCount] = React.useState(0)
 
   // Fetch unread notification count
@@ -267,7 +270,9 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {navItems
+                .filter(item => !item.adminOnly || isPartnerAdmin)
+                .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     tooltip={item.title}
@@ -305,7 +310,7 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser user={user} isPartnerAdmin={isPartnerAdmin} />
       </SidebarFooter>
     </Sidebar>
   )

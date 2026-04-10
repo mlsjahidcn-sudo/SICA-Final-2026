@@ -9,6 +9,7 @@ interface User {
   full_name: string;
   avatar_url?: string;
   partner_id?: string;
+  partner_role?: string;
   approval_status?: string;
   rejection_reason?: string;
 }

@@ -32,6 +32,7 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   group: string;
+  adminOnly?: boolean;
 }
 
 const partnerNavItems: NavItem[] = [
@@ -40,12 +41,12 @@ const partnerNavItems: NavItem[] = [
   { label: 'New Application', href: '/partner-v2/applications/new', icon: <IconPlus className="size-4" />, group: 'Actions' },
   { label: 'Tasks', href: '/partner-v2/tasks', icon: <IconClipboardList className="size-4" />, group: 'Navigation' },
   { label: 'Students', href: '/partner-v2/students', icon: <IconUsers className="size-4" />, group: 'Navigation' },
-  { label: 'Team', href: '/partner-v2/team', icon: <IconUsersGroup className="size-4" />, group: 'Navigation' },
+  { label: 'Team', href: '/partner-v2/team', icon: <IconUsersGroup className="size-4" />, group: 'Navigation', adminOnly: true },
   { label: 'Universities', href: '/partner-v2/universities', icon: <IconBuilding className="size-4" />, group: 'Navigation' },
   { label: 'Meetings', href: '/partner-v2/meetings', icon: <IconCalendar className="size-4" />, group: 'Navigation' },
   { label: 'Analytics', href: '/partner-v2/analytics', icon: <IconChartBar className="size-4" />, group: 'Navigation' },
   { label: 'Notifications', href: '/partner-v2/notifications', icon: <IconBell className="size-4" />, group: 'Navigation' },
-  { label: 'Settings', href: '/partner-v2/settings', icon: <IconSettings className="size-4" />, group: 'Navigation' },
+  { label: 'Settings', href: '/partner-v2/settings', icon: <IconSettings className="size-4" />, group: 'Navigation', adminOnly: true },
   { label: 'Profile', href: '/partner-v2/profile', icon: <IconUserCircle className="size-4" />, group: 'Account' },
 ];
 
@@ -70,8 +71,12 @@ export function PartnerCommandPalette() {
     command();
   };
 
-  // Group items by their group property
-  const groups = partnerNavItems.reduce<Record<string, NavItem[]>>((acc, item) => {
+  const isPartnerAdmin = (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin';
+
+  // Group items by their group property, filter admin-only items for members
+  const groups = partnerNavItems
+    .filter(item => !item.adminOnly || isPartnerAdmin)
+    .reduce<Record<string, NavItem[]>>((acc, item) => {
     if (!acc[item.group]) acc[item.group] = [];
     acc[item.group].push(item);
     return acc;

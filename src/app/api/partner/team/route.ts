@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePartnerAdmin, getPartnerAdminId, getPartnerTeamMembers } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId, getPartnerTeamMembers } from '@/lib/partner-auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify partner admin authentication
-    const authResult = await requirePartnerAdmin(request);
+    // Verify partner authentication (both admin and member can view team)
+    const authResult = await verifyPartnerAuth(request);
     if ('error' in authResult) {
       return authResult.error;
     }
