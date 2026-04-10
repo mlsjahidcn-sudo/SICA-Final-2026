@@ -427,7 +427,8 @@ export function ProgramDetailContent({ program }: { program: Program }) {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <div className="rounded-lg border bg-card p-6 sticky top-20">
-              <div className="space-y-4 mb-6">
+              {/* Program Fees */}
+              <div className="space-y-3">
                 <h2 className="text-lg font-semibold">Program Fees</h2>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Tuition/Year</span>
@@ -439,92 +440,84 @@ export function ProgramDetailContent({ program }: { program: Program }) {
 
               <Separator className="my-4" />
 
-              {/* Application Timeline - Only render after mount */}
-              {isMounted && (
-                <div className="space-y-4 mb-6">
-                  <h2 className="text-lg font-semibold">Application Timeline</h2>
-                  
-                  {/* Countdown Timer */}
-                  {countdown && !countdown.isExpired && (countdown.days > 0 || countdown.hours > 0 || countdown.minutes > 0 || countdown.seconds > 0) && (
-                    <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                          <IconHourglass className="h-3 w-3" />
-                          Deadline in
-                        </p>
-                        <div className="grid grid-cols-4 gap-2 text-center">
-                          <div className="bg-background rounded-md p-2 border shadow-sm">
-                            <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
-                          </div>
-                          <div className="bg-background rounded-md p-2 border shadow-sm">
-                            <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
-                          </div>
-                          <div className="bg-background rounded-md p-2 border shadow-sm">
-                            <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
-                          </div>
-                          <div className="bg-background rounded-md p-2 border shadow-sm">
-                            <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
-                          </div>
-                        </div>
+              {/* Application Timeline */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Application Timeline</h2>
+                
+                {/* Only render countdown after mount to prevent hydration issues */}
+                {isMounted && countdown && !countdown.isExpired && (
+                  <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <IconHourglass className="h-3 w-3" />
+                      Deadline in
+                    </p>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="bg-background rounded-md p-2 border shadow-sm">
+                        <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
+                      </div>
+                      <div className="bg-background rounded-md p-2 border shadow-sm">
+                        <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
+                      </div>
+                      <div className="bg-background rounded-md p-2 border shadow-sm">
+                        <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
+                      </div>
+                      <div className="bg-background rounded-md p-2 border shadow-sm">
+                        <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Applications Closed Message */}
-                  {countdown && countdown.isExpired && (
-                    <div className="p-4 rounded-lg border bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
-                      <div className="text-center">
-                        <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
-                        <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
-                      </div>
+                  </div>
+                )}
+                
+                {/* Applications Closed Message */}
+                {isMounted && countdown && countdown.isExpired && (
+                  <div className="p-4 rounded-lg border bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
+                    <div className="text-center">
+                      <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                      <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
                     </div>
-                  )}
-                  
-                  {/* Timeline Details */}
-                  {program.application_start_date && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <IconCalendar className="h-4 w-4" /> Opens
-                      </span>
-                      <Badge variant="secondary">{formatDate(program.application_start_date)}</Badge>
-                    </div>
-                  )}
-                  {program.application_end_date && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <IconCalendar className="h-4 w-4" /> Deadline
-                      </span>
-                      <Badge variant="secondary">{formatDate(program.application_end_date)}</Badge>
-                    </div>
-                  )}
-                  {program.start_month && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <IconCalendar className="h-4 w-4" /> Start
-                      </span>
-                      <Badge variant="secondary">{program.start_month}</Badge>
-                    </div>
-                  )}
-                  {!program.application_start_date && !program.application_end_date && !program.start_month && !countdown && (
-                    <p className="text-sm text-muted-foreground">Contact for deadline details</p>
-                  )}
-                  {/* Show contact message if countdown exists but is expired (no need to show both) */}
-                  {countdown && countdown.isExpired && (
-                    <p className="text-sm text-muted-foreground">The application deadline has passed.</p>
-                  )}
-                </div>
-              )}
-
-              <Separator className="my-4" />
+                  </div>
+                )}
+                
+                {/* Timeline Dates */}
+                {program.application_start_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <IconCalendar className="h-4 w-4" /> Opens
+                    </span>
+                    <Badge variant="secondary">{formatDate(program.application_start_date)}</Badge>
+                  </div>
+                )}
+                {program.application_end_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <IconCalendar className="h-4 w-4" /> Deadline
+                    </span>
+                    <Badge variant="secondary">{formatDate(program.application_end_date)}</Badge>
+                  </div>
+                )}
+                {program.start_month && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <IconCalendar className="h-4 w-4" /> Start
+                    </span>
+                    <Badge variant="secondary">{program.start_month}</Badge>
+                  </div>
+                )}
+                {/* Contact message when no dates */}
+                {isMounted && !countdown && !program.application_start_date && !program.application_end_date && !program.start_month && (
+                  <p className="text-sm text-muted-foreground">Contact for deadline details</p>
+                )}
+              </div>
 
               {/* Capacity */}
               {(program.capacity || program.current_applications) && (
                 <>
-                  <div className="space-y-3 mb-6">
+                  <Separator className="my-4" />
+                  <div className="space-y-3">
                     <h2 className="text-lg font-semibold">Capacity</h2>
                     {program.capacity && (
                       <div className="flex items-center justify-between">
@@ -543,28 +536,29 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                       </div>
                     )}
                   </div>
-                  <Separator className="my-4" />
                 </>
               )}
 
               {/* Rating */}
-              {program.rating && (
+              {program.rating && program.rating > 0 && (
                 <>
-                  <div className="space-y-3 mb-6">
+                  <Separator className="my-4" />
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Rating</span>
                       <div className="flex items-center gap-1">
                         <Award className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                         <span className="font-medium">{program.rating.toFixed(1)}</span>
-                        {program.review_count && (
+                        {program.review_count && program.review_count > 0 && (
                           <span className="text-xs text-muted-foreground">({program.review_count})</span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <Separator className="my-4" />
                 </>
               )}
+
+              <Separator className="my-4" />
 
               {/* CTA Buttons */}
               <div className="space-y-3">
