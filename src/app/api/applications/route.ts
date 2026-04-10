@@ -9,16 +9,25 @@ interface User {
   partner_id?: string;
 }
 
-// Helper to get partner ID for the current user (either partner themselves or team member)
-function getPartnerIdForUser(user: User | null): string | null {
-  // If user is a partner, use their own ID
-  if (user?.role === 'partner') {
-    return user.id;
-  }
+// Helper to get partner ID (partners table id) for the current user
+async function getPartnerIdForUser(user: User | null, supabase: ReturnType<typeof getSupabaseClient>): Promise<string | null> {
+  if (!user) return null;
+  
   // If user has partner_id (team member), use that
-  if (user?.partner_id) {
+  if (user.partner_id) {
     return user.partner_id;
   }
+  
+  // If user is a partner, look up partners.id from partners table where user_id = user.id
+  if (user.role === 'partner') {
+    const { data: partnerRecord } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    return partnerRecord?.id || null;
+  }
+  
   return null;
 }
 
@@ -31,6 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
+    const partnerId = await getPartnerIdForUser(user, supabase);
+    
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
@@ -86,9 +97,10 @@ export async function GET(request: NextRequest) {
         query = query.eq('student_id', studentRec.id);
       }
     } else if (user.role === 'partner' || user.partner_id) {
-      const partnerId = getPartnerIdForUser(user);
       if (partnerId) {
         query = query.eq('partner_id', partnerId);
+      } else {
+        return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
       }
     }
 
@@ -175,7 +187,8 @@ export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuthToken(request);
     console.log("verifyAuthToken user:", user)
-    const partnerId = getPartnerIdForUser(user);
+    const supabase = getSupabaseClient();
+    const partnerId = await getPartnerIdForUser(user, supabase);
     console.log("partnerId:", partnerId)
     if (!user || !['student', 'partner', 'admin'].includes(user.role) && !partnerId) {
       console.log("Unauthorized!")
@@ -202,7 +215,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseClient();
     console.log("supabase client initialized")
     
     // Determine student ID (students.id, not users.id)
@@ -239,7 +251,7 @@ export async function POST(request: NextRequest) {
     const finalPartnerId: string | null = partnerId;
     console.log("finalPartnerId:", finalPartnerId)
 
-    // If program_id is provided, check if student already has an application for this program
+    // If program_id is provided, check if student already has a NON-DRAFT application for this program
     if (program_id) {
       console.log("Checking existing application for program_id:", program_id, "student_id:", finalStudentId)
       const { data: existing } = await supabase
@@ -247,8 +259,9 @@ export async function POST(request: NextRequest) {
         .select('id')
         .eq('student_id', finalStudentId)
         .eq('program_id', program_id)
-        .single();
-      console.log("existing application:", existing)
+        .neq('status', 'draft') // Allow multiple draft applications for the same program
+        .maybeSingle(); // Use maybeSingle to avoid error if no existing application
+      console.log("existing application (non-draft):", existing)
 
       if (existing) {
         return NextResponse.json(

@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
       isOwner = studentRecord?.id === application.student_id;
     }
 
-    if (!isOwner && authUser.role !== 'admin') {
+    if (!isOwner && authUser.role !== 'admin' && authUser.role !== 'partner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
