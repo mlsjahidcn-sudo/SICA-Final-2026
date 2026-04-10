@@ -1,16 +1,7 @@
 import { getSupabaseClient } from "@/storage/database/supabase-client";
-import { S3Storage } from "coze-coding-dev-sdk";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail, getAssessmentReportReadyTemplate } from "@/lib/email";
-
-const storage = new S3Storage({
-  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
-  accessKey: "",
-  secretKey: "",
-  bucketName: process.env.COZE_BUCKET_NAME,
-  region: "cn-beijing",
-});
 
 interface AssessmentData {
   id: string;
@@ -155,7 +146,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { data: existingReport } = await supabase
       .from("assessment_reports")
       .select("*")
-      .eq("assessment_id", id)
+      .eq("application_id", id)
       .single();
 
     if (existingReport) {
@@ -188,21 +179,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const reportContent = response.content;
 
-    // Upload report to storage
-    const reportFileName = `reports/${id}/${Date.now()}_report.md`;
-    const reportKey = await storage.uploadFile({
-      fileContent: Buffer.from(reportContent),
-      fileName: reportFileName,
-      contentType: "text/markdown",
-    });
-
-    // Save report to database
+    // Save report to database (store content directly, no file upload needed)
     const { data: report, error: reportError } = await supabase
       .from("assessment_reports")
       .insert({
         application_id: id,
         report_content: reportContent,
-        report_file_key: reportKey,
         generated_at: new Date().toISOString(),
       })
       .select()

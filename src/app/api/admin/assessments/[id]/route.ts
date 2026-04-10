@@ -1,14 +1,7 @@
 import { getSupabaseClient } from "@/storage/database/supabase-client";
-import { S3Storage } from "coze-coding-dev-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const storage = new S3Storage({
-  endpointUrl: process.env.COZE_BUCKET_ENDPOINT_URL,
-  accessKey: "",
-  secretKey: "",
-  bucketName: process.env.COZE_BUCKET_NAME,
-  region: "cn-beijing",
-});
+const STORAGE_BUCKET = "documents";
 
 // GET - Get assessment details
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
 
     // Get assessment with documents
+    // Note: assessment_documents table uses 'application_id' as foreign key
     const { data: assessment, error } = await supabase
       .from("assessment_applications")
       .select(
@@ -46,10 +40,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .eq("application_id", id)
       .single();
 
-    // Generate signed URLs for documents
+    // Generate signed URLs for documents using Supabase Storage
     const documentsWithUrls = await Promise.all(
-      (assessment.documents || []).map(async (doc: { file_url: string; id: string; document_type: string; file_name: string }) => {
-        // file_url is already a signed URL from S3, no need to regenerate
+      (assessment.documents || []).map(async (doc: { file_key: string | null; file_url: string | null; id: string; document_type: string; file_name: string }) => {
+        if (doc.file_key) {
+          // Try to generate signed URL from Supabase Storage
+          const { data: signedUrlData } = await supabase
+            .storage
+            .from(STORAGE_BUCKET)
+            .createSignedUrl(doc.file_key, 86400); // 24 hours
+
+          if (signedUrlData?.signedUrl) {
+            return { ...doc, preview_url: signedUrlData.signedUrl };
+          }
+        }
+        // Fallback to stored file_url
         return { ...doc, preview_url: doc.file_url };
       })
     );
