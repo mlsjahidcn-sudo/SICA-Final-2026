@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
         submitted_at,
         reviewed_at,
         created_at,
+        notes,
+        priority,
+        profile_snapshot,
         programs (
           id,
           name,

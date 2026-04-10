@@ -298,17 +298,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Priority is an integer field (0=normal, 1=low, 2=high, 3=urgent)
     if (body.priority !== undefined) {
-      const priorityMap: Record<string, number> = {
-        'low': 1,
-        'normal': 0,
-        'high': 2,
-        'urgent': 3,
-      };
-      if (typeof body.priority === 'string') {
-        updateData.priority = priorityMap[body.priority] ?? 0;
-      } else {
+      if (typeof body.priority === 'number') {
         updateData.priority = body.priority;
+      } else {
+        const priorityMap: Record<string, number> = { 'low': 1, 'normal': 0, 'high': 2, 'urgent': 3 };
+        updateData.priority = priorityMap[String(body.priority)] ?? (parseInt(String(body.priority), 10) || 0);
       }
+    }
+
+    // Profile snapshot stores personal_statement, study_plan, etc.
+    if (body.profile_snapshot !== undefined) {
+      updateData.profile_snapshot = body.profile_snapshot;
     }
 
     // If program_id is changing, validate it exists and update partner_id if needed
@@ -322,11 +322,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (!program) {
         return NextResponse.json({ error: 'Program not found' }, { status: 400 });
       }
-    }
-
-    // If partner is editing, also allow updating student profile snapshot
-    if (user.role === 'partner' && body.profile_snapshot !== undefined) {
-      updateData.profile_snapshot = body.profile_snapshot;
     }
 
     if (Object.keys(updateData).length <= 1) {
