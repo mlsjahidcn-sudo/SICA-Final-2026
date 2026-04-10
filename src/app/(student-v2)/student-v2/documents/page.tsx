@@ -58,7 +58,7 @@ interface Document {
     id: string
     programs?: {
       id: string
-      name_en: string
+      name: string
       universities?: {
         id: string
         name_en: string
@@ -72,7 +72,7 @@ interface Application {
   status: string
   programs?: {
     id: string
-    name_en: string
+    name: string
     universities?: {
       id: string
       name_en: string
@@ -303,7 +303,7 @@ export default function DocumentsPage() {
                   <SelectContent>
                     {applications.map(app => (
                       <SelectItem key={app.id} value={app.id}>
-                        {app.programs?.name_en || 'Unknown Program'}
+                        {app.programs?.name || 'Unknown Program'}
                         {app.programs?.universities && ` - ${app.programs.universities.name_en}`}
                       </SelectItem>
                     ))}
@@ -450,7 +450,7 @@ export default function DocumentsPage() {
                       {doc.applications?.programs && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                           <IconSchool className="h-4 w-4" />
-                          <span>{doc.applications.programs.name_en}</span>
+                          <span>{doc.applications.programs.name}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

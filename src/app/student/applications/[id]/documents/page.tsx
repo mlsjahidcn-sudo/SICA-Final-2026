@@ -38,7 +38,7 @@ interface Application {
   status: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     universities: {
       id: string;
       name_en: string;
@@ -232,7 +232,7 @@ export default function ApplicationDocumentsPage() {
           <h1 className="text-3xl font-bold mb-2">Upload Documents</h1>
           {application && (
             <p className="text-muted-foreground">
-              {application.programs.name_en} at {application.programs.universities.name_en}
+              {application.programs.name} at {application.programs.universities.name_en}
             </p>
           )}
         </div>

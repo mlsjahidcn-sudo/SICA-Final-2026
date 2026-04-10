@@ -60,7 +60,7 @@ interface Application {
   updated_at: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     name_cn: string | null;
     degree_type: string;
     universities: {
@@ -200,7 +200,7 @@ export default function ApplicationDetailPage() {
           
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{application.programs.name_en}</h1>
+              <h1 className="text-3xl font-bold mb-2">{application.programs.name}</h1>
               <p className="text-muted-foreground">
                 {application.programs.universities.name_en} • {application.programs.universities.city}
               </p>

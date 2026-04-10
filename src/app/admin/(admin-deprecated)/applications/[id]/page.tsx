@@ -68,7 +68,7 @@ interface Application {
   updated_at: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     name_cn: string | null;
     degree_type: string;
     universities: {
@@ -262,7 +262,7 @@ export default function AdminApplicationDetailPage() {
               <div className="flex items-center gap-2 mt-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  {application.programs.name_en} at {application.programs.universities.name_en}
+                  {application.programs.name} at {application.programs.universities.name_en}
                 </span>
               </div>
             </div>

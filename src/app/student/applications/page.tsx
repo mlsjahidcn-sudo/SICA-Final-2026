@@ -35,7 +35,7 @@ interface Application {
   created_at: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     degree_type: string;
     universities: {
       id: string;
@@ -242,7 +242,7 @@ export default function StudentApplicationsPage() {
                           <FileText className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">{application.programs.name_en}</h3>
+                          <h3 className="font-semibold text-lg">{application.programs.name}</h3>
                           <p className="text-muted-foreground">
                             {application.programs.universities.name_en} • {application.programs.universities.city}
                           </p>

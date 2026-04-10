@@ -51,7 +51,7 @@ interface Application {
   passport_last_name: string;
   email: string;
   programs: {
-    name_en: string;
+    name: string;
     universities: {
       name_en: string;
     };
@@ -434,7 +434,7 @@ export default function AdminDocumentReviewPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Program:</span>
-                  <p className="font-medium">{application.programs.name_en}</p>
+                  <p className="font-medium">{application.programs.name}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">University:</span>

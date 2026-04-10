@@ -74,7 +74,7 @@ interface Application {
   email: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     degree_type: string;
     universities: {
       id: string;
@@ -457,7 +457,7 @@ function ReviewApplicationsContent() {
                             {app.email}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {app.programs.name_en}
+                            {app.programs.name}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <GraduationCap className="h-3 w-3" />
@@ -525,7 +525,7 @@ function ReviewApplicationsContent() {
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <div>
-                          <p className="font-medium">{app.programs.name_en}</p>
+                          <p className="font-medium">{app.programs.name}</p>
                           <p className="text-sm text-muted-foreground">{app.programs.degree_type}</p>
                         </div>
                       </TableCell>

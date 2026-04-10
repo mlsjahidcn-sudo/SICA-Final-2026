@@ -47,7 +47,7 @@ interface RecentApplication {
   nationality: string;
   email: string;
   programs: {
-    name_en: string;
+    name: string;
     degree_type: string;
     universities: {
       name_en: string;
@@ -205,7 +205,7 @@ export default function PartnerV2DashboardPage() {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>{app.programs.universities.name_en}</span>
                           <span>•</span>
-                          <span>{app.programs.name_en}</span>
+                          <span>{app.programs.name}</span>
                         </div>
                       </div>
                     </div>

@@ -1464,7 +1464,7 @@ interface ProfileDocument {
     id: string
     programs?: {
       id: string
-      name_en: string
+      name: string
       universities?: { id: string; name_en: string }
     }
   }
@@ -1475,7 +1475,7 @@ interface ProfileApplication {
   status: string
   programs?: {
     id: string
-    name_en: string
+    name: string
     universities?: { id: string; name_en: string }
   }
 }
@@ -1606,7 +1606,7 @@ function ProfileDocumentsTab() {
   const getAppName = (appId: string) => {
     const app = applications.find(a => a.id === appId)
     if (app?.programs) {
-      return `${app.programs.name_en}${app.programs.universities ? ` - ${app.programs.universities.name_en}` : ''}`
+      return `${app.programs.name}${app.programs.universities ? ` - ${app.programs.universities.name_en}` : ''}`
     }
     return 'Unknown Application'
   }
@@ -1633,7 +1633,7 @@ function ProfileDocumentsTab() {
                 <SelectContent>
                   {applications.map(app => (
                     <SelectItem key={app.id} value={app.id}>
-                      {app.programs?.name_en || 'Unknown Program'}
+                      {app.programs?.name || 'Unknown Program'}
                       {app.programs?.universities ? ` - ${app.programs.universities.name_en}` : ''}
                     </SelectItem>
                   ))}

@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           partner_id,
           programs (
             id,
-            name_en,
+            name,
             universities (
               id,
               name_en
@@ -190,9 +190,13 @@ export async function POST(request: NextRequest) {
     const documentType = formData.get('document_type') as string;
     const file = formData.get('file') as File;
 
+    console.log('Document upload - application_id:', applicationId, 'document_type:', documentType, 'file:', file ? `${file.name} (${file.size} bytes, ${file.type})` : 'missing');
+
     if (!applicationId || !documentType || !file) {
+      console.log('Missing required fields:', { applicationId: !!applicationId, documentType: !!documentType, file: !!file });
       return NextResponse.json({ 
-        error: 'Application ID, document type, and file are required' 
+        error: 'Application ID, document type, and file are required',
+        details: { applicationId: !!applicationId, documentType: !!documentType, file: !!file }
       }, { status: 400 });
     }
 

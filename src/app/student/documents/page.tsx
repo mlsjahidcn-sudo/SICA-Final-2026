@@ -52,7 +52,7 @@ interface Document {
     status: string;
     programs: {
       id: string;
-      name_en: string;
+      name: string;
       universities: {
         id: string;
         name_en: string;
@@ -129,7 +129,7 @@ export default function DocumentCenterPage() {
       
       // Combine all documents with application info
       const allDocuments: Document[] = [];
-      applications.forEach((app: { id: string; status: string; programs: { id: string; name_en: string; universities: { id: string; name_en: string } } }, index: number) => {
+      applications.forEach((app: { id: string; status: string; programs: { id: string; name: string; universities: { id: string; name_en: string } } }, index: number) => {
         const docs = documentsResults[index]?.documents || [];
         docs.forEach((doc: Document) => {
           allDocuments.push({
@@ -383,7 +383,7 @@ export default function DocumentCenterPage() {
                             href={`/student/applications/${doc.application_id}`}
                             className="text-primary hover:underline"
                           >
-                            {doc.applications?.programs?.name_en || 'Unknown Program'}
+                            {doc.applications?.programs?.name || 'Unknown Program'}
                             <ExternalLink className="h-3 w-3 inline ml-1" />
                           </Link>
                           <span className="text-muted-foreground mx-2">•</span>

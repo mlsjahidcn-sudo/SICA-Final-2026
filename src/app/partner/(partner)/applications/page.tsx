@@ -42,7 +42,7 @@ interface Application {
   email: string;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     degree_type: string;
     universities: {
       id: string;
@@ -266,7 +266,7 @@ export default function PartnerApplicationsPage() {
                         </td>
                         <td className="p-4">
                           <div>
-                            <p className="font-medium">{application.programs.name_en}</p>
+                            <p className="font-medium">{application.programs.name}</p>
                             <p className="text-sm text-muted-foreground">{application.programs.degree_type}</p>
                           </div>
                         </td>

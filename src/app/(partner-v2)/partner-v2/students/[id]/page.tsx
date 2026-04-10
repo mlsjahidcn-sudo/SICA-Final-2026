@@ -139,7 +139,7 @@ interface Application {
   gpa?: number;
   programs: {
     id: string;
-    name_en: string;
+    name: string;
     name_cn?: string;
     degree_type: string;
     discipline?: string;
@@ -638,7 +638,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                           <div className="min-w-0">
                             <p className="font-medium truncate">{app.programs.universities.name_en}</p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span className="truncate max-w-[150px]">{app.programs.name_en}</span>
+                              <span className="truncate max-w-[150px]">{app.programs.name}</span>
                               <span>•</span>
                               <span>{app.programs.degree_type}</span>
                             </div>

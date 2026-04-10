@@ -74,7 +74,7 @@ interface StudentDetail {
     created_at: string
     programs: {
       id: string
-      name_en: string
+      name: string
       degree_type: string
       universities: {
         id: string
@@ -357,7 +357,7 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
                   {student.applications.map((app) => (
                     <div key={app.id} className="flex items-start justify-between p-4 rounded-lg border">
                       <div className="space-y-1">
-                        <div className="font-medium">{app.programs.name_en}</div>
+                        <div className="font-medium">{app.programs.name}</div>
                         <div className="text-sm text-muted-foreground">
                           {app.programs.universities.name_en} • {app.programs.degree_type}
                         </div>

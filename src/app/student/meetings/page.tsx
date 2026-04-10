@@ -40,7 +40,7 @@ interface Meeting {
     id: string;
     status: string;
     programs: {
-      name_en: string;
+      name: string;
       degree_type: string;
       universities: {
         name_en: string;
@@ -190,7 +190,7 @@ export default function StudentMeetingsPage() {
             <div>
               <h3 className="font-semibold text-lg">{meeting.title}</h3>
               <p className="text-sm text-muted-foreground">
-                {meeting.applications.programs.name_en} • {meeting.applications.programs.universities.name_en}
+                {meeting.applications.programs.name} • {meeting.applications.programs.universities.name_en}
               </p>
             </div>
             {getStatusBadge(meeting.status)}

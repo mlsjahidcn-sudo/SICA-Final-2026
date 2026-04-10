@@ -29,7 +29,6 @@ interface Application {
   programs: {
     id: string;
     name: string;
-    name_en: string;
     universities: {
       id: string;
       name: string;
