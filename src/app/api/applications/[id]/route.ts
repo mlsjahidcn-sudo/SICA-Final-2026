@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
-// Helper to get partner ID for the current user
-function getPartnerIdForUser(user: { id: string; role: string; partner_id?: string } | null): string | null {
+// Helper to get partner ID for the current user (either partner themselves or team member)
+function getPartnerIdForUser(user: { id: string; email: string; role: string; partner_id?: string } | null): string | null {
   if (user?.role === 'partner') {
     return user.id;
   }
@@ -13,175 +13,142 @@ function getPartnerIdForUser(user: { id: string; role: string; partner_id?: stri
   return null;
 }
 
-// GET /api/applications/[id] - Get application details (for partners, admins, and students)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/applications/[id] - Get a single application by ID
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const user = await verifyAuthToken(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
     const supabase = getSupabaseClient();
+    const partnerId = getPartnerIdForUser(user);
 
-    // Build base query
     let query = supabase
       .from('applications')
       .select(`
-        id,
-        status,
-        created_at,
-        updated_at,
-        submitted_at,
-        intake,
-        personal_statement,
-        study_plan,
-        notes,
-        profile_snapshot,
+        *,
         programs (
           id,
           name,
           name_en,
-          name_cn,
           degree_level,
-          category,
-          language,
-          duration_years,
-          tuition_fee_per_year,
-          currency,
-          scholarship_coverage,
-          application_end_date,
           universities (
             id,
             name,
             name_en,
             name_cn,
-            city,
-            province,
-            logo_url,
-            website_url
+            city
           )
         ),
         students (
           id,
+          user_id,
           first_name,
           last_name,
           nationality,
-          date_of_birth,
-          gender,
           email,
-          phone,
-          current_address,
-          permanent_address,
-          highest_degree,
-          graduation_school,
-          graduation_date,
-          gpa,
-          chinese_level,
-          chinese_test_score,
-          chinese_test_date,
-          english_level,
-          english_test_type,
-          english_test_score,
-          english_test_date,
-          passport_number
-        ),
-        application_documents (
-          id,
-          document_type,
-          status,
-          file_url,
-          rejection_reason,
-          created_at
+          users (
+            id,
+            full_name,
+            email
+          )
         )
       `)
       .eq('id', id);
 
-    // Apply role-based filters
+    // If user is partner, only allow access to their own applications
+    if (user.role === 'partner' || partnerId) {
+      query = query.eq('partner_id', partnerId);
+    }
+
+    // If user is student, only allow access to their own applications
     if (user.role === 'student') {
-      // Students can only see their own applications
-      const { data: studentRecord } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (!studentRecord) {
-        return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
-      }
-      
-      query = query.eq('student_id', studentRecord.id);
-    } else if (user.role === 'partner' || user.partner_id) {
-      // Partners can only see applications they referred
-      const partnerId = getPartnerIdForUser(user);
-      if (partnerId) {
-        query = query.eq('partner_id', partnerId);
+      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
+      if (studentRec) {
+        query = query.eq('student_id', studentRec.id);
+      } else {
+        return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
       }
     }
-    // Admins can see all applications, no filter needed
 
     const { data: application, error } = await query.single();
 
-    if (error || !application) {
+    if (error) {
       console.error('Error fetching application:', error);
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // Get timeline from application_status_history
-    const { data: timeline } = await supabase
-      .from('application_status_history')
-      .select(`
-        id,
-        old_status,
-        new_status,
-        changed_at,
-        notes,
-        users (
-          id,
-          full_name,
-          email
-        )
-      `)
-      .eq('application_id', id)
-      .order('changed_at', { ascending: true });
-
-    // Get single student from array (Supabase returns array for has-many relations)
-    const student = Array.isArray(application.students) ? application.students[0] : application.students;
-    const program = Array.isArray(application.programs) ? application.programs[0] : application.programs;
-    
-    // Merge profile_snapshot into the application for backward compatibility
-    const mergedApplication = {
+    // Fix relations (Supabase returns arrays for has-many)
+    const normalizedApplication = {
       ...application,
-      programs: program,
-      students: student,
-      ...(application.profile_snapshot || {}),
-      // Use students data as primary source
-      passport_first_name: student?.first_name,
-      passport_last_name: student?.last_name,
-      first_name: student?.first_name,
-      last_name: student?.last_name,
+      programs: Array.isArray(application.programs) ? application.programs[0] : application.programs,
+      students: Array.isArray(application.students) ? application.students[0] : application.students,
     };
 
-    return NextResponse.json({ 
-      application: mergedApplication,
-      events: timeline?.map(event => {
-        const eventUser = Array.isArray(event.users) ? event.users[0] : event.users;
-        return {
-          id: event.id,
-          old_status: event.old_status,
-          new_status: event.new_status,
-          changed_at: event.changed_at,
-          changed_by_name: eventUser?.full_name,
-          notes: event.notes
-        };
-      }) || []
-    });
-
+    return NextResponse.json({ application: normalizedApplication });
   } catch (error) {
-    console.error('Error in application GET:', error);
+    console.error('Error in applications [id] GET:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// POST /api/applications/[id] - Submit an application
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const user = await verifyAuthToken(request);
+    const partnerId = getPartnerIdForUser(user);
+
+    if (!user || !['student', 'partner', 'admin'].includes(user.role) && !partnerId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const supabase = getSupabaseClient();
+
+    // First, get the application to verify ownership
+    const { data: existingApp, error: fetchError } = await supabase
+      .from('applications')
+      .select('id, student_id, partner_id, status')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingApp) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (user.role === 'partner' || partnerId) {
+      if (existingApp.partner_id !== partnerId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+    } else if (user.role === 'student') {
+      const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
+      if (!studentRec || existingApp.student_id !== studentRec.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+    }
+
+    // Update application status to submitted
+    const { data: updatedApp, error: updateError } = await supabase
+      .from('applications')
+      .update({
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('Error submitting application:', updateError);
+      return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 });
+    }
+
+    return NextResponse.json({ application: updatedApp });
+  } catch (error) {
+    console.error('Error in applications [id] POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
