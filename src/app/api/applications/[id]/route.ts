@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
-// Helper to get partner ID for the current user (either partner themselves or team member)
+// Helper to get partner ID for the current user.
+// applications.partner_id stores users.id (not partners.id), so we return user.id for partners.
 function getPartnerIdForUser(user: { id: string; email: string; role: string; partner_id?: string } | null): string | null {
-  if (user?.role === 'partner') {
+  if (!user) return null;
+  if (user.role === 'partner') {
     return user.id;
   }
-  if (user?.partner_id) {
+  if (user.partner_id) {
     return user.partner_id;
   }
   return null;
@@ -32,11 +34,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         programs (
           id,
           name,
-          name_en,
           degree_level,
           universities (
             id,
-            name,
             name_en,
             name_cn,
             city

@@ -51,9 +51,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         submitted_at,
-        personal_statement,
-        study_plan,
-        intake,
+        profile_snapshot,
         programs (
           id,
           name,
@@ -258,19 +256,24 @@ export async function POST(request: NextRequest) {
       financial_guarantee: studentProfile.financial_guarantee,
     } : null;
 
-    // Build the application record with profile data
-    const applicationData: any = {
-      student_id: studentId,
-      program_id,
-      university_id: targetUniversityId,
-      partner_id: partner_id || null,
-      submitted_by: user.id,
+    // Build profile snapshot with all form data (only id, student_id, program_id, partner_id, status, 
+    // priority, notes, profile_snapshot columns exist in the external Supabase applications table)
+    const profileSnapshotWithExtras = {
+      ...(profileSnapshot || {}),
       intake: targetIntake,
-      status: 'draft',
+      university_id: targetUniversityId,
       personal_statement: personal_statement || '',
       study_plan: study_plan || '',
-      // Store profile snapshot as JSONB metadata for reference
-      profile_snapshot: profileSnapshot,
+    };
+
+    // Build the application record - only use columns that exist in the external DB
+    const applicationData: Record<string, unknown> = {
+      student_id: studentId,
+      program_id,
+      partner_id: partner_id || null,
+      status: 'draft',
+      // Store all extra data in profile_snapshot since those columns don't exist in the DB
+      profile_snapshot: profileSnapshotWithExtras,
     };
 
     const { data: application, error } = await supabase

@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
         document_type,
         status,
         file_key,
-        file_url,
         file_name,
         file_size,
         content_type,
@@ -81,20 +80,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
     }
 
-    // Generate public URLs for documents
-    const documentsWithUrls = (documents || []).map(doc => {
-      let url = null;
-      if (doc.file_key) {
-        const { data: urlData } = supabase
-          .storage
-          .from('documents')
-          .getPublicUrl(doc.file_key);
-        url = urlData?.publicUrl || null;
-      } else if (doc.file_url) {
-        url = doc.file_url;
-      }
-      return { ...doc, url };
-    });
+    // Generate signed URLs for documents
+    const documentsWithUrls = await Promise.all(
+      (documents || []).map(async (doc) => {
+        let url = null;
+        if (doc.file_key) {
+          const { data: signedUrlData } = await supabase
+            .storage
+            .from('documents')
+            .createSignedUrl(doc.file_key, 3600);
+          if (signedUrlData?.signedUrl) {
+            url = signedUrlData.signedUrl;
+          } else {
+            const { data: urlData } = supabase
+              .storage
+              .from('documents')
+              .getPublicUrl(doc.file_key);
+            url = urlData?.publicUrl || null;
+          }
+        }
+        return { ...doc, url };
+      })
+    );
 
     // Calculate stats
     const stats = {
@@ -167,7 +174,7 @@ export async function POST(request: NextRequest) {
       .select('id, file_key')
       .eq('application_id', applicationId)
       .eq('document_type', documentType)
-      .single();
+      .maybeSingle();
 
     // If replacing, delete old file from storage
     if (existingDoc?.file_key) {
@@ -179,7 +186,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload file to Supabase Storage
-    const fileExt = file.name.split('.').pop();
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `${user.id}/${applicationId}/${documentType}_${timestamp}_${sanitizedFileName}`;
@@ -195,44 +201,77 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Error uploading file:', uploadError);
-      return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to upload file', details: uploadError.message }, { status: 500 });
     }
 
-    // Get public URL
-    const { data: urlData } = supabase
+    // Generate signed URL
+    let publicUrl = '';
+    const { data: signedUrlData } = await supabase
       .storage
       .from('documents')
-      .getPublicUrl(uploadData.path);
+      .createSignedUrl(uploadData.path, 3600);
+    if (signedUrlData?.signedUrl) {
+      publicUrl = signedUrlData.signedUrl;
+    } else {
+      const { data: urlData } = supabase
+        .storage
+        .from('documents')
+        .getPublicUrl(uploadData.path);
+      publicUrl = urlData?.publicUrl || '';
+    }
 
-    // Create or update document record
-    const { data: document, error } = await supabase
-      .from('application_documents')
-      .upsert({
-        id: existingDoc?.id,
-        application_id: applicationId,
-        document_type: documentType,
-        file_key: uploadData.path,
-        file_url: urlData?.publicUrl || '',
-        file_name: file.name,
-        file_size: file.size,
-        content_type: file.type,
-        uploaded_by: user.id,
-        status: 'pending',
-        uploaded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'id',
-      })
-      .select()
-      .single();
+    // Create or update document record - only use columns that exist
+    let result;
+    if (existingDoc?.id) {
+      // Update existing record
+      const { data, error } = await supabase
+        .from('application_documents')
+        .update({
+          file_key: uploadData.path,
+          file_name: file.name,
+          file_size: file.size,
+          content_type: file.type,
+          status: 'pending',
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingDoc.id)
+        .select()
+        .single();
+      result = { data, error };
+    } else {
+      // Insert new record
+      const { data, error } = await supabase
+        .from('application_documents')
+        .insert({
+          application_id: applicationId,
+          document_type: documentType,
+          file_key: uploadData.path,
+          file_name: file.name,
+          file_size: file.size,
+          content_type: file.type,
+          status: 'pending',
+          uploaded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      result = { data, error };
+    }
 
-    if (error) {
-      console.error('Error creating document record:', error);
+    if (result.error) {
+      console.error('Error creating document record:', result.error);
+      // Try to clean up uploaded file
+      try {
+        await supabase.storage.from('documents').remove([uploadData.path]);
+      } catch {
+        // Ignore cleanup errors
+      }
       return NextResponse.json({ error: 'Failed to create document record' }, { status: 500 });
     }
 
     return NextResponse.json({ 
-      document: { ...document, url: urlData?.publicUrl || '' }
+      document: { ...result.data, url: publicUrl }
     }, { status: 201 });
 
   } catch (error) {

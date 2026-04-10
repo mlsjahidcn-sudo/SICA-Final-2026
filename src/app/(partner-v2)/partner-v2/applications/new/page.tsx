@@ -279,39 +279,26 @@ export default function PartnerNewApplicationPage() {
     console.log("createDraftApplication called! formData:", formData, "showRequestNote:", showRequestNote)
     if (!formData.student_id) {
       toast.error("Please select a student first")
-      console.log("Missing student_id")
       return false
     }
     if (formData.program_ids.length === 0 && !showRequestNote) {
       toast.error("Please select at least one program or add a request note")
-      console.log("Missing programs and no request note")
       return false
     }
     if (!formData.intake) {
       toast.error("Please select an intake")
-      console.log("Missing intake")
       return false
     }
 
     try {
       const token = localStorage.getItem("sica_auth_token")
-      console.log("token exists:", !!token)
-      
-      // If multiple programs selected, create one application per program
-      // For now, let's use the first selected program and store the rest in notes or create multiple
-      const primaryProgramId = formData.program_ids[0] || null
-      const primaryUniversityId = primaryProgramId 
-        ? programs.find(p => p.id === primaryProgramId)?.universities.id || null 
-        : null
-      console.log("primaryProgramId:", primaryProgramId, "primaryUniversityId:", primaryUniversityId)
       
       const requestBody = {
         student_id: formData.student_id,
-        university_id: primaryUniversityId,
-        program_id: primaryProgramId,
+        program_id: formData.program_ids.length > 0 ? formData.program_ids[0] : null,
         intake: formData.intake,
         requested_university_program_note: showRequestNote ? formData.requested_university_program_note : null,
-        selected_program_ids: formData.program_ids // Extra field for future use
+        selected_program_ids: formData.program_ids // API creates one app per program
       }
       console.log("requestBody to /api/applications:", requestBody)
       
@@ -324,11 +311,20 @@ export default function PartnerNewApplicationPage() {
         body: JSON.stringify(requestBody),
       })
 
-      console.log("response status:", response.status, "response ok:", response.ok)
       if (response.ok) {
         const data = await response.json()
         console.log("response data:", data)
-        setApplicationId(data.application.id)
+        
+        // API now creates one application per selected program
+        const count = data.count || 1
+        const primaryApp = data.application
+        
+        if (primaryApp) {
+          setApplicationId(primaryApp.id)
+          if (count > 1) {
+            toast.success(`${count} applications created successfully`)
+          }
+        }
         return true
       } else {
         const error = await response.json()
@@ -337,7 +333,7 @@ export default function PartnerNewApplicationPage() {
         return false
       }
     } catch (error) {
-      console.error("Error creating application (catch block):", error)
+      console.error("Error creating application:", error)
       toast.error("Failed to create application")
       return false
     }

@@ -9,23 +9,19 @@ interface User {
   partner_id?: string;
 }
 
-// Helper to get partner ID (partners table id) for the current user
-async function getPartnerIdForUser(user: User | null, supabase: ReturnType<typeof getSupabaseClient>): Promise<string | null> {
+// Helper to get partner ID for the current user.
+// applications.partner_id stores users.id (not partners.id), so we return user.id for partners.
+function getPartnerIdForUser(user: User | null): string | null {
   if (!user) return null;
   
-  // If user has partner_id (team member), use that
-  if (user.partner_id) {
-    return user.partner_id;
+  // If user is a partner, use their users.id (that's what applications.partner_id stores)
+  if (user.role === 'partner') {
+    return user.id;
   }
   
-  // If user is a partner, look up partners.id from partners table where user_id = user.id
-  if (user.role === 'partner') {
-    const { data: partnerRecord } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    return partnerRecord?.id || null;
+  // If user has partner_id (team member scenario), use that
+  if (user.partner_id) {
+    return user.partner_id;
   }
   
   return null;
@@ -40,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
-    const partnerId = await getPartnerIdForUser(user, supabase);
+    const partnerId = getPartnerIdForUser(user);
     
     const { searchParams } = new URL(request.url);
     
@@ -68,7 +64,6 @@ export async function GET(request: NextRequest) {
           degree_level,
           universities (
             id,
-            name,
             name_en,
             name_cn,
             city,
@@ -123,7 +118,6 @@ export async function GET(request: NextRequest) {
         students.email.ilike.%${search}%,
         students.nationality.ilike.%${search}%,
         programs.name.ilike.%${search}%,
-        programs.universities.name.ilike.%${search}%,
         programs.universities.name_en.ilike.%${search}%
       `);
     }
@@ -188,7 +182,7 @@ export async function POST(request: NextRequest) {
     const user = await verifyAuthToken(request);
     console.log("verifyAuthToken user:", user)
     const supabase = getSupabaseClient();
-    const partnerId = await getPartnerIdForUser(user, supabase);
+    const partnerId = getPartnerIdForUser(user);
     console.log("partnerId:", partnerId)
     if (!user || !['student', 'partner', 'admin'].includes(user.role) && !partnerId) {
       console.log("Unauthorized!")
@@ -251,28 +245,7 @@ export async function POST(request: NextRequest) {
     const finalPartnerId: string | null = partnerId;
     console.log("finalPartnerId:", finalPartnerId)
 
-    // If program_id is provided, check if student already has a NON-DRAFT application for this program
-    if (program_id) {
-      console.log("Checking existing application for program_id:", program_id, "student_id:", finalStudentId)
-      const { data: existing } = await supabase
-        .from('applications')
-        .select('id')
-        .eq('student_id', finalStudentId)
-        .eq('program_id', program_id)
-        .neq('status', 'draft') // Allow multiple draft applications for the same program
-        .maybeSingle(); // Use maybeSingle to avoid error if no existing application
-      console.log("existing application (non-draft):", existing)
-
-      if (existing) {
-        return NextResponse.json(
-          { error: 'Student has already applied for this program' },
-          { status: 400 }
-        );
-      }
-    }
-
     // Store all extra form data in profile_snapshot JSONB column
-    // The applications table only has: student_id, program_id, partner_id, status, priority, notes, profile_snapshot
     const profileSnapshot = {
       passport_number: body.passport_number,
       first_name: body.passport_first_name || body.first_name,
@@ -300,41 +273,72 @@ export async function POST(request: NextRequest) {
       career_goals: body.career_goals,
       requested_university_program_note,
       selected_program_ids,
+      intake,
     };
-    console.log("profileSnapshot:", profileSnapshot, "intake:", intake)
 
-    // Temporarily store intake in profile_snapshot only, since Supabase REST API isn't seeing the intake column yet
-    const profileSnapshotWithIntake = {
-      ...profileSnapshot,
-      intake, // Store intake inside profile_snapshot for now
-    };
-    console.log("Inserting into applications table with:", {
-      student_id: finalStudentId,
-      program_id,
-      partner_id: finalPartnerId,
-      status: 'draft',
-      profile_snapshot: profileSnapshotWithIntake,
-    })
-    const { data: application, error } = await supabase
-      .from('applications')
-      .insert({
-        student_id: finalStudentId,
-        program_id,
-        partner_id: finalPartnerId,
-        status: 'draft',
-        profile_snapshot: profileSnapshotWithIntake,
-      })
-      .select('*')
-      .single();
-    console.log("Supabase insert result: application:", application, "error:", error)
+    // Determine which program IDs to create applications for
+    const programIdsToCreate: (string | null)[] = program_id 
+      ? [program_id] 
+      : (selected_program_ids && selected_program_ids.length > 0)
+        ? selected_program_ids
+        : [null]; // Request note only, no program
 
-    if (error) {
-      console.error('Error creating application:', error);
-      return NextResponse.json({ error: 'Failed to create application', details: error }, { status: 500 });
+    console.log("programIdsToCreate:", programIdsToCreate)
+
+    // Create one application per program
+    const createdApplications = [];
+    for (const pid of programIdsToCreate) {
+      // Check for existing non-draft application for this student + program
+      if (pid) {
+        const { data: existing } = await supabase
+          .from('applications')
+          .select('id')
+          .eq('student_id', finalStudentId)
+          .eq('program_id', pid)
+          .neq('status', 'draft')
+          .maybeSingle();
+
+        if (existing) {
+          console.log("Skipping program_id:", pid, "- student already has a non-draft application");
+          continue;
+        }
+      }
+
+      const { data: application, error } = await supabase
+        .from('applications')
+        .insert({
+          student_id: finalStudentId,
+          program_id: pid,
+          partner_id: finalPartnerId,
+          status: 'draft',
+          profile_snapshot: profileSnapshot,
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Error creating application for program_id:', pid, error);
+        // Continue creating other applications even if one fails
+        continue;
+      }
+      
+      if (application) {
+        createdApplications.push(application);
+      }
     }
 
-    console.log("Returning application:", application)
-    return NextResponse.json({ application }, { status: 201 });
+    if (createdApplications.length === 0) {
+      return NextResponse.json({ error: 'Failed to create any applications' }, { status: 500 });
+    }
+
+    // Return the first application as the primary one (for backward compatibility)
+    // Also return all created applications
+    console.log("Created", createdApplications.length, "applications")
+    return NextResponse.json({ 
+      application: createdApplications[0],
+      applications: createdApplications,
+      count: createdApplications.length,
+    }, { status: 201 });
   } catch (error) {
     console.error('Error in applications POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

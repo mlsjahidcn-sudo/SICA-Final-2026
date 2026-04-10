@@ -38,7 +38,6 @@ export async function GET(
         document_type,
         status,
         file_key,
-        file_url,
         file_name,
         file_size,
         content_type,
@@ -71,16 +70,22 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Generate URL from Supabase Storage
+    // Generate signed URL from Supabase Storage
     let url = null;
     if (document.file_key) {
-      const { data: urlData } = supabase
+      const { data: signedUrlData } = await supabase
         .storage
         .from('documents')
-        .getPublicUrl(document.file_key);
-      url = urlData?.publicUrl || null;
-    } else if (document.file_url) {
-      url = document.file_url;
+        .createSignedUrl(document.file_key, 3600);
+      if (signedUrlData?.signedUrl) {
+        url = signedUrlData.signedUrl;
+      } else {
+        const { data: urlData } = supabase
+          .storage
+          .from('documents')
+          .getPublicUrl(document.file_key);
+        url = urlData?.publicUrl || null;
+      }
     }
 
     return NextResponse.json({ document: { ...document, url } });
@@ -122,7 +127,6 @@ export async function DELETE(
       .select(`
         id,
         file_key,
-        file_url,
         applications (
           student_id
         )
@@ -147,17 +151,6 @@ export async function DELETE(
       } catch (storageError) {
         console.error('Error deleting from storage:', storageError);
         // Continue with database deletion even if storage deletion fails
-      }
-    } else if (document.file_url) {
-      // Legacy: try to extract path from URL for deletion
-      try {
-        const urlParts = document.file_url.split('/documents/');
-        if (urlParts.length > 1) {
-          const filePath = urlParts[1].split('?')[0]; // Remove query params
-          await supabase.storage.from('documents').remove([filePath]);
-        }
-      } catch {
-        // Ignore deletion errors for legacy files
       }
     }
 

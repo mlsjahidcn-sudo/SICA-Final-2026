@@ -50,7 +50,7 @@ export async function verifyAuthToken(request: NextRequest): Promise<User | null
     const serviceSupabase = getSupabaseClient();
     const { data: userProfile } = await serviceSupabase
       .from('users')
-      .select('role, full_name, partner_id, referred_by_partner_id')
+      .select('role, full_name, referred_by_partner_id')
       .eq('id', authUser.id)
       .maybeSingle();
     
@@ -58,13 +58,20 @@ export async function verifyAuthToken(request: NextRequest): Promise<User | null
       role = userProfile.role;
       fullName = userProfile.full_name;
     }
+
+    // Look up partner_id from partners table if user is a partner
+    let partnerId: string | undefined;
+    if (role === 'partner') {
+      // For partners, applications.partner_id stores users.id, so partner_id = authUser.id
+      partnerId = authUser.id;
+    }
     
     const user: User = {
       id: authUser.id,
       email: authUser.email!,
       role: role || 'student',
       full_name: fullName || authUser.email?.split('@')[0] || 'User',
-      partner_id: userProfile?.partner_id || authUser.user_metadata?.partner_id,
+      partner_id: partnerId || authUser.user_metadata?.partner_id,
       referred_by_partner_id: userProfile?.referred_by_partner_id || authUser.user_metadata?.referred_by_partner_id,
     };
 

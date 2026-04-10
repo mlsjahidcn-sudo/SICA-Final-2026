@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
-// GET - Get URL for a document
+// GET - Get signed URL for a document
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,13 +16,12 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabaseClient();
 
-    // Get document with application info
+    // Get document with application info - only select columns that exist
     const { data: doc, error: docError } = await supabase
       .from('application_documents')
       .select(`
         id,
         file_key,
-        file_url,
         file_name,
         content_type,
         applications!inner(student_id, partner_id)
@@ -34,9 +33,7 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // Verify access - user must own the application or be admin/partner
-    // applications.student_id references students.id, NOT users.id
-    // applications.partner_id references partners.id, NOT users.id
+    // Verify access
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const application = doc.applications as any;
     let isOwner = false;
@@ -47,33 +44,34 @@ export async function GET(
         .eq('user_id', authUser.id)
         .maybeSingle();
       isOwner = studentRecord?.id === application.student_id;
-    }
-    const isAdmin = authUser.role === 'admin';
-    let isPartner = false;
-    if (authUser.role === 'partner') {
-      const { data: partnerRecord } = await supabase
-        .from('partners')
-        .select('id')
-        .eq('user_id', authUser.id)
-        .maybeSingle();
-      isPartner = partnerRecord?.id === application.partner_id;
+    } else if (authUser.role === 'partner') {
+      // applications.partner_id stores users.id
+      isOwner = application.partner_id === authUser.id;
     }
 
-    if (!isOwner && !isAdmin && !isPartner) {
+    if (!isOwner && authUser.role !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get URL from Supabase Storage
+    // Get signed URL from Supabase Storage
     let url = null;
     if (doc.file_key) {
-      const { data: urlData } = supabase
+      // Try signed URL first (works for private buckets)
+      const { data: signedUrlData } = await supabase
         .storage
         .from('documents')
-        .getPublicUrl(doc.file_key);
-      url = urlData?.publicUrl || null;
-    } else if (doc.file_url) {
-      // Fallback to legacy file_url
-      url = doc.file_url;
+        .createSignedUrl(doc.file_key, 3600); // 1 hour
+
+      if (signedUrlData?.signedUrl) {
+        url = signedUrlData.signedUrl;
+      } else {
+        // Fallback to public URL
+        const { data: urlData } = supabase
+          .storage
+          .from('documents')
+          .getPublicUrl(doc.file_key);
+        url = urlData?.publicUrl || null;
+      }
     }
 
     if (!url) {
