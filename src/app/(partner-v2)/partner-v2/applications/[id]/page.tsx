@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { ApplicationStatusBadge } from '@/components/partner-v2/application-status-badge';
 import { ApplicationTimeline } from '@/components/partner-v2/application-timeline';
@@ -35,6 +36,7 @@ interface University {
   name_cn?: string | null;
   city: string;
   province: string;
+  logo_url?: string | null;
 }
 
 interface Program {
@@ -208,9 +210,21 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               </h1>
               <ApplicationStatusBadge status={application.status} />
             </div>
-            <p className="text-muted-foreground text-sm mt-1">
-              {getUniversityName(application.programs.universities)} • {getProgramName(application.programs)}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              {application.programs.universities.logo_url ? (
+                <Avatar className="h-5 w-5 rounded border">
+                  <AvatarImage src={application.programs.universities.logo_url} alt="" className="object-contain p-0.5" />
+                  <AvatarFallback className="rounded text-[8px]">
+                    <IconBuilding className="h-3 w-3" />
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <IconBuilding className="h-4 w-4 text-muted-foreground" />
+              )}
+              <p className="text-muted-foreground text-sm">
+                {getUniversityName(application.programs.universities)} · {getProgramName(application.programs)}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" asChild>

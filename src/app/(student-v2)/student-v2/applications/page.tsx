@@ -31,9 +31,11 @@ import {
   IconFileText,
   IconEye,
   IconEdit,
-  IconSend
+  IconSend,
+  IconBuilding,
 } from "@tabler/icons-react"
 import { studentApi, type Application } from "@/lib/student-api"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
@@ -298,9 +300,18 @@ function ApplicationsContent() {
                   className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow gap-4"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <IconSchool className="h-6 w-6 text-primary" />
-                    </div>
+                    {app.programs?.universities?.logo_url ? (
+                      <Avatar className="h-12 w-12 rounded-lg border shrink-0">
+                        <AvatarImage src={app.programs.universities.logo_url} alt="" className="object-contain p-1" />
+                        <AvatarFallback className="rounded-lg bg-primary/10">
+                          <IconBuilding className="h-6 w-6 text-primary" />
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border">
+                        <IconSchool className="h-6 w-6 text-primary" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold">{app.programs?.name}</h3>

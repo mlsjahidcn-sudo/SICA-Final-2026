@@ -67,7 +67,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id,
             name_en,
             name_cn,
-            city
+            city,
+            logo_url
           )
         ),
         students (

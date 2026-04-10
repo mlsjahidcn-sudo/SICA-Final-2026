@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
             name_en,
             name_cn,
             city,
-            province
+            province,
+            logo_url
           )
         ),
         students (
