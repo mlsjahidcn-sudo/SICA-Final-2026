@@ -22,6 +22,7 @@ import {
   IconChecklist,
   IconTrophy,
   IconBriefcase,
+  IconGlobe,
 } from "@tabler/icons-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -30,6 +31,7 @@ interface ProgramDetail {
   id: string
   name: string
   name_fr: string | null
+  code: string | null
   university_id: string
   degree_level: string
   language: string
@@ -43,7 +45,7 @@ interface ProgramDetail {
   career_prospects_en: string | null
   career_prospects_cn: string | null
   duration_years: number | null
-  start_month: string | null
+  start_month: number | null
   application_start_date: string | null
   application_end_date: string | null
   min_gpa: number | null
@@ -65,7 +67,8 @@ interface ProgramDetail {
   tags: string[] | null
   capacity: number | null
   current_applications: number | null
-  code: string | null
+  application_fee_currency: string | null
+  accommodation_fee_currency: string | null
   universities?: {
     id: string
     name_en: string
@@ -116,17 +119,10 @@ function ProgramDetailContent() {
     return `${years} year${years > 1 ? 's' : ''}`
   }
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "N/A"
-    try {
-      return new Date(dateStr).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    } catch {
-      return dateStr
-    }
+  const formatMonth = (month: number | null) => {
+    if (!month) return null
+    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    return months[month] || null
   }
 
   const hasScholarship = !!program?.scholarship_coverage || (program?.scholarship_types && program.scholarship_types.length > 0)
@@ -237,24 +233,42 @@ function ProgramDetailContent() {
           )}
 
           {/* Curriculum */}
-          {program.curriculum_en && (
+          {(program.curriculum_en || program.curriculum_cn) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <IconChecklist className="h-5 w-5" />
+                  <IconBook className="h-5 w-5" />
                   Curriculum
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{program.curriculum_en}</p>
+                  {program.curriculum_en && <p className="whitespace-pre-wrap">{program.curriculum_en}</p>}
+                  {program.curriculum_cn && <p className="mt-4 whitespace-pre-wrap">{program.curriculum_cn}</p>}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Career Prospects */}
-          {program.career_prospects_en && (
+          {/* Prerequisites / Requirements */}
+          {(program.application_requirements || program.prerequisites) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IconChecklist className="h-5 w-5" />
+                  Requirements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <p className="whitespace-pre-wrap">{program.application_requirements || program.prerequisites}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Career Outcomes */}
+          {(program.career_prospects_en || program.career_prospects_cn || program.outcomes) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -264,24 +278,11 @@ function ProgramDetailContent() {
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{program.career_prospects_en}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Application Requirements */}
-          {program.application_requirements && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <IconChecklist className="h-5 w-5" />
-                  Application Requirements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{program.application_requirements}</p>
+                  {program.career_prospects_en && <p className="whitespace-pre-wrap">{program.career_prospects_en}</p>}
+                  {program.career_prospects_cn && <p className="mt-4 whitespace-pre-wrap">{program.career_prospects_cn}</p>}
+                  {!program.career_prospects_en && !program.career_prospects_cn && program.outcomes && (
+                    <p className="whitespace-pre-wrap">{program.outcomes}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -349,10 +350,7 @@ function ProgramDetailContent() {
               {hasScholarship ? (
                 <div className="space-y-2">
                   {program.scholarship_coverage && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Coverage</p>
-                      <p className="font-medium">{program.scholarship_coverage}</p>
-                    </div>
+                    <p className="text-sm">{program.scholarship_coverage}</p>
                   )}
                   {program.scholarship_types && program.scholarship_types.length > 0 && (
                     <div>
@@ -380,31 +378,43 @@ function ProgramDetailContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {program.application_start_date && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Application Opens</p>
-                  <p className="font-medium">{formatDate(program.application_start_date)}</p>
-                </div>
-              )}
-              {program.application_end_date && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Application Deadline</p>
-                  <p className="font-medium">{formatDate(program.application_end_date)}</p>
-                </div>
-              )}
-              {program.start_month && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Month</p>
-                  <p className="font-medium">{program.start_month}</p>
-                </div>
-              )}
-              {!program.application_start_date && !program.application_end_date && !program.start_month && (
+              {program.application_end_date ? (
+                <>
+                  {program.application_start_date && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Opens</span>
+                      <span className="text-sm font-medium">{new Date(program.application_start_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Deadline</span>
+                    <span className="text-sm font-medium">{new Date(program.application_end_date).toLocaleDateString()}</span>
+                  </div>
+                  {program.start_month && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Start</span>
+                      <span className="text-sm font-medium">{formatMonth(program.start_month)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
                 <p className="text-sm text-muted-foreground">Contact university for deadline details</p>
+              )}
+              {program.universities?.website_url && (
+                <a
+                  href={program.universities.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <IconGlobe className="h-4 w-4" />
+                  Visit university website
+                </a>
               )}
             </CardContent>
           </Card>
 
-          {/* Requirements & Details */}
+          {/* Details */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Details</CardTitle>
@@ -440,28 +450,16 @@ function ProgramDetailContent() {
                   <Badge variant="secondary">Required</Badge>
                 </div>
               )}
-              {program.capacity && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-medium">{program.capacity}</span>
-                </div>
-              )}
-              {program.rating && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Rating</span>
-                  <div className="flex items-center gap-1">
-                    <IconStar className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                    <span className="text-sm font-medium">{program.rating.toFixed(1)}</span>
-                    {program.review_count && (
-                      <span className="text-xs text-muted-foreground">({program.review_count})</span>
-                    )}
-                  </div>
-                </div>
-              )}
               {program.accreditation && (
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Accreditation</span>
                   <span className="text-sm font-medium">{program.accreditation}</span>
+                </div>
+              )}
+              {program.rating != null && program.rating > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Rating</span>
+                  <span className="text-sm font-medium">{program.rating.toFixed(1)} ({program.review_count} reviews)</span>
                 </div>
               )}
             </CardContent>

@@ -51,6 +51,7 @@ export async function GET(
           tuition_fee_per_year,
           currency,
           scholarship_coverage,
+          scholarship_types,
           application_end_date,
           universities (
             id,

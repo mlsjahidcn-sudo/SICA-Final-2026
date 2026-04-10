@@ -21,6 +21,7 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
         id,
         name,
         name_fr,
+        code,
         university_id,
         degree_level,
         language,
@@ -56,7 +57,8 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
         tags,
         capacity,
         current_applications,
-        code,
+        application_fee_currency,
+        accommodation_fee_currency,
         universities (
           id,
           name_en,
@@ -74,13 +76,14 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
     if (programById) return programById;
   }
 
-  // Try as slug
+  // Try by name (slug-like behavior since slug column doesn't exist)
   const { data: programBySlug } = await supabase
     .from('programs')
     .select(`
       id,
       name,
       name_fr,
+      code,
       university_id,
       degree_level,
       language,
@@ -116,7 +119,8 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
       tags,
       capacity,
       current_applications,
-      code,
+      application_fee_currency,
+      accommodation_fee_currency,
       universities (
         id,
         name_en,
@@ -129,7 +133,7 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
         ranking_national
       )
     `)
-    .eq('slug', idOrSlug)
+    .eq('id', idOrSlug)
     .single();
 
   return programBySlug;
@@ -175,7 +179,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       card: 'summary_large_image',
       title: `${program.name} at ${uniName}`,
       description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160),
-      images: program.cover_image ? [program.cover_image] : [],
+      images: program.cover_image ? [{ url: program.cover_image, width: 1200, height: 630 }] : [],
     },
     alternates: {
       canonical: `${baseUrl}/programs/${id}`,

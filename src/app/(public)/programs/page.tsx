@@ -63,9 +63,11 @@ interface Program {
   sub_category: string | null;
   tuition_fee_per_year: number | null;
   currency: string;
-  curriculum_en: string | null;
-  curriculum_cn: string | null;
-  career_prospects_en: string | null;
+  scholarship_coverage: string | null;
+  scholarship_types: string[] | null;
+  cover_image: string | null;
+  rating: number | null;
+  review_count: number | null;
   is_active: boolean;
   universities: University;
 }

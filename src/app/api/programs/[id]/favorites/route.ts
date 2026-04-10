@@ -95,9 +95,8 @@ export async function POST(
         created_at,
         programs (
           id,
-          name_en,
-          name_cn,
-          degree_type,
+          name,
+          degree_level,
           universities (
             id,
             name_en,

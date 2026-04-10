@@ -1,6 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+const PROGRAM_SELECT = `
+  id,
+  name,
+  name_fr,
+  code,
+  university_id,
+  degree_level,
+  language,
+  category,
+  sub_category,
+  description,
+  description_en,
+  description_cn,
+  curriculum_en,
+  curriculum_cn,
+  career_prospects_en,
+  career_prospects_cn,
+  duration_years,
+  start_month,
+  application_start_date,
+  application_end_date,
+  min_gpa,
+  language_requirement,
+  entrance_exam_required,
+  entrance_exam_details,
+  prerequisites,
+  tuition_fee_per_year,
+  currency,
+  scholarship_coverage,
+  scholarship_types,
+  application_requirements,
+  cover_image,
+  is_active,
+  rating,
+  review_count,
+  accreditation,
+  outcomes,
+  tags,
+  capacity,
+  current_applications,
+  application_fee_currency,
+  accommodation_fee_currency,
+  universities (
+    id,
+    name_en,
+    name_cn,
+    city,
+    province,
+    logo_url,
+    website_url,
+    type,
+    ranking_national
+  )
+`;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,34 +74,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseClient();
     let query = supabase
       .from('programs')
-      .select(`
-        id,
-        name,
-        name_fr,
-        university_id,
-        degree_level,
-        language,
-        tuition_fee_per_year,
-        currency,
-        description,
-        description_en,
-        category,
-        sub_category,
-        curriculum_en,
-        duration_years,
-        scholarship_coverage,
-        scholarship_types,
-        is_active,
-        cover_image,
-        rating,
-        review_count,
-        universities (
-          id,
-          name_en,
-          city,
-          logo_url
-        )
-      `, { count: 'exact' })
+      .select(PROGRAM_SELECT, { count: 'exact' })
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -60,38 +88,12 @@ export async function GET(request: NextRequest) {
 
     if (degree_level) {
       const degrees = degree_level.split(',').map(d => d.trim());
-      // Normalize to match database capitalization (Bachelor, Master, PhD, etc.)
-      const normalizedDegrees = degrees.map(d => {
-        const lower = d.toLowerCase();
-        if (lower === 'bachelor') return 'Bachelor';
-        if (lower === 'master') return 'Master';
-        if (lower === 'phd') return 'PhD';
-        if (lower === 'diploma') return 'Diploma';
-        if (lower === 'language') return 'language';
-        return d;
-      });
-      query = query.in('degree_level', normalizedDegrees);
+      query = query.in('degree_level', degrees);
     }
 
     if (language) {
       const languages = language.split(',').map(l => l.trim());
-      const normalizedLanguages: string[] = [];
-      for (const lang of languages) {
-        const lower = lang.toLowerCase();
-        if (lower === 'both') {
-          // "Both" means English and Chinese
-          normalizedLanguages.push('English', 'Chinese');
-        } else if (lower === 'english') {
-          normalizedLanguages.push('English');
-        } else if (lower === 'chinese') {
-          normalizedLanguages.push('Chinese');
-        } else {
-          normalizedLanguages.push(lang);
-        }
-      }
-      // Deduplicate
-      const uniqueLanguages = [...new Set(normalizedLanguages)];
-      query = query.in('language', uniqueLanguages);
+      query = query.in('language', languages);
     }
 
     if (category) {

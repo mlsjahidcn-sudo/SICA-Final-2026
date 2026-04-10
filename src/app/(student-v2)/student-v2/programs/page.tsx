@@ -46,9 +46,6 @@ interface Program {
   scholarship_coverage: string | null
   scholarship_types: string[] | null
   is_active: boolean
-  cover_image: string | null
-  rating: number | null
-  review_count: number | null
   universities?: {
     id: string
     name_en: string

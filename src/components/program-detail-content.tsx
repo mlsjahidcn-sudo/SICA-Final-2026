@@ -9,28 +9,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   IconSchool as Building2,
   IconStar as Award,
-  IconCircleCheck as CheckCircle2,
   IconChevronRight,
   IconClock,
   IconFileText,
   IconGlobe,
-  IconUsers,
   IconCalendar,
   IconCash as DollarSign,
-  IconShield as Shield,
   IconBook,
   IconLanguage,
   IconMapPin,
   IconBriefcase,
-  IconHourglass,
+  IconMail,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
-import { DeadlineTimer } from '@/components/deadline-timer';
 
 interface Program {
   id: string;
   name: string;
   name_fr: string | null;
+  code: string | null;
   university_id: string;
   degree_level: string;
   language: string;
@@ -44,7 +41,7 @@ interface Program {
   career_prospects_en: string | null;
   career_prospects_cn: string | null;
   duration_years: number | null;
-  start_month: string | null;
+  start_month: number | null;
   application_start_date: string | null;
   application_end_date: string | null;
   min_gpa: number | null;
@@ -66,7 +63,8 @@ interface Program {
   tags: string[] | null;
   capacity: number | null;
   current_applications: number | null;
-  code: string | null;
+  application_fee_currency: string | null;
+  accommodation_fee_currency: string | null;
   universities?: {
     id: string;
     name_en: string;
@@ -102,17 +100,10 @@ function formatCurrency(amount: number | null | undefined, currency: string | nu
   }).format(amount);
 }
 
-function formatDate(dateStr: string | null | undefined) {
-  if (!dateStr) return null;
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
+function formatMonth(month: number | null) {
+  if (!month) return null;
+  const months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return months[month] || null;
 }
 
 export function ProgramDetailContent({ program }: { program: Program }) {
@@ -145,8 +136,56 @@ export function ProgramDetailContent({ program }: { program: Program }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Countdown state
+  const [countdown, setCountdown] = React.useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const [isExpired, setIsExpired] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!program.application_end_date) return;
+
+    const targetDate = new Date(program.application_end_date).getTime();
+    const now = Date.now();
+
+    if (now >= targetDate) {
+      setIsExpired(true);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const diff = targetDate - now;
+
+      if (diff <= 0) {
+        setIsExpired(true);
+        setCountdown(null);
+        return;
+      }
+
+      setCountdown({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [program.application_end_date]);
+
   const university = program.universities;
   const hasScholarship = !!program.scholarship_coverage || (program.scholarship_types && program.scholarship_types.length > 0);
+
+  // Determine countdown urgency
+  const getUrgencyLevel = () => {
+    if (!countdown) return 'normal';
+    if (countdown.days <= 3) return 'urgent';
+    if (countdown.days <= 7) return 'warning';
+    return 'normal';
+  };
+
+  const urgency = getUrgencyLevel();
 
   return (
     <div className="relative">
@@ -193,6 +232,7 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
                   <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                  <TabsTrigger value="career">Career</TabsTrigger>
                 </TabsList>
 
                 {/* Overview Tab */}
@@ -238,55 +278,69 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                           <p className="font-medium">{formatCurrency(program.tuition_fee_per_year, program.currency) || 'Contact'}</p>
                         </div>
                       </div>
+                      {program.start_month && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                          <IconCalendar className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Start Month</p>
+                            <p className="font-medium">{formatMonth(program.start_month)}</p>
+                          </div>
+                        </div>
+                      )}
+                      {program.rating != null && program.rating > 0 && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                          <Award className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Rating</p>
+                            <p className="font-medium">{program.rating.toFixed(1)} ({program.review_count} reviews)</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Scholarship */}
                   {hasScholarship && (
-                    <div className="rounded-lg border border-green-200 bg-green-50/50 p-6">
+                    <div className="rounded-lg border border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/30 p-6">
                       <div className="flex items-center gap-2 mb-3">
-                        <Award className="h-5 w-5 text-green-600" />
-                        <h2 className="text-lg font-semibold text-green-800">Scholarship Available</h2>
+                        <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <h2 className="text-lg font-semibold text-green-800 dark:text-green-300">Scholarship Available</h2>
                       </div>
                       {program.scholarship_coverage && (
-                        <p className="text-green-700 whitespace-pre-wrap">{program.scholarship_coverage}</p>
+                        <p className="text-sm text-green-700 dark:text-green-400">{program.scholarship_coverage}</p>
                       )}
                       {program.scholarship_types && program.scholarship_types.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {program.scholarship_types.map((type, i) => (
-                            <Badge key={i} variant="outline" className="text-green-700 border-green-300">{type}</Badge>
+                            <Badge key={i} variant="outline" className="text-green-700 dark:text-green-400 border-green-300 dark:border-green-700">{type}</Badge>
                           ))}
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Career Prospects */}
-                  {program.career_prospects_en && (
-                    <div className="rounded-lg border bg-card p-6">
-                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <IconBriefcase className="h-5 w-5" />
-                        Career Prospects
-                      </h2>
-                      <div className="prose prose-sm max-w-none text-muted-foreground">
-                        <p className="whitespace-pre-wrap">{program.career_prospects_en}</p>
-                      </div>
                     </div>
                   )}
                 </TabsContent>
 
                 {/* Curriculum Tab */}
                 <TabsContent value="curriculum" className="space-y-6">
-                  <div className="rounded-lg border bg-card p-6">
-                    <h2 className="text-lg font-semibold mb-4">Curriculum</h2>
-                    {program.curriculum_en ? (
-                      <div className="prose prose-sm max-w-none text-muted-foreground">
-                        <p className="whitespace-pre-wrap">{program.curriculum_en}</p>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">Curriculum details not available. Please contact the university for more information.</p>
-                    )}
-                  </div>
+                  {(program.curriculum_en || program.curriculum_cn) ? (
+                    <div className="rounded-lg border bg-card p-6">
+                      <h2 className="text-lg font-semibold mb-4">Curriculum</h2>
+                      {program.curriculum_en && (
+                        <div className="prose prose-sm max-w-none text-muted-foreground">
+                          <p className="whitespace-pre-wrap">{program.curriculum_en}</p>
+                        </div>
+                      )}
+                      {program.curriculum_cn && (
+                        <div className="mt-4 prose prose-sm max-w-none text-muted-foreground">
+                          <p className="whitespace-pre-wrap">{program.curriculum_cn}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border bg-card p-6">
+                      <p className="text-muted-foreground">Curriculum details not available yet. Contact the university for more information.</p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Requirements Tab */}
@@ -297,13 +351,17 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                       <div className="prose prose-sm max-w-none text-muted-foreground">
                         <p className="whitespace-pre-wrap">{program.application_requirements}</p>
                       </div>
+                    ) : program.prerequisites ? (
+                      <div className="prose prose-sm max-w-none text-muted-foreground">
+                        <p className="whitespace-pre-wrap">{program.prerequisites}</p>
+                      </div>
                     ) : (
                       <p className="text-muted-foreground">Entry requirements not specified. Please contact the university for details.</p>
                     )}
                   </div>
 
                   {/* Additional Requirements */}
-                  {(program.min_gpa || program.language_requirement || program.entrance_exam_required || program.prerequisites) && (
+                  {(program.min_gpa || program.language_requirement || program.entrance_exam_required) && (
                     <div className="rounded-lg border bg-card p-6">
                       <h2 className="text-lg font-semibold mb-4">Additional Requirements</h2>
                       <div className="space-y-3">
@@ -328,13 +386,40 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                         {program.entrance_exam_details && (
                           <p className="text-sm text-muted-foreground">{program.entrance_exam_details}</p>
                         )}
-                        {program.prerequisites && (
-                          <div>
-                            <p className="text-muted-foreground text-sm mb-1">Prerequisites</p>
-                            <p className="text-sm whitespace-pre-wrap">{program.prerequisites}</p>
-                          </div>
-                        )}
                       </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Career Tab */}
+                <TabsContent value="career" className="space-y-6">
+                  {(program.career_prospects_en || program.career_prospects_cn) ? (
+                    <div className="rounded-lg border bg-card p-6">
+                      <h2 className="text-lg font-semibold mb-4">Career Prospects</h2>
+                      {program.career_prospects_en && (
+                        <div className="prose prose-sm max-w-none text-muted-foreground">
+                          <p className="whitespace-pre-wrap">{program.career_prospects_en}</p>
+                        </div>
+                      )}
+                      {program.career_prospects_cn && (
+                        <div className="mt-4 prose prose-sm max-w-none text-muted-foreground">
+                          <p className="whitespace-pre-wrap">{program.career_prospects_cn}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : program.outcomes ? (
+                    <div className="rounded-lg border bg-card p-6">
+                      <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <IconBriefcase className="h-5 w-5" />
+                        Career Outcomes
+                      </h2>
+                      <div className="prose prose-sm max-w-none text-muted-foreground">
+                        <p className="whitespace-pre-wrap">{program.outcomes}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border bg-card p-6">
+                      <p className="text-muted-foreground">Career prospects information not available yet.</p>
                     </div>
                   )}
                 </TabsContent>
@@ -391,6 +476,12 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                     {formatCurrency(program.tuition_fee_per_year, program.currency) || 'Contact'}
                   </span>
                 </div>
+                {program.application_fee_currency && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Application Fee Currency</span>
+                    <span className="font-medium text-sm">{program.application_fee_currency}</span>
+                  </div>
+                )}
               </div>
 
               <Separator className="my-4" />
@@ -398,87 +489,85 @@ export function ProgramDetailContent({ program }: { program: Program }) {
               {/* Application Timeline */}
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold">Application Timeline</h2>
-                
-                {/* Deadline Timer */}
-                {isMounted && program.application_end_date && (
-                  <DeadlineTimer deadline={program.application_end_date} />
-                )}
-                
-                {/* Timeline Dates */}
-                {program.application_start_date && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <IconCalendar className="h-4 w-4" /> Opens
-                    </span>
-                    <Badge variant="secondary">{formatDate(program.application_start_date)}</Badge>
+                {isMounted && program.application_end_date ? (
+                  isExpired ? (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3">
+                      <p className="text-sm font-medium text-red-700 dark:text-red-400">Applications Closed</p>
+                      <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                        Deadline was {new Date(program.application_end_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : countdown ? (
+                    <div className="space-y-2">
+                      <div className={cn(
+                        "rounded-lg p-3",
+                        urgency === 'urgent' ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800' :
+                        urgency === 'warning' ? 'bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800' :
+                        'bg-muted/50 border'
+                      )}>
+                        <p className={cn(
+                          "text-xs font-medium mb-2",
+                          urgency === 'urgent' ? 'text-red-600 dark:text-red-400' :
+                          urgency === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-muted-foreground'
+                        )}>
+                          {urgency === 'urgent' ? 'Closing soon!' : urgency === 'warning' ? 'Deadline approaching' : 'Time remaining'}
+                        </p>
+                        <div className="grid grid-cols-4 gap-1 text-center">
+                          <div>
+                            <p className={cn("text-lg font-bold", urgency === 'urgent' ? 'text-red-700 dark:text-red-300' : 'text-foreground')}>
+                              {String(countdown.days).padStart(2, '0')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Days</p>
+                          </div>
+                          <div>
+                            <p className={cn("text-lg font-bold", urgency === 'urgent' ? 'text-red-700 dark:text-red-300' : 'text-foreground')}>
+                              {String(countdown.hours).padStart(2, '0')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Hrs</p>
+                          </div>
+                          <div>
+                            <p className={cn("text-lg font-bold", urgency === 'urgent' ? 'text-red-700 dark:text-red-300' : 'text-foreground')}>
+                              {String(countdown.minutes).padStart(2, '0')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Min</p>
+                          </div>
+                          <div>
+                            <p className={cn("text-lg font-bold", urgency === 'urgent' ? 'text-red-700 dark:text-red-300' : 'text-foreground')}>
+                              {String(countdown.seconds).padStart(2, '0')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">Sec</p>
+                          </div>
+                        </div>
+                      </div>
+                      {program.application_start_date && (
+                        <p className="text-xs text-muted-foreground">
+                          Opens: {new Date(program.application_start_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Deadline: {new Date(program.application_end_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : null
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <IconCalendar className="h-4 w-4 shrink-0" />
+                    <span>Contact for deadline details</span>
                   </div>
                 )}
-                {program.application_end_date && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <IconCalendar className="h-4 w-4" /> Deadline
-                    </span>
-                    <Badge variant="secondary">{formatDate(program.application_end_date)}</Badge>
-                  </div>
-                )}
-                {program.start_month && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <IconCalendar className="h-4 w-4" /> Start
-                    </span>
-                    <Badge variant="secondary">{program.start_month}</Badge>
-                  </div>
-                )}
-                {/* Contact message when no deadline */}
-                {isMounted && !program.application_end_date && !program.application_start_date && !program.start_month && (
-                  <p className="text-sm text-muted-foreground">Contact for deadline details</p>
+                {university?.website_url && (
+                  <a
+                    href={university.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <IconGlobe className="h-4 w-4" />
+                    Visit university website
+                  </a>
                 )}
               </div>
-
-              {/* Capacity */}
-              {(program.capacity || program.current_applications) && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-3">
-                    <h2 className="text-lg font-semibold">Capacity</h2>
-                    {program.capacity && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-2">
-                          <IconUsers className="h-4 w-4" /> Spots
-                        </span>
-                        <span className="font-medium">{program.capacity}</span>
-                      </div>
-                    )}
-                    {program.current_applications && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-2">
-                          <IconUsers className="h-4 w-4" /> Applied
-                        </span>
-                        <span className="font-medium">{program.current_applications}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Rating */}
-              {program.rating && program.rating > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Rating</span>
-                      <div className="flex items-center gap-1">
-                        <Award className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                        <span className="font-medium">{program.rating.toFixed(1)}</span>
-                        {program.review_count && program.review_count > 0 && (
-                          <span className="text-xs text-muted-foreground">({program.review_count})</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
 
               <Separator className="my-4" />
 
