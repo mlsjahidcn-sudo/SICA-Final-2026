@@ -190,9 +190,10 @@ export default function PartnerV2DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {recentApplications.map((app) => (
-                  <div
+                  <Link
                     key={app.id}
-                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    href={`/partner-v2/applications/${app.id}`}
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -211,13 +212,9 @@ export default function PartnerV2DashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(app.status)}
-                      <Button variant="ghost" size="icon-sm" asChild>
-                        <Link href={`/partner-v2/applications/${app.id}`}>
-                          <IconEye className="h-4 w-4" />
-                        </Link>
-                      </Button>
+                      <IconEye className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

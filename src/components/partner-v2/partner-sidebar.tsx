@@ -31,7 +31,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import { 
   IconDashboard, 
   IconFileText, 
@@ -95,6 +94,7 @@ const navItems = [
     title: "Notifications",
     url: "/partner-v2/notifications",
     icon: <IconBell />,
+    showBadge: true,
   },
   {
     title: "Settings",
@@ -193,6 +193,33 @@ function NavUser({ user }: { user: { full_name: string; email: string; avatar_ur
 export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const [unreadCount, setUnreadCount] = React.useState(0)
+
+  // Fetch unread notification count
+  React.useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('sica_auth_token') : null;
+        if (!token || !user) return;
+
+        const response = await fetch('/api/partner/notifications/unread-count', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadCount(data.count || 0);
+        }
+      } catch {
+        // Silently fail - badge is non-critical
+      }
+    };
+
+    fetchUnreadCount();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -241,9 +268,14 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
                     isActive={pathname === item.url || (item.url !== "/partner-v2" && pathname.startsWith(item.url))}
                     asChild
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} className="relative flex items-center w-full">
                       {item.icon}
                       <span>{item.title}</span>
+                      {item.showBadge && unreadCount > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

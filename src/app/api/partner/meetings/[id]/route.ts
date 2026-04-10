@@ -1,110 +1,109 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verify authentication
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = getSupabaseClient();
     const { id } = await params;
-    
-    // Check if it's a sample meeting
-    if (id.startsWith('sample-')) {
-      const sampleMeetings = generateSampleMeetings();
-      const meeting = sampleMeetings.find(m => m.id === id);
-      
-      if (meeting) {
-        return NextResponse.json({ meeting });
-      }
-      
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
-    }
-    
+
+    // Fetch meeting with related data
     const { data: meeting, error } = await supabase
-      .from('meeting_details')
-      .select('*')
+      .from('meetings')
+      .select(`
+        id,
+        application_id,
+        student_id,
+        title,
+        meeting_date,
+        duration_minutes,
+        platform,
+        meeting_url,
+        meeting_id_text,
+        meeting_password,
+        status,
+        created_by,
+        created_at,
+        updated_at,
+        applications (
+          id,
+          partner_id,
+          programs (
+            name,
+            degree_level,
+            universities (
+              name,
+              name_en
+            )
+          ),
+          students (
+            first_name,
+            last_name,
+            email
+          )
+        )
+      `)
       .eq('id', id)
-      .single();
-    
+      .maybeSingle();
+
     if (error) {
       console.error('Error fetching meeting:', error);
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
-    
-    return NextResponse.json({ meeting });
-    
+
+    if (!meeting) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+
+    // Verify partner has access to this meeting
+    if (user.role === 'partner') {
+      const app = meeting.applications as unknown as Record<string, unknown> | null;
+      if (app?.partner_id !== user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // Normalize meeting data
+    const appData = (meeting.applications as unknown as Record<string, unknown> | null) || {};
+    const student = (appData.students as unknown as Record<string, unknown> | null) || {};
+    const program = (appData.programs as unknown as Record<string, unknown> | null) || {};
+    const university = (program.universities as unknown as Record<string, unknown> | null) || {};
+
+    const normalizedMeeting = {
+      id: meeting.id,
+      application_id: meeting.application_id,
+      student_id: meeting.student_id,
+      title: meeting.title,
+      meeting_date: meeting.meeting_date,
+      duration_minutes: meeting.duration_minutes,
+      platform: meeting.platform,
+      meeting_url: meeting.meeting_url,
+      meeting_id_external: meeting.meeting_id_text,
+      meeting_password: meeting.meeting_password,
+      status: meeting.status,
+      created_by: meeting.created_by,
+      created_at: meeting.created_at,
+      updated_at: meeting.updated_at,
+      student_name: [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Unknown',
+      student_email: student.email || '',
+      program_name: program.name || '',
+      degree_type: program.degree_level || '',
+      university_name: university.name_en || university.name || '',
+    };
+
+    return NextResponse.json({ meeting: normalizedMeeting });
+
   } catch (error) {
     console.error('Meeting detail API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-function generateSampleMeetings() {
-  const now = new Date();
-  const sampleMeetings = [];
-  
-  const titles = [
-    'Initial Interview',
-    'Second Round Interview',
-    'Document Review Session',
-    'Final Interview',
-    'Application Follow-up',
-    'Program Consultation',
-  ];
-  
-  const students = [
-    { name: 'John Smith', email: 'john.smith@example.com' },
-    { name: 'Jane Doe', email: 'jane.doe@example.com' },
-    { name: 'Alex Johnson', email: 'alex.johnson@example.com' },
-    { name: 'Sarah Williams', email: 'sarah.williams@example.com' },
-    { name: 'Michael Chen', email: 'michael.chen@example.com' },
-  ];
-  
-  const programs = [
-    { name: 'Software Engineering', university: 'Tsinghua University' },
-    { name: 'Business Administration', university: 'Peking University' },
-    { name: 'Chinese Language', university: 'Fudan University' },
-    { name: 'International Relations', university: 'Shanghai Jiao Tong University' },
-  ];
-  
-  const platforms = ['zoom', 'google_meet', 'teams'];
-  const statuses = ['scheduled', 'scheduled', 'scheduled', 'completed', 'cancelled'];
-  
-  for (let i = 0; i < 10; i++) {
-    const daysOffset = Math.floor(Math.random() * 14) - 7;
-    const hoursOffset = Math.floor(Math.random() * 10) + 8;
-    const meetingDate = new Date(now);
-    meetingDate.setDate(meetingDate.getDate() + daysOffset);
-    meetingDate.setHours(hoursOffset, 0, 0, 0);
-    
-    const student = students[Math.floor(Math.random() * students.length)];
-    const program = programs[Math.floor(Math.random() * programs.length)];
-    const platform = platforms[Math.floor(Math.random() * platforms.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    
-    sampleMeetings.push({
-      id: `sample-${i}`,
-      title: titles[Math.floor(Math.random() * titles.length)],
-      description: 'Discussion about application requirements and next steps.',
-      meeting_date: meetingDate.toISOString(),
-      duration_minutes: [30, 45, 60][Math.floor(Math.random() * 3)],
-      status,
-      meeting_type: 'interview',
-      platform,
-      meeting_url: `https://zoom.us/j/${Math.floor(Math.random() * 900000000 + 100000000)}`,
-      meeting_id_external: Math.floor(Math.random() * 900000000 + 100000000).toString(),
-      meeting_password: Math.floor(Math.random() * 900000 + 100000).toString(),
-      notes: null,
-      student_id: 'sample-student-id',
-      student_name: student.name,
-      student_email: student.email,
-      application_id: 'sample-application-id',
-      program_name: program.name,
-      degree_type: 'Master',
-      university_name: program.university,
-    });
-  }
-  
-  return sampleMeetings;
 }
