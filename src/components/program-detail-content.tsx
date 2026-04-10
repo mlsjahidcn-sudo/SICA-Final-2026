@@ -437,44 +437,42 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                   <h2 className="text-lg font-semibold">Application Timeline</h2>
                   
                   {/* Countdown Timer */}
-                  {countdown && (
-                    <div className={cn(
-                      "p-4 rounded-lg border",
-                      countdown.isExpired 
-                        ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800" 
-                        : "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
-                    )}>
-                      {countdown.isExpired ? (
-                        <div className="text-center">
-                          <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
-                          <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                            <IconHourglass className="h-3 w-3" />
-                            Deadline in
-                          </p>
-                          <div className="grid grid-cols-4 gap-2 text-center">
-                            <div className="bg-background rounded-md p-2 border shadow-sm">
-                              <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
-                            </div>
-                            <div className="bg-background rounded-md p-2 border shadow-sm">
-                              <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
-                            </div>
-                            <div className="bg-background rounded-md p-2 border shadow-sm">
-                              <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
-                            </div>
-                            <div className="bg-background rounded-md p-2 border shadow-sm">
-                              <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
-                            </div>
+                  {countdown && !countdown.isExpired && (countdown.days > 0 || countdown.hours > 0 || countdown.minutes > 0 || countdown.seconds > 0) && (
+                    <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <IconHourglass className="h-3 w-3" />
+                          Deadline in
+                        </p>
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.days).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Days</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.hours).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Hours</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.minutes).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mins</div>
+                          </div>
+                          <div className="bg-background rounded-md p-2 border shadow-sm">
+                            <div className="text-xl font-bold">{String(countdown.seconds).padStart(2, '0')}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Secs</div>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Applications Closed Message */}
+                  {countdown && countdown.isExpired && (
+                    <div className="p-4 rounded-lg border bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
+                      <div className="text-center">
+                        <IconHourglass className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                        <p className="font-semibold text-red-700 dark:text-red-400">Applications Closed</p>
+                      </div>
                     </div>
                   )}
                   
@@ -505,6 +503,10 @@ export function ProgramDetailContent({ program }: { program: Program }) {
                   )}
                   {!program.application_start_date && !program.application_end_date && !program.start_month && !countdown && (
                     <p className="text-sm text-muted-foreground">Contact for deadline details</p>
+                  )}
+                  {/* Show contact message if countdown exists but is expired (no need to show both) */}
+                  {countdown && countdown.isExpired && (
+                    <p className="text-sm text-muted-foreground">The application deadline has passed.</p>
                   )}
                 </div>
               )}
