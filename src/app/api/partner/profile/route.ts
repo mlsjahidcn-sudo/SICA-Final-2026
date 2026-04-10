@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 interface ProfileResponse {
   id: string;
@@ -15,14 +16,18 @@ interface ProfileResponse {
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = getSupabaseClient();
     
-    // Get user basic info - using first partner user for demo
-    const { data: user, error: userError } = await supabase
+    // Get user basic info
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, full_name, email, phone, avatar_url')
-      .eq('role', 'partner')
-      .limit(1)
+      .eq('id', user.id)
       .single();
     
     if (userError) {
@@ -39,11 +44,11 @@ export async function GET(request: NextRequest) {
     
     // Ignore error if no profile exists yet
     const profile: ProfileResponse = {
-      id: user.id,
-      full_name: user.full_name || '',
-      email: user.email || '',
-      phone: user.phone,
-      avatar_url: user.avatar_url,
+      id: userData.id,
+      full_name: userData.full_name || '',
+      email: userData.email || '',
+      phone: userData.phone,
+      avatar_url: userData.avatar_url,
       company_name: partnerProfile?.company_name || null,
       position: partnerProfile?.position || null,
       address: partnerProfile?.address || null,
@@ -60,20 +65,13 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = getSupabaseClient();
     const body = await request.json();
-    
-    // Get current user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('role', 'partner')
-      .limit(1)
-      .single();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
     
     // Update user basic info
     const { error: updateUserError } = await supabase

@@ -1,26 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = getSupabaseClient();
     const formData = await request.formData();
     const file = formData.get('avatar') as File;
     
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-    
-    // Get current user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('role', 'partner')
-      .limit(1)
-      .single();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     // Generate unique filename
@@ -32,10 +26,10 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Upload to Supabase storage
+    // Upload to Supabase storage (documents bucket, since avatars may not exist)
     const { data: uploadData, error: uploadError } = await supabase
       .storage
-      .from('avatars')
+      .from('documents') // Use existing documents bucket since avatars may not be created
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true,
@@ -49,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Get public URL
     const { data: urlData } = supabase
       .storage
-      .from('avatars')
+      .from('documents')
       .getPublicUrl(fileName);
     
     const avatarUrl = urlData.publicUrl;
