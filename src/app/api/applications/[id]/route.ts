@@ -431,7 +431,20 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     // Fetch the application to check ownership and status
     const { data: application, error: fetchError } = await supabase
       .from('applications')
-      .select('id, status, student_id, partner_id')
+      .select(`
+        id,
+        status,
+        student_id,
+        partner_id,
+        students (
+          id,
+          user_id,
+          users (
+            id,
+            referred_by_partner_id
+          )
+        )
+      `)
       .eq('id', id)
       .maybeSingle();
 
@@ -451,10 +464,25 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Only partner admins can delete applications' }, { status: 403 });
     }
 
+    // Get the student's referrer info for partner access control (same logic as GET endpoint)
+    const studentData = Array.isArray(application.students) ? application.students[0] : application.students;
+    const studentUserData = studentData?.users
+      ? (Array.isArray(studentData.users) ? studentData.users[0] : studentData.users)
+      : null;
+    
+    // Determine the student's referrer partner user ID
+    let referrerUserId = '';
+    if (studentUserData?.referred_by_partner_id) {
+      const referrerResult = await getReferrerUserId(application.student_id, supabase);
+      referrerUserId = referrerResult || '';
+    } else {
+      referrerUserId = studentData?.user_id || '';
+    }
+
     // Verify access via canPartnerAccessApplication
     const canAccess = await canPartnerAccessApplication(
       partnerUser,
-      application.student_id,
+      referrerUserId,
       application.partner_id
     );
     if (!canAccess) {
