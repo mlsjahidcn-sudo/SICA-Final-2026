@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         data: {
           full_name: fullName,
           role: role,
+          partner_role: role === 'partner' ? 'partner_admin' : undefined,
         },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/login`,
       },
@@ -59,17 +60,25 @@ export async function POST(request: NextRequest) {
       full_name: fullName,
       role: role,
       approval_status: approvalStatus,
+      is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
     // Add partner-specific fields
-    if (role === 'partner' && partnerInfo) {
-      userProfile.company_name = partnerInfo.companyName || null;
-      userProfile.country = partnerInfo.country || null;
-      userProfile.city = partnerInfo.city || null;
-      userProfile.website = partnerInfo.website || null;
-      if (partnerInfo.phone) userProfile.phone = partnerInfo.phone;
+    if (role === 'partner') {
+      // Self-signed-up partners get partner_admin role (they're creating their own org)
+      // Their partner_id points to themselves as the org owner
+      userProfile.partner_role = 'partner_admin';
+      userProfile.partner_id = authData.user.id;
+
+      if (partnerInfo) {
+        userProfile.company_name = partnerInfo.companyName || null;
+        userProfile.country = partnerInfo.country || null;
+        userProfile.city = partnerInfo.city || null;
+        userProfile.website = partnerInfo.website || null;
+        if (partnerInfo.phone) userProfile.phone = partnerInfo.phone;
+      }
     }
 
     const { error: profileError } = await supabase

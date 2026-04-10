@@ -71,7 +71,7 @@ export function PartnerCommandPalette() {
     command();
   };
 
-  const isPartnerAdmin = (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin';
+  const isPartnerAdmin = !(user as unknown as Record<string, unknown>)?.partner_role || (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin';
 
   // Group items by their group property, filter admin-only items for members
   const groups = partnerNavItems

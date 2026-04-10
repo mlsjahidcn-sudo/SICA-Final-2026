@@ -44,13 +44,17 @@ export async function POST(
       );
     }
 
-    // Update user approval status
-    const { error: updateError } = await supabase
+    // Update user approval status and ensure partner fields are set
+    // Use service role client to bypass RLS (admin updating another user's row)
+    const adminClient = getSupabaseClient();
+    const { error: updateError } = await adminClient
       .from('users')
       .update({
         approval_status: 'approved',
         approved_at: new Date().toISOString(),
         approved_by: authUser.id,
+        partner_role: 'partner_admin', // Self-signed-up partners are org admins
+        partner_id: partnerUserId, // They are their own org owner
         updated_at: new Date().toISOString(),
       })
       .eq('id', partnerUserId)
@@ -65,10 +69,17 @@ export async function POST(
     }
 
     // Also update the partners table status if a record exists
-    await supabase
+    await adminClient
       .from('partners')
       .update({ status: 'approved', updated_at: new Date().toISOString() })
       .eq('user_id', partnerUserId);
+
+    // Also update the auth user metadata to include partner_role
+    await adminClient.auth.admin.updateUserById(partnerUserId, {
+      user_metadata: {
+        partner_role: 'partner_admin',
+      }
+    });
 
     return NextResponse.json({ 
       success: true,

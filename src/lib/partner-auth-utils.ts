@@ -54,7 +54,9 @@ export async function requirePartnerAdmin(request: NextRequest): Promise<{ user:
   
   const partnerUser = result.user;
   
-  if (partnerUser.partner_role !== 'partner_admin') {
+  // Treat null partner_role as partner_admin for backward compatibility
+  // (original partner accounts created before the partner_role column existed)
+  if (partnerUser.partner_role && partnerUser.partner_role !== 'partner_admin') {
     return { error: NextResponse.json({ error: 'Forbidden - Partner admin access only' }, { status: 403 }) };
   }
   
@@ -83,7 +85,8 @@ export async function getPartnerAdminId(userId: string): Promise<string | null> 
     return null;
   }
   
-  if (user.partner_role === 'partner_admin') {
+  // Treat null partner_role as partner_admin for backward compatibility
+  if (!user.partner_role || user.partner_role === 'partner_admin') {
     return user.id;
   }
   

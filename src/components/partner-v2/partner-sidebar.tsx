@@ -201,7 +201,7 @@ function NavUser({ user, isPartnerAdmin }: { user: { full_name: string; email: s
 export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user } = useAuth()
-  const isPartnerAdmin = (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin'
+  const isPartnerAdmin = !(user as unknown as Record<string, unknown>)?.partner_role || (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin'
   const [unreadCount, setUnreadCount] = React.useState(0)
 
   // Fetch unread notification count
