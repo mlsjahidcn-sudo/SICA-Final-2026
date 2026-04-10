@@ -71,13 +71,13 @@ import { useAutoSave } from "@/hooks/use-auto-save"
 
 // Constants
 const DEGREE_LEVELS = [
-  { value: 'bachelor', label: 'Bachelor' },
-  { value: 'master', label: 'Master' },
-  { value: 'phd', label: 'PhD' },
-  { value: 'language', label: 'Language Program' },
-  { value: 'pre_university', label: 'Pre-University' },
-  { value: 'diploma', label: 'Diploma' },
-  { value: 'certificate', label: 'Certificate' },
+  { value: 'Bachelor', label: 'Bachelor' },
+  { value: 'Master', label: 'Master' },
+  { value: 'PhD', label: 'PhD' },
+  { value: 'Chinese Language', label: 'Language Program' },
+  { value: 'Pre-University', label: 'Pre-University' },
+  { value: 'Diploma', label: 'Diploma' },
+  { value: 'Certificate', label: 'Certificate' },
 ]
 
 const CATEGORIES = [

@@ -82,11 +82,11 @@ interface UniversityOption {
 
 const DEGREE_LEVELS = [
   { value: 'all', label: 'All Degrees' },
-  { value: 'bachelor', label: 'Bachelor' },
-  { value: 'master', label: 'Master' },
-  { value: 'phd', label: 'PhD' },
-  { value: 'diploma', label: 'Diploma' },
-  { value: 'language', label: 'Chinese Language' },
+  { value: 'Bachelor', label: 'Bachelor' },
+  { value: 'Master', label: 'Master' },
+  { value: 'PhD', label: 'PhD' },
+  { value: 'Diploma', label: 'Diploma' },
+  { value: 'Chinese Language', label: 'Chinese Language' },
 ];
 
 const LANGUAGES = [

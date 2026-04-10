@@ -106,10 +106,10 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: typeof Ic
 
 const DEGREE_TYPES = [
   { value: 'all', label: 'All Degrees' },
-  { value: 'bachelor', label: 'Bachelor' },
-  { value: 'master', label: 'Master' },
-  { value: 'phd', label: 'PhD' },
-  { value: 'language', label: 'Language Program' },
+  { value: 'Bachelor', label: 'Bachelor' },
+  { value: 'Master', label: 'Master' },
+  { value: 'PhD', label: 'PhD' },
+  { value: 'Chinese Language', label: 'Language Program' },
 ];
 
 const SORT_OPTIONS = [
