@@ -777,6 +777,46 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 
 - 大学列表、详情、创建、编辑、删除
 - 仅限管理员操作
+- **AI大学信息生成**: 输入大学名称，AI自动填充所有详细信息
+
+#### AI大学信息生成 (AI University Generation)
+
+管理员在创建新大学时，可以使用AI自动生成大学详细信息：
+
+**功能特性**：
+- 输入大学英文名称或中文名称
+- AI自动生成完整信息：中英文名称、描述、地址、排名、网站等
+- 支持SEO优化：自动生成meta_title、meta_description、meta_keywords
+- 生成设施、住宿等详细信息
+
+**使用方法**：
+1. 访问 `/admin/v2/universities/new`
+2. 在"AI-Powered University Generation"卡片中输入大学名称
+3. 点击"AI Generate"按钮
+4. 等待AI生成完成后，检查并编辑表单字段
+5. 点击"Create University"保存
+
+**API端点**：
+- `POST /api/admin/universities/generate` - AI生成大学信息
+
+**生成字段**：
+- 基本信息：name_en, name_cn, short_name, website, founded_year
+- 位置：province, city, address_en, address_cn
+- 分类：type (985/211/Double First-Class/Provincial/Private), category
+- 排名：ranking_national, ranking_international
+- 描述：description_en, description_cn
+- 设施：facilities_en, facilities_cn
+- 住宿：accommodation_info_en, accommodation_info_cn
+- 学生数据：student_count, international_student_count
+- 奖学金：scholarship_available, scholarship_percentage
+- SEO：meta_title, meta_description, meta_keywords
+- 媒体：logo_url, cover_image_url
+
+**页面路由**：
+- `/admin/v2/universities` - 大学列表
+- `/admin/v2/universities/new` - 创建大学（含AI生成）
+- `/admin/v2/universities/[id]` - 大学详情
+- `/admin/v2/universities/[id]/edit` - 编辑大学
 
 ### 项目管理 (Program Management)
 

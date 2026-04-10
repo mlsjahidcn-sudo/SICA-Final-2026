@@ -31,7 +31,9 @@ import {
   IconDeviceFloppy,
   IconMapPin,
   IconTag,
-  IconCurrencyDollar
+  IconCurrencyDollar,
+  IconSparkles,
+  IconRefresh
 } from "@tabler/icons-react"
 
 const provinces = [
@@ -70,10 +72,45 @@ const classificationTypes = [
   { value: 'Provincial', label: 'Provincial Key', color: 'bg-green-500/10 text-green-600 border-green-200' },
 ]
 
+// Type for AI generated data
+interface AIGeneratedData {
+  name_en: string;
+  name_cn: string;
+  description_en: string;
+  description_cn: string;
+  facilities_en?: string;
+  facilities_cn?: string;
+  accommodation_info_en?: string;
+  accommodation_info_cn?: string;
+  address_en?: string;
+  address_cn?: string;
+  province: string;
+  city: string;
+  type: string;
+  category: string;
+  founded_year: number | null;
+  website: string | null;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string[];
+  short_name?: string;
+  ranking_national?: number;
+  ranking_international?: number;
+  student_count?: number;
+  international_student_count?: number;
+  teaching_languages?: string[];
+  scholarship_available?: boolean;
+  scholarship_percentage?: number;
+  logo_url?: string;
+  cover_image_url?: string;
+}
+
 export default function NewUniversityPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [aiGenerated, setAiGenerated] = useState(false)
   
   const [formData, setFormData] = useState({
     name_en: '',
@@ -117,6 +154,127 @@ export default function NewUniversityPage() {
         ? prev.type.filter(t => t !== typeValue)
         : [...prev.type, typeValue]
     }))
+  }
+
+  // AI Generate function
+  const handleAIGenerate = async () => {
+    if (!formData.name_en.trim()) {
+      toast.error('Please enter a university name first')
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      
+      const response = await fetch('/api/admin/universities/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name_en: formData.name_en,
+          name_cn: formData.name_cn || undefined,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to generate university info')
+      }
+
+      const data = await response.json()
+      const generated: AIGeneratedData = data.university
+
+      // Map AI response to form data
+      const updatedFormData = {
+        ...formData,
+        name_en: generated.name_en || formData.name_en,
+        name_cn: generated.name_cn || formData.name_cn,
+        short_name: generated.short_name || formData.short_name,
+        province: generated.province || formData.province,
+        city: generated.city || formData.city,
+        category: mapCategory(generated.category) || formData.category,
+        founded_year: generated.founded_year?.toString() || formData.founded_year,
+        website: generated.website || formData.website,
+        description_en: generated.description_en || formData.description_en,
+        description_cn: generated.description_cn || formData.description_cn,
+        description: generated.description_en || formData.description,
+        ranking_national: generated.ranking_national?.toString() || formData.ranking_national,
+        ranking_international: generated.ranking_international?.toString() || formData.ranking_international,
+        logo_url: generated.logo_url || formData.logo_url,
+        cover_image_url: generated.cover_image_url || formData.cover_image_url,
+        scholarship_available: generated.scholarship_available ?? formData.scholarship_available,
+        scholarship_percentage: generated.scholarship_percentage?.toString() || formData.scholarship_percentage,
+        // Generate slug from name if not set
+        slug: formData.slug || generateSlug(generated.name_en || formData.name_en),
+      }
+
+      // Handle type classification
+      if (generated.type) {
+        const typeMap: Record<string, string> = {
+          '985': '985',
+          '211': '211',
+          'double_first_class': 'Double First-Class',
+          'public': 'Provincial',
+          'private': 'Provincial',
+        }
+        const mappedType = typeMap[generated.type.toLowerCase().replace(/[-\s]/g, '_')]
+        if (mappedType && !updatedFormData.type.includes(mappedType)) {
+          updatedFormData.type = [...updatedFormData.type, mappedType]
+        }
+      }
+
+      setFormData(updatedFormData)
+      setAiGenerated(true)
+      toast.success('University info generated successfully! Review and edit as needed.')
+    } catch (error) {
+      console.error('Error generating university:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to generate university info')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  // Map AI category to our category list
+  const mapCategory = (aiCategory: string | undefined): string => {
+    if (!aiCategory) return ''
+    const categoryMap: Record<string, string> = {
+      'comprehensive': 'Comprehensive',
+      'technical': 'Science & Technology',
+      'science & technology': 'Science & Technology',
+      'technology': 'Science & Technology',
+      'medical': 'Medical',
+      'agriculture': 'Agricultural',
+      'agricultural': 'Agricultural',
+      'normal': 'Normal (Teacher Training)',
+      'teacher training': 'Normal (Teacher Training)',
+      'finance': 'Finance & Economics',
+      'economics': 'Finance & Economics',
+      'business': 'Finance & Economics',
+      'language': 'Language',
+      'arts': 'Arts',
+      'law': 'Law',
+      'sports': 'Sports',
+      'pharmaceutical': 'Pharmaceutical',
+      'aerospace': 'Aerospace',
+      'maritime': 'Maritime',
+      'petroleum': 'Petroleum',
+      'forestry': 'Forestry',
+    }
+    return categoryMap[aiCategory.toLowerCase()] || aiCategory
+  }
+
+  // Generate URL slug from name
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,6 +354,79 @@ export default function NewUniversityPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* AI Generation Card */}
+              <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconSparkles className="h-5 w-5 text-primary" />
+                    AI-Powered University Generation
+                  </CardTitle>
+                  <CardDescription>
+                    Enter a university name and let AI fill in all the details automatically
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="ai_name_en">University Name</Label>
+                      <Input
+                        id="ai_name_en"
+                        placeholder="e.g., Tsinghua University or 清华大学"
+                        value={formData.name_en}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name_en: e.target.value })
+                          setAiGenerated(false)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAIGenerate()
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="ai_name_cn">Chinese Name (optional)</Label>
+                      <Input
+                        id="ai_name_cn"
+                        placeholder="e.g., 清华大学"
+                        value={formData.name_cn}
+                        onChange={(e) => setFormData({ ...formData, name_cn: e.target.value })}
+                      />
+                    </div>
+                    <Button 
+                      type="button"
+                      onClick={handleAIGenerate}
+                      disabled={isGenerating || !formData.name_en.trim()}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : aiGenerated ? (
+                        <>
+                          <IconRefresh className="mr-2 h-4 w-4" />
+                          Regenerate
+                        </>
+                      ) : (
+                        <>
+                          <IconSparkles className="mr-2 h-4 w-4" />
+                          AI Generate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {aiGenerated && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      AI-generated content loaded. Review and edit fields below as needed.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Basic Information */}
               <Card>
                 <CardHeader>
@@ -612,6 +843,7 @@ export default function NewUniversityPage() {
                 <div className="flex items-center justify-between max-w-7xl mx-auto">
                   <div className="text-sm text-muted-foreground">
                     Creating new university
+                    {aiGenerated && <span className="ml-2 text-green-600 dark:text-green-400">(AI-generated)</span>}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" asChild>
