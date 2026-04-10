@@ -10,25 +10,12 @@ interface User {
   partner_id?: string;
 }
 
-// Helper to get partner ID for the current user (either partner themselves or team member)
-async function getPartnerRecordId(userId: string): Promise<string | null> {
-  const supabase = getSupabaseClient();
-  // Look up the partners table record for this user
-  const { data: partnerRecord } = await supabase
-    .from('partners')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  return partnerRecord?.id || null;
-}
-
+// Helper to get partner user ID
 function getPartnerUserId(user: User | null): string | null {
   if (!user) return null;
-  // If user is a partner, use their own ID
   if (user.role === 'partner') {
     return user.id;
   }
-  // If user has partner_id (team member), use that
   if (user.partner_id) {
     return user.partner_id;
   }
@@ -47,9 +34,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Not a partner or team member' }, { status: 403 });
     }
 
-    // Get the partners table record ID
-    const partnerRecordId = await getPartnerRecordId(partnerId);
-
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
@@ -58,7 +42,6 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseClient();
 
     // Get students who have applications with this partner OR were referred by this partner
-    // First, get students with applications
     let appsQuery = supabase
       .from('applications')
       .select(`
@@ -82,13 +65,7 @@ export async function GET(request: NextRequest) {
       `)
       .neq('status', 'draft');
 
-    // Filter by partner - use partner record ID if available, otherwise no results from apps
-    if (partnerRecordId) {
-      appsQuery = appsQuery.eq('partner_id', partnerRecordId);
-    } else {
-      // No partner record, use impossible ID to return empty results
-      appsQuery = appsQuery.eq('partner_id', '00000000-0000-0000-0000-000000000000');
-    }
+    appsQuery = appsQuery.eq('partner_id', partnerId);
 
     const { data: applications, error: appsError } = await appsQuery;
 
@@ -128,39 +105,26 @@ export async function GET(request: NextRequest) {
     
     // Add students from applications
     for (const app of applications || []) {
-      const studentData = app.students as unknown as {
-        id: string;
-        user_id: string;
-        nationality?: string;
-        date_of_birth?: string;
-        gender?: string;
-        users: {
-          id: string;
-          email: string;
-          full_name: string;
-          phone?: string;
-          avatar_url?: string;
-          created_at: string;
-          referred_by_partner_id?: string;
-        };
-      };
-      
-      if (studentData && studentData.users && !studentsMap.has(studentData.users.id)) {
-        studentsMap.set(studentData.users.id, {
-          id: studentData.users.id,
-          email: studentData.users.email,
-          full_name: studentData.users.full_name,
-          phone: studentData.users.phone,
-          avatar_url: studentData.users.avatar_url,
-          nationality: studentData.nationality,
-          created_at: studentData.users.created_at,
-          referred_by_partner_id: studentData.users.referred_by_partner_id,
-          application_count: 1,
-        });
-      } else if (studentData && studentData.users) {
-        const existing = studentsMap.get(studentData.users.id);
-        if (existing) {
-          existing.application_count += 1;
+      const studentData = Array.isArray(app.students) ? app.students[0] : app.students;
+      if (studentData && studentData.users) {
+        const userData = Array.isArray(studentData.users) ? studentData.users[0] : studentData.users;
+        if (userData && !studentsMap.has(userData.id)) {
+          studentsMap.set(userData.id, {
+            id: userData.id,
+            email: userData.email,
+            full_name: userData.full_name,
+            phone: userData.phone,
+            avatar_url: userData.avatar_url,
+            nationality: studentData.nationality,
+            created_at: userData.created_at,
+            referred_by_partner_id: userData.referred_by_partner_id,
+            application_count: 1,
+          });
+        } else if (userData) {
+          const existing = studentsMap.get(userData.id);
+          if (existing) {
+            existing.application_count += 1;
+          }
         }
       }
     }
@@ -168,9 +132,8 @@ export async function GET(request: NextRequest) {
     // Add referred students (if not already in the map)
     for (const userData of referredUsers || []) {
       if (!studentsMap.has(userData.id)) {
-        // Get first student record (if any)
-        const studentRecords = userData.students as unknown as Array<{ nationality?: string }>;
-        const studentRecord = Array.isArray(studentRecords) ? studentRecords[0] : undefined;
+        const studentRecords = Array.isArray(userData.students) ? userData.students : [userData.students];
+        const studentRecord = studentRecords.find(Boolean);
         studentsMap.set(userData.id, {
           id: userData.id,
           email: userData.email,
@@ -190,7 +153,7 @@ export async function GET(request: NextRequest) {
     // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
-      students = students.filter((s: { full_name?: string; email?: string; nationality?: string }) => 
+      students = students.filter((s: any) => 
         s.full_name?.toLowerCase().includes(searchLower) ||
         s.email?.toLowerCase().includes(searchLower) ||
         s.nationality?.toLowerCase().includes(searchLower)
@@ -198,8 +161,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get application stats for each student
-    // First, get student IDs (from students table) for each user
-    const userIds = students.map((s: { id: string }) => s.id);
+    const userIds = students.map((s: any) => s.id);
     
     // Get student records linked to these users
     const { data: studentRecords } = await supabase
@@ -219,11 +181,7 @@ export async function GET(request: NextRequest) {
       .in('student_id', studentIds)
       .neq('status', 'draft');
 
-    if (partnerRecordId) {
-      appStatsQuery = appStatsQuery.eq('partner_id', partnerRecordId);
-    } else {
-      appStatsQuery = appStatsQuery.eq('partner_id', '00000000-0000-0000-0000-000000000000');
-    }
+    appStatsQuery = appStatsQuery.eq('partner_id', partnerId);
 
     const { data: appStats } = await appStatsQuery;
 
@@ -247,13 +205,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge stats into students
-    students = students.map((s: { id: string }) => ({
+    students = students.map((s: any) => ({
       ...s,
       stats: statsMap.get(s.id) || { total: 0, accepted: 0, pending: 0 },
     }));
 
     // Sort by application count (most active first), then by creation date
-    students.sort((a: { application_count: number; created_at: string }, b: { application_count: number; created_at: string }) => {
+    students.sort((a: any, b: any) => {
       if (b.application_count !== a.application_count) {
         return b.application_count - a.application_count;
       }
@@ -298,10 +256,6 @@ export async function POST(request: NextRequest) {
       console.log('No partner ID - returning 403');
       return NextResponse.json({ error: 'Unauthorized: Not a partner or team member' }, { status: 403 });
     }
-
-    // Get the partners table record ID for this partner user
-    const partnerRecordId = await getPartnerRecordId(partnerId);
-    console.log('Partner record ID from partners table:', partnerRecordId);
 
     const body = await request.json();
     console.log('Request body:', body);
@@ -435,7 +389,7 @@ export async function POST(request: NextRequest) {
     const studentData: Record<string, unknown> = {
       id: studentId,
       user_id: newUser.id,
-      partner_id: partnerRecordId, // Link to partners table record
+      partner_id: partnerId, // Link to partner user id
       // Personal information
       nationality: nationality || null,
       date_of_birth: date_of_birth || null,

@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { verifyAuthToken } from '@/lib/auth-utils';
+
+// Helper to get partner user ID
+function getPartnerUserId(user: { id: string; role: string; partner_id?: string } | null): string | null {
+  if (!user) return null;
+  if (user.role === 'partner') {
+    return user.id;
+  }
+  if (user.partner_id) {
+    return user.partner_id;
+  }
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await verifyAuthToken(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const partnerId = getPartnerUserId(user);
+    if (!partnerId) {
+      return NextResponse.json({ error: 'Unauthorized: Not a partner or team member' }, { status: 403 });
+    }
+
     const supabase = getSupabaseClient();
     
     // Get time range from query params (default 30 days)
@@ -12,10 +35,13 @@ export async function GET(request: NextRequest) {
     const lastPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
     
     // Get total count and status breakdown
-    const { data: applications, error: appsError } = await supabase
+    let appsQuery = supabase
       .from('applications')
       .select('status, created_at, submitted_at')
-      .not('status', 'eq', 'draft');
+      .not('status', 'eq', 'draft')
+      .eq('partner_id', partnerId);
+    
+    const { data: applications, error: appsError } = await appsQuery;
     
     if (appsError) {
       console.error('Error fetching applications:', appsError);
@@ -40,37 +66,76 @@ export async function GET(request: NextRequest) {
     };
     
     // Get recent applications with program and university details
-    const { data: recentApplications, error: recentError } = await supabase
+    let recentQuery = supabase
       .from('applications')
       .select(`
         id,
         status,
         submitted_at,
         created_at,
-        passport_first_name,
-        passport_last_name,
-        nationality,
-        email,
+        students (
+          first_name,
+          last_name,
+          nationality,
+          email
+        ),
         programs (
-          name_en,
-          degree_type,
+          name,
+          degree_level,
           universities (
+            name,
             name_en,
             city
           )
         )
       `)
       .not('status', 'eq', 'draft')
+      .eq('partner_id', partnerId)
       .order('created_at', { ascending: false })
       .limit(5);
+    
+    const { data: recentApplications, error: recentError } = await recentQuery;
     
     if (recentError) {
       console.error('Error fetching recent applications:', recentError);
     }
+
+    // Normalize recent applications (handle arrays from Supabase relations)
+    const normalizedRecent = recentApplications?.map(app => {
+      const student = Array.isArray(app.students) ? app.students[0] : app.students;
+      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
+      const university = program?.universities 
+        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+        : null;
+
+      return {
+        id: app.id,
+        status: app.status,
+        submitted_at: app.submitted_at,
+        created_at: app.created_at,
+        first_name: student?.first_name,
+        last_name: student?.last_name,
+        passport_first_name: student?.first_name, // backward compatibility
+        passport_last_name: student?.last_name, // backward compatibility
+        nationality: student?.nationality,
+        email: student?.email,
+        programs: program ? {
+          name_en: program.name,
+          name: program.name,
+          degree_type: program.degree_level, // backward compatibility
+          degree_level: program.degree_level,
+          universities: university ? {
+            name_en: university.name_en || university.name,
+            name: university.name,
+            city: university.city
+          } : null
+        } : null
+      };
+    }) || [];
     
     return NextResponse.json({
       stats,
-      recentApplications: recentApplications || [],
+      recentApplications: normalizedRecent,
     });
     
   } catch (error) {
