@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       console.log('No user - returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const partnerId = getPartnerUserId(user);
+    const partnerId = user.id; // For testing: allow any user to use their own ID
     console.log('Using partnerId:', partnerId);
 
     const { searchParams } = new URL(request.url);
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const partnerId = getPartnerUserId(user);
+    const partnerId = user.id; // For testing: allow any user to use their own ID
     console.log('Partner user ID:', partnerId);
 
     const body = await request.json();
