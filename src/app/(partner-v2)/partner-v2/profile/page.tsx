@@ -62,8 +62,10 @@ export default function ProfilePage() {
     try {
       const token = localStorage.getItem('sica_auth_token');
       
-      const response = await fetch('/api/partner/profile', {
+      // Add cache-busting query param
+      const response = await fetch(`/api/partner/profile?t=${Date.now()}`, {
         headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store',
       });
       
       if (response.ok) {
@@ -104,6 +106,7 @@ export default function ProfilePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(profile),
+        cache: 'no-store',
       });
       
       const data = await response.json();
@@ -122,6 +125,8 @@ export default function ProfilePage() {
           setOriginalProfile(profile);
         }
         setHasChanges(false);
+        // Force a refresh from the server after a short delay
+        setTimeout(() => fetchProfile(), 500);
       } else {
         const errorMsg = data.details || data.error || 'Failed to save profile';
         toast.error(errorMsg);

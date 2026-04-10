@@ -20,14 +20,21 @@ const emptyToNull = (val: string | null | undefined): string | null => {
   return val;
 };
 
+// Add cache-busting headers to response
+const addNoCacheHeaders = (response: NextResponse): NextResponse => {
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  response.headers.set('Surrogate-Control', 'no-store');
+  return response;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const user = await verifyAuthToken(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    console.log('[GET /api/partner/profile] User ID:', user.id);
 
     const supabase = getSupabaseClient();
     
@@ -40,25 +47,21 @@ export async function GET(request: NextRequest) {
     
     if (userError) {
       console.error('[GET /api/partner/profile] Error fetching user:', userError);
-      return NextResponse.json({ error: 'Failed to fetch profile', details: userError.message }, { status: 500 });
+      return addNoCacheHeaders(NextResponse.json({ error: 'Failed to fetch profile', details: userError.message }, { status: 500 }));
     }
     
     if (!userData) {
       console.error('[GET /api/partner/profile] No user found for ID:', user.id);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return addNoCacheHeaders(NextResponse.json({ error: 'User not found' }, { status: 404 }));
     }
     
-    console.log('[GET /api/partner/profile] User data:', userData);
-    
     // Get partner profile extension from partners table
-    // Note: partners table has company_address (not address) and contact_person (not position)
     const { data: partnerProfile, error: profileError } = await supabase
       .from('partners')
       .select('company_name, contact_person, company_address, website')
       .eq('user_id', user.id)
       .maybeSingle();
     
-    console.log('[GET /api/partner/profile] Partner profile:', partnerProfile);
     if (profileError) {
       console.log('[GET /api/partner/profile] Partner profile error:', profileError);
     }
@@ -71,16 +74,16 @@ export async function GET(request: NextRequest) {
       phone: userData.phone,
       avatar_url: userData.avatar_url,
       company_name: partnerProfile?.company_name || null,
-      position: partnerProfile?.contact_person || null, // contact_person maps to position
-      address: partnerProfile?.company_address || null,  // company_address maps to address
+      position: partnerProfile?.contact_person || null,
+      address: partnerProfile?.company_address || null,
       website: partnerProfile?.website || null,
     };
     
-    return NextResponse.json({ profile });
+    return addNoCacheHeaders(NextResponse.json({ profile }));
     
   } catch (error) {
     console.error('[GET /api/partner/profile] Error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 });
+    return addNoCacheHeaders(NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 }));
   }
 }
 
@@ -91,12 +94,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[PUT /api/partner/profile] User ID:', user.id);
-
     const supabase = getSupabaseClient();
     const body = await request.json();
-    
-    console.log('[PUT /api/partner/profile] Request body:', JSON.stringify(body));
     
     // Update user basic info
     const userUpdateData = {
@@ -107,8 +106,6 @@ export async function PUT(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     
-    console.log('[PUT /api/partner/profile] Updating user with:', JSON.stringify(userUpdateData));
-    
     const { error: updateUserError } = await supabase
       .from('users')
       .update(userUpdateData)
@@ -116,89 +113,79 @@ export async function PUT(request: NextRequest) {
     
     if (updateUserError) {
       console.error('[PUT /api/partner/profile] Error updating user:', updateUserError);
-      return NextResponse.json({ error: 'Failed to update user profile', details: updateUserError.message }, { status: 500 });
+      return addNoCacheHeaders(NextResponse.json({ error: 'Failed to update user profile', details: updateUserError.message }, { status: 500 }));
     }
     
-    console.log('[PUT /api/partner/profile] User updated successfully');
-    
     // Update or create partner profile in partners table
-    // Map API fields to DB columns:
-    //   position → contact_person
-    //   address → company_address
     const { data: existingProfile, error: findError } = await supabase
       .from('partners')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle();
     
-    console.log('[PUT /api/partner/profile] Existing partner:', existingProfile);
     if (findError) {
       console.log('[PUT /api/partner/profile] Find error:', findError);
     }
     
     const profileData: Record<string, unknown> = {
       company_name: emptyToNull(body.company_name),
-      contact_person: emptyToNull(body.position), // position maps to contact_person
-      company_address: emptyToNull(body.address),  // address maps to company_address
+      contact_person: emptyToNull(body.position),
+      company_address: emptyToNull(body.address),
       website: emptyToNull(body.website),
       updated_at: new Date().toISOString(),
     };
     
-    console.log('[PUT /api/partner/profile] Profile data to save:', JSON.stringify(profileData));
-    
     let profileError;
-    let savedProfile;
-    
     if (existingProfile) {
-      console.log('[PUT /api/partner/profile] Updating existing partner, id:', existingProfile.id);
       const result = await supabase
         .from('partners')
         .update(profileData)
-        .eq('id', existingProfile.id)
-        .select()
-        .single();
+        .eq('id', existingProfile.id);
       profileError = result.error;
-      savedProfile = result.data;
     } else {
-      console.log('[PUT /api/partner/profile] Inserting new partner');
       const result = await supabase
         .from('partners')
-        .insert({ ...profileData, user_id: user.id })
-        .select()
-        .single();
+        .insert({ ...profileData, user_id: user.id });
       profileError = result.error;
-      savedProfile = result.data;
     }
     
     if (profileError) {
-      console.error('[PUT /api/partner/profile] Error saving partner profile:', profileError);
-      // Still return success for user update, but warn about partner profile
-      return NextResponse.json({ 
+      return addNoCacheHeaders(NextResponse.json({ 
         success: true, 
         warning: 'User profile updated but partner details failed to save',
         partnerError: profileError.message,
-      });
+      }));
     }
     
-    console.log('[PUT /api/partner/profile] Partner profile saved successfully:', savedProfile);
+    // Fetch the actual saved data from the database to return
+    const { data: savedUser } = await supabase
+      .from('users')
+      .select('id, full_name, email, phone, avatar_url')
+      .eq('id', user.id)
+      .single();
     
-    // Return the updated profile so frontend can refresh
+    const { data: savedPartner } = await supabase
+      .from('partners')
+      .select('company_name, contact_person, company_address, website')
+      .eq('user_id', user.id)
+      .single();
+    
     const updatedProfile: ProfileResponse = {
       id: user.id,
-      full_name: body.full_name || '',
-      email: body.email || '',
-      phone: emptyToNull(body.phone),
-      avatar_url: emptyToNull(body.avatar_url),
-      company_name: emptyToNull(body.company_name),
-      position: emptyToNull(body.position),
-      address: emptyToNull(body.address),
-      website: emptyToNull(body.website),
+      full_name: savedUser?.full_name || '',
+      email: savedUser?.email || '',
+      phone: savedUser?.phone,
+      avatar_url: savedUser?.avatar_url,
+      company_name: savedPartner?.company_name || null,
+      position: savedPartner?.contact_person || null,
+      address: savedPartner?.company_address || null,
+      website: savedPartner?.website || null,
     };
     
-    return NextResponse.json({ success: true, profile: updatedProfile });
+    return addNoCacheHeaders(NextResponse.json({ success: true, profile: updatedProfile }));
     
   } catch (error) {
     console.error('[PUT /api/partner/profile] Error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 });
+    return addNoCacheHeaders(NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 }));
   }
 }
