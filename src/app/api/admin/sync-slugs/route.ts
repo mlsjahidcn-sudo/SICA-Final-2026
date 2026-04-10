@@ -21,7 +21,7 @@ export async function POST() {
   // Get all programs
   const { data: programs, error: fetchError } = await supabase
     .from('programs')
-    .select('id, name, degree_level, slug')
+    .select('id, name, degree_level, slug, university_id')
     .is('slug', null) // Only update programs without a slug yet
     .limit(1000);
   
