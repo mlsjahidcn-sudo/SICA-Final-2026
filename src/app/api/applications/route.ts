@@ -290,13 +290,17 @@ export async function POST(request: NextRequest) {
     };
     console.log("profileSnapshot:", profileSnapshot, "intake:", intake)
 
+    // Temporarily store intake in profile_snapshot only, since Supabase REST API isn't seeing the intake column yet
+    const profileSnapshotWithIntake = {
+      ...profileSnapshot,
+      intake, // Store intake inside profile_snapshot for now
+    };
     console.log("Inserting into applications table with:", {
       student_id: finalStudentId,
       program_id,
       partner_id: finalPartnerId,
       status: 'draft',
-      intake,
-      profile_snapshot: profileSnapshot,
+      profile_snapshot: profileSnapshotWithIntake,
     })
     const { data: application, error } = await supabase
       .from('applications')
@@ -305,8 +309,7 @@ export async function POST(request: NextRequest) {
         program_id,
         partner_id: finalPartnerId,
         status: 'draft',
-        intake,
-        profile_snapshot: profileSnapshot,
+        profile_snapshot: profileSnapshotWithIntake,
       })
       .select('*')
       .single();
