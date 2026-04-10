@@ -22,7 +22,7 @@ export default function PartnerV2Layout({
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/partner/login');
+        router.push('/login');
       } else if (user.role !== 'partner') {
         router.push('/unauthorized');
       }
@@ -77,7 +77,7 @@ export default function PartnerV2Layout({
               onClick={() => {
                 localStorage.removeItem('sica_auth_token');
                 localStorage.removeItem('sica_user_data');
-                router.push('/partner/login');
+                router.push('/login');
               }}
               className="w-full text-sm text-muted-foreground hover:text-foreground underline"
             >
@@ -117,7 +117,7 @@ export default function PartnerV2Layout({
               onClick={() => {
                 localStorage.removeItem('sica_auth_token');
                 localStorage.removeItem('sica_user_data');
-                router.push('/partner/login');
+                router.push('/login');
               }}
               className="w-full text-sm text-muted-foreground hover:text-foreground underline"
             >

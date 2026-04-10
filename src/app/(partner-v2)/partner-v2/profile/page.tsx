@@ -48,7 +48,7 @@ const DEFAULT_PROFILE: PartnerProfile = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [profile, setProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [originalProfile, setOriginalProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,6 +125,8 @@ export default function ProfilePage() {
           setOriginalProfile(profile);
         }
         setHasChanges(false);
+        // Refresh auth context to update sidebar
+        await refreshUser();
         // Force a refresh from the server after a short delay
         setTimeout(() => fetchProfile(), 500);
       } else {
@@ -184,6 +186,8 @@ export default function ProfilePage() {
         setProfile(prev => ({ ...prev, avatar_url: data.url }));
         setHasChanges(true);
         toast.success('Avatar uploaded successfully');
+        // Refresh auth context to update sidebar
+        await refreshUser();
       } else {
         toast.error('Failed to upload avatar');
       }

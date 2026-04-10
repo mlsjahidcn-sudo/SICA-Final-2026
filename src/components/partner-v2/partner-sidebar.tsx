@@ -103,7 +103,7 @@ const navItems = [
   },
 ]
 
-function NavUser({ user }: { user: { full_name: string; email: string } | null }) {
+function NavUser({ user }: { user: { full_name: string; email: string; avatar_url?: string | null } | null }) {
   const { isMobile } = useSidebar()
   const { signOut } = useAuth()
   const router = useRouter()
@@ -128,6 +128,7 @@ function NavUser({ user }: { user: { full_name: string; email: string } | null }
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={user?.avatar_url || undefined} />
                 <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
                   {initials}
                 </AvatarFallback>
@@ -149,6 +150,7 @@ function NavUser({ user }: { user: { full_name: string; email: string } | null }
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarImage src={user?.avatar_url || undefined} />
                   <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
                     {initials}
                   </AvatarFallback>
