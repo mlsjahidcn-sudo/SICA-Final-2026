@@ -34,12 +34,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const status = searchParams.get('status') || '';
+    const degreeType = searchParams.get('degreeType') || '';
+    const search = searchParams.get('search') || '';
+    const sort = searchParams.get('sort') || 'submitted_desc';
     
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * pageSize;
 
-    // Build query based on role
+    // Build query
     let query = supabase
       .from('applications')
       .select(`
@@ -54,6 +57,7 @@ export async function GET(request: NextRequest) {
           degree_level,
           universities (
             id,
+            name,
             name_en,
             name_cn,
             city,
@@ -65,6 +69,7 @@ export async function GET(request: NextRequest) {
           user_id,
           first_name,
           last_name,
+          nationality,
           email,
           users (
             id,
@@ -74,31 +79,62 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' });
 
-    // Students can only see their own applications
+    // Role-based filters
     if (user.role === 'student') {
-      // First, get the student's student record id
       const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
       if (studentRec) {
         query = query.eq('student_id', studentRec.id);
       }
-    }
-    // Partners (and team members) can see applications of students they referred
-    else if (user.role === 'partner' || user.partner_id) {
+    } else if (user.role === 'partner' || user.partner_id) {
       const partnerId = getPartnerIdForUser(user);
       if (partnerId) {
         query = query.eq('partner_id', partnerId);
       }
     }
-    // Admins can see all applications
-    // No filter needed for admin
 
-    if (status) {
+    // Status filter
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
 
-    query = query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    // Degree level filter (normalize)
+    if (degreeType && degreeType !== 'all') {
+      const normalizedDegree = degreeType.charAt(0).toUpperCase() + degreeType.slice(1);
+      query = query.eq('programs.degree_level', normalizedDegree);
+    }
+
+    // Search filter
+    if (search) {
+      query = query.or(`
+        students.first_name.ilike.%${search}%,
+        students.last_name.ilike.%${search}%,
+        students.email.ilike.%${search}%,
+        students.nationality.ilike.%${search}%,
+        programs.name.ilike.%${search}%,
+        programs.universities.name.ilike.%${search}%,
+        programs.universities.name_en.ilike.%${search}%
+      `);
+    }
+
+    // Sorting
+    switch (sort) {
+      case 'submitted_desc':
+        query = query.order('submitted_at', { ascending: false, nullsFirst: false });
+        break;
+      case 'submitted_asc':
+        query = query.order('submitted_at', { ascending: true, nullsFirst: false });
+        break;
+      case 'name_asc':
+        query = query.order('students(last_name)', { ascending: true });
+        break;
+      case 'name_desc':
+        query = query.order('students(last_name)', { ascending: false });
+        break;
+      default:
+        query = query.order('created_at', { ascending: false });
+    }
+
+    query = query.range(offset, offset + pageSize - 1);
 
     const { data: applications, error, count } = await query;
 
@@ -107,12 +143,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
+    // Fix relations (Supabase returns arrays for has-many)
+    const normalizedApplications = applications?.map(app => ({
+      ...app,
+      programs: Array.isArray(app.programs) ? app.programs[0] : app.programs,
+      students: Array.isArray(app.students) ? app.students[0] : app.students,
+    })) || [];
+
+    const total = count || 0;
+    const hasMore = offset + pageSize < total;
+
     return NextResponse.json({
-      applications,
-      total: count || 0,
+      applications: normalizedApplications,
+      total,
       page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit),
+      pageSize,
+      hasMore,
+      // Backward compatibility
+      limit: pageSize,
+      totalPages: Math.ceil(total / pageSize)
     });
   } catch (error) {
     console.error('Error in applications GET:', error);

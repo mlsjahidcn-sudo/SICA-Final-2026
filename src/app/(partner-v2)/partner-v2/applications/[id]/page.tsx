@@ -28,85 +28,52 @@ import {
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
-interface Application {
+interface University {
   id: string;
-  status: string;
-  submitted_at: string | null;
-  created_at: string;
-  updated_at: string;
-  
-  // Personal Info
-  passport_number: string;
-  passport_first_name: string;
-  passport_last_name: string;
+  name: string;
+  name_en?: string | null;
+  name_cn?: string | null;
+  city: string;
+  province: string;
+}
+
+interface Program {
+  id: string;
+  name: string;
+  name_en?: string | null;
+  name_cn?: string | null;
+  degree_level: string;
+  category?: string;
+  language?: string;
+  duration_years?: number;
+  tuition_fee_per_year?: number;
+  currency?: string;
+  universities: University;
+}
+
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
   nationality: string;
-  date_of_birth: string;
-  gender: string;
+  date_of_birth?: string;
+  gender?: string;
   email: string;
-  phone: string;
-  current_address: string;
-  permanent_address: string;
-  
-  // Education
-  highest_degree: string;
-  graduation_school: string;
-  graduation_date: string;
-  gpa: number;
-  
-  // Language
-  chinese_level: string;
-  chinese_test_score: string;
-  chinese_test_date: string;
-  english_level: string;
-  english_test_type: string;
-  english_test_score: string;
-  english_test_date: string;
-  
-  // Study Plan
-  study_plan: string;
-  research_interest: string;
-  career_goals: string;
-  
-  // Documents
-  passport_copy_url: string;
-  diploma_url: string;
-  transcript_url: string;
-  recommendation_letter_1_url: string;
-  recommendation_letter_2_url: string;
-  language_certificate_url: string;
-  study_plan_url: string;
-  photo_url: string;
-  medical_certificate_url: string;
-  other_documents: string[];
-  
-  // Relations
-  programs: {
-    id: string;
-    name_en: string;
-    name_cn: string;
-    degree_type: string;
-    discipline: string;
-    duration_months: number;
-    tuition_per_year: number;
-    tuition_currency: string;
-    universities: {
-      id: string;
-      name_en: string;
-      name_cn: string;
-      city: string;
-      province: string;
-    };
-  };
-  users: {
-    id: string;
-    full_name: string;
-    email: string;
-  };
-  partner: {
-    id: string;
-    full_name: string;
-    email: string;
-  } | null;
+  phone?: string;
+  current_address?: string;
+  permanent_address?: string;
+  highest_degree?: string;
+  graduation_school?: string;
+  graduation_date?: string;
+  gpa?: number;
+  chinese_level?: string;
+  chinese_test_score?: string;
+  chinese_test_date?: string;
+  english_level?: string;
+  english_test_type?: string;
+  english_test_score?: string;
+  english_test_date?: string;
+  passport_number?: string;
 }
 
 interface TimelineEvent {
@@ -118,16 +85,34 @@ interface TimelineEvent {
   notes?: string;
 }
 
-const DOCUMENT_LABELS: Record<string, string> = {
-  passport_copy_url: 'Passport Copy',
-  diploma_url: 'Diploma',
-  transcript_url: 'Transcript',
-  recommendation_letter_1_url: 'Recommendation Letter 1',
-  recommendation_letter_2_url: 'Recommendation Letter 2',
-  language_certificate_url: 'Language Certificate',
-  study_plan_url: 'Study Plan',
-  photo_url: 'Photo',
-  medical_certificate_url: 'Medical Certificate',
+interface Application {
+  id: string;
+  status: string;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  intake?: string;
+  personal_statement?: string;
+  study_plan?: string;
+  research_interest?: string;
+  career_goals?: string;
+  programs: Program;
+  students: Student;
+}
+
+const DOCUMENT_TYPES: Record<string, string> = {
+  passport: 'Passport',
+  diploma: 'Diploma',
+  transcript: 'Transcript',
+  language_certificate: 'Language Certificate',
+  photo: 'Photo',
+  recommendation: 'Recommendation Letter',
+  cv: 'CV',
+  study_plan: 'Study Plan',
+  financial_proof: 'Financial Proof',
+  medical_exam: 'Medical Exam',
+  police_clearance: 'Police Clearance',
+  other: 'Other',
 };
 
 export default function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -151,16 +136,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         if (response.ok) {
           const data = await response.json();
           setApplication(data.application);
-          
-          // Fetch timeline
-          const timelineResponse = await fetch(`/api/applications/${resolvedParams.id}/timeline`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          
-          if (timelineResponse.ok) {
-            const timelineData = await timelineResponse.json();
-            setTimeline(timelineData.events || []);
-          }
+          setTimeline(data.events || []);
         } else {
           toast.error('Application not found');
           router.push('/partner-v2/applications');
@@ -195,16 +171,13 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     );
   }
 
-  const documents = Object.entries(DOCUMENT_LABELS)
-    .filter(([key]) => {
-      const appRecord = application as unknown as Record<string, unknown>;
-      return appRecord[key];
-    })
-    .map(([key, label]) => ({
-      key,
-      label,
-      url: (application as unknown as Record<string, string>)[key],
-    }));
+  const getUniversityName = (uni: University) => {
+    return uni.name_en || uni.name;
+  };
+
+  const getProgramName = (prog: Program) => {
+    return prog.name_en || prog.name;
+  };
 
   return (
     <>
@@ -219,12 +192,12 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold">
-                {application.passport_first_name} {application.passport_last_name}
+                {application.students.first_name} {application.students.last_name}
               </h1>
               <ApplicationStatusBadge status={application.status} />
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              {application.programs.universities.name_en} • {application.programs.name_en}
+              {getUniversityName(application.programs.universities)} • {getProgramName(application.programs)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -235,7 +208,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               </Link>
             </Button>
             <Button asChild>
-              <a href={`mailto:${application.email}`}>
+              <a href={`mailto:${application.students.email}`}>
                 <IconMail className="h-4 w-4 mr-2" />
                 Contact
               </a>
@@ -270,31 +243,31 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">First Name</p>
-                      <p className="font-medium">{application.passport_first_name}</p>
+                      <p className="font-medium">{application.students.first_name}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Last Name</p>
-                      <p className="font-medium">{application.passport_last_name}</p>
+                      <p className="font-medium">{application.students.last_name}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Passport Number</p>
-                      <p className="font-medium">{application.passport_number}</p>
+                      <p className="font-medium">{application.students.passport_number || 'Not provided'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Nationality</p>
-                      <p className="font-medium">{application.nationality}</p>
+                      <p className="font-medium">{application.students.nationality}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Date of Birth</p>
                       <p className="font-medium">
-                        {application.date_of_birth 
-                          ? new Date(application.date_of_birth).toLocaleDateString()
+                        {application.students.date_of_birth 
+                          ? new Date(application.students.date_of_birth).toLocaleDateString()
                           : 'Not provided'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Gender</p>
-                      <p className="font-medium capitalize">{application.gender || 'Not provided'}</p>
+                      <p className="font-medium capitalize">{application.students.gender || 'Not provided'}</p>
                     </div>
                   </div>
                   
@@ -303,17 +276,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <IconMail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${application.email}`} className="text-primary hover:underline">
-                        {application.email}
+                      <a href={`mailto:${application.students.email}`} className="text-primary hover:underline">
+                        {application.students.email}
                       </a>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconPhone className="h-4 w-4 text-muted-foreground" />
-                      <span>{application.phone || 'Not provided'}</span>
+                      <span>{application.students.phone || 'Not provided'}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <IconMapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span>{application.current_address || 'Not provided'}</span>
+                      <span>{application.students.current_address || 'Not provided'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -332,7 +305,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     <p className="text-sm text-muted-foreground">University</p>
                     <div className="flex items-center gap-2 mt-1">
                       <IconBuilding className="h-4 w-4 text-primary" />
-                      <p className="font-medium">{application.programs.universities.name_en}</p>
+                      <p className="font-medium">{getUniversityName(application.programs.universities)}</p>
                     </div>
                     <p className="text-sm text-muted-foreground ml-6">
                       {application.programs.universities.city}, {application.programs.universities.province}
@@ -344,24 +317,26 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Program</p>
-                      <p className="font-medium">{application.programs.name_en}</p>
+                      <p className="font-medium">{getProgramName(application.programs)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Degree</p>
-                      <p className="font-medium">{application.programs.degree_type}</p>
+                      <p className="font-medium">{application.programs.degree_level}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Discipline</p>
-                      <p className="font-medium">{application.programs.discipline}</p>
+                      <p className="font-medium">{application.programs.category || 'Not specified'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">{application.programs.duration_months} months</p>
+                      <p className="font-medium">{application.programs.duration_years ? `${application.programs.duration_years} years` : 'Not specified'}</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-sm text-muted-foreground">Tuition</p>
                       <p className="font-medium">
-                        {application.programs.tuition_currency} {application.programs.tuition_per_year?.toLocaleString()}/year
+                        {application.programs.currency && application.programs.tuition_fee_per_year 
+                          ? `${application.programs.currency} ${application.programs.tuition_fee_per_year.toLocaleString()}/year`
+                          : 'Not specified'}
                       </p>
                     </div>
                   </div>
@@ -414,21 +389,21 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Highest Degree</p>
-                      <p className="font-medium">{application.highest_degree || 'Not provided'}</p>
+                      <p className="font-medium">{application.students.highest_degree || 'Not provided'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">GPA</p>
-                      <p className="font-medium">{application.gpa || 'Not provided'}</p>
+                      <p className="font-medium">{application.students.gpa || 'Not provided'}</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-sm text-muted-foreground">Graduation School</p>
-                      <p className="font-medium">{application.graduation_school || 'Not provided'}</p>
+                      <p className="font-medium">{application.students.graduation_school || 'Not provided'}</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-sm text-muted-foreground">Graduation Date</p>
                       <p className="font-medium">
-                        {application.graduation_date 
-                          ? new Date(application.graduation_date).toLocaleDateString()
+                        {application.students.graduation_date 
+                          ? new Date(application.students.graduation_date).toLocaleDateString()
                           : 'Not provided'}
                       </p>
                     </div>
@@ -450,17 +425,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Level</p>
-                        <p className="font-medium">{application.chinese_level || 'Not provided'}</p>
+                        <p className="font-medium">{application.students.chinese_level || 'Not provided'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Score</p>
-                        <p className="font-medium">{application.chinese_test_score || 'N/A'}</p>
+                        <p className="font-medium">{application.students.chinese_test_score || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Date</p>
                         <p className="font-medium">
-                          {application.chinese_test_date 
-                            ? new Date(application.chinese_test_date).toLocaleDateString()
+                          {application.students.chinese_test_date 
+                            ? new Date(application.students.chinese_test_date).toLocaleDateString()
                             : 'N/A'}
                         </p>
                       </div>
@@ -472,17 +447,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Test Type</p>
-                        <p className="font-medium">{application.english_test_type || 'Not provided'}</p>
+                        <p className="font-medium">{application.students.english_test_type || 'Not provided'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Score</p>
-                        <p className="font-medium">{application.english_test_score || 'N/A'}</p>
+                        <p className="font-medium">{application.students.english_test_score || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Date</p>
                         <p className="font-medium">
-                          {application.english_test_date 
-                            ? new Date(application.english_test_date).toLocaleDateString()
+                          {application.students.english_test_date 
+                            ? new Date(application.students.english_test_date).toLocaleDateString()
                             : 'N/A'}
                         </p>
                       </div>
@@ -502,34 +477,16 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   Uploaded Documents
                 </CardTitle>
                 <CardDescription>
-                  Click to view or download documents
+                  Check the Documents page for full document management
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {documents.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No documents uploaded</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.key}
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <IconFileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="text-sm font-medium">{doc.label}</span>
-                        </div>
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                            <IconExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Button asChild>
+                  <Link href={`/partner-v2/applications/${application.id}/documents`}>
+                    <IconExternalLink className="h-4 w-4 mr-2" />
+                    View Documents
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Select,
@@ -35,22 +34,35 @@ import {
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
+interface University {
+  id: string;
+  name: string;
+  name_en?: string | null;
+  name_cn?: string | null;
+  city: string;
+}
+
+interface Program {
+  id: string;
+  name: string;
+  degree_level: string;
+  universities: University;
+}
+
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  nationality: string;
+  email: string;
+}
+
 interface Application {
   id: string;
   status: string;
   submitted_at: string | null;
-  passport_first_name: string;
-  passport_last_name: string;
-  nationality: string;
-  email: string;
-  programs: {
-    name_en: string;
-    degree_type: string;
-    universities: {
-      name_en: string;
-      city: string;
-    };
-  };
+  programs: Program;
+  students: Student;
 }
 
 interface ApplicationsResponse {
@@ -87,19 +99,6 @@ const SORT_OPTIONS = [
   { value: 'name_desc', label: 'Name (Z-A)' },
 ];
 
-interface University {
-  id: string;
-  name_en: string;
-  name_cn: string | null;
-}
-
-interface Program {
-  id: string;
-  name_en: string;
-  name_cn: string | null;
-  university_id: string;
-}
-
 export default function PartnerV2ApplicationsPage() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -112,8 +111,6 @@ export default function PartnerV2ApplicationsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  
-
 
   const fetchApplications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setIsLoading(true);
@@ -211,8 +208,6 @@ export default function PartnerV2ApplicationsPage() {
     }
   };
 
-
-  
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
     const Icon = config.icon;
@@ -222,6 +217,10 @@ export default function PartnerV2ApplicationsPage() {
         {config.label}
       </Badge>
     );
+  };
+
+  const getUniversityName = (uni: University) => {
+    return uni.name_en || uni.name;
   };
 
   return (
@@ -374,14 +373,16 @@ export default function PartnerV2ApplicationsPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium truncate">
-                            {app.passport_first_name} {app.passport_last_name}
+                            {app.students.first_name} {app.students.last_name}
                           </p>
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <span className="truncate max-w-[200px]">{app.programs.universities.name_en}</span>
+                            <span className="truncate max-w-[200px]">
+                              {getUniversityName(app.programs.universities)}
+                            </span>
                             <span>•</span>
-                            <span className="truncate max-w-[150px]">{app.programs.name_en}</span>
+                            <span className="truncate max-w-[150px]">{app.programs.name}</span>
                             <span>•</span>
-                            <span>{app.nationality}</span>
+                            <span>{app.students.nationality}</span>
                           </div>
                         </div>
                       </div>
