@@ -173,7 +173,12 @@ export async function PUT(
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        // Handle date fields - convert empty string to null
+        if (field === 'application_deadline' && body[field] === '') {
+          updateData[field] = null;
+        } else {
+          updateData[field] = body[field];
+        }
       }
     }
 
