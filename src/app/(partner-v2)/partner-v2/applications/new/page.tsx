@@ -106,7 +106,7 @@ interface University {
 interface WizardFormData {
   student_id: string
   program_ids: string[] // Changed to array for multiple programs
-  university_id: string
+  university_id?: string
   intake: string
   personal_statement: string
   study_plan: string
@@ -153,7 +153,7 @@ export default function PartnerNewApplicationPage() {
   const [formData, setFormData] = React.useState<WizardFormData>({
     student_id: preselectedStudentId || "",
     program_ids: [], // Changed to array
-    university_id: "",
+    university_id: undefined,
     intake: "",
     personal_statement: "",
     study_plan: "",
@@ -270,13 +270,26 @@ export default function PartnerNewApplicationPage() {
   }
 
   const createDraftApplication = async () => {
-    if (!formData.student_id || (formData.program_ids.length === 0 && !showRequestNote) || !formData.intake) {
-      toast.error("Please fill in all required fields")
+    console.log("createDraftApplication called! formData:", formData, "showRequestNote:", showRequestNote)
+    if (!formData.student_id) {
+      toast.error("Please select a student first")
+      console.log("Missing student_id")
+      return false
+    }
+    if (formData.program_ids.length === 0 && !showRequestNote) {
+      toast.error("Please select at least one program or add a request note")
+      console.log("Missing programs and no request note")
+      return false
+    }
+    if (!formData.intake) {
+      toast.error("Please select an intake")
+      console.log("Missing intake")
       return false
     }
 
     try {
       const token = localStorage.getItem("sica_auth_token")
+      console.log("token exists:", !!token)
       
       // If multiple programs selected, create one application per program
       // For now, let's use the first selected program and store the rest in notes or create multiple
@@ -284,6 +297,17 @@ export default function PartnerNewApplicationPage() {
       const primaryUniversityId = primaryProgramId 
         ? programs.find(p => p.id === primaryProgramId)?.universities.id || null 
         : null
+      console.log("primaryProgramId:", primaryProgramId, "primaryUniversityId:", primaryUniversityId)
+      
+      const requestBody = {
+        student_id: formData.student_id,
+        university_id: primaryUniversityId,
+        program_id: primaryProgramId,
+        intake: formData.intake,
+        requested_university_program_note: showRequestNote ? formData.requested_university_program_note : null,
+        selected_program_ids: formData.program_ids // Extra field for future use
+      }
+      console.log("requestBody to /api/applications:", requestBody)
       
       const response = await fetch("/api/applications", {
         method: "POST",
@@ -291,27 +315,23 @@ export default function PartnerNewApplicationPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          student_id: formData.student_id,
-          university_id: primaryUniversityId,
-          program_id: primaryProgramId,
-          intake: formData.intake,
-          requested_university_program_note: showRequestNote ? formData.requested_university_program_note : null,
-          selected_program_ids: formData.program_ids // Extra field for future use
-        }),
+        body: JSON.stringify(requestBody),
       })
 
+      console.log("response status:", response.status, "response ok:", response.ok)
       if (response.ok) {
         const data = await response.json()
+        console.log("response data:", data)
         setApplicationId(data.application.id)
         return true
       } else {
         const error = await response.json()
+        console.log("error response:", error)
         toast.error(error.error || "Failed to create application")
         return false
       }
     } catch (error) {
-      console.error("Error creating application:", error)
+      console.error("Error creating application (catch block):", error)
       toast.error("Failed to create application")
       return false
     }

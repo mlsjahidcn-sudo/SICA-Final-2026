@@ -171,14 +171,19 @@ export async function GET(request: NextRequest) {
 
 // POST /api/applications - Create a new application (student or partner)
 export async function POST(request: NextRequest) {
+  console.log("POST /api/applications called")
   try {
     const user = await verifyAuthToken(request);
+    console.log("verifyAuthToken user:", user)
     const partnerId = getPartnerIdForUser(user);
+    console.log("partnerId:", partnerId)
     if (!user || !['student', 'partner', 'admin'].includes(user.role) && !partnerId) {
+      console.log("Unauthorized!")
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     const body = await request.json();
+    console.log("request body:", body)
     const {
       student_id, // Required for partners/admins (students.id, not users.id)
       user_id, // Alternative: if partner provides users.id, look up students.id
@@ -190,6 +195,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields: either program_id OR requested_university_program_note must be present
     if (!program_id && !requested_university_program_note) {
+      console.log("Missing program_id and requested_university_program_note")
       return NextResponse.json(
         { error: 'Either program or request note is required' },
         { status: 400 }
@@ -197,18 +203,23 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
+    console.log("supabase client initialized")
     
     // Determine student ID (students.id, not users.id)
     let finalStudentId: string;
     if (user.role === 'student') {
       // For students, get their student record id via user_id
+      console.log("User is student, getting student record via user_id:", user.id)
       const { data: studentRec } = await supabase.from('students').select('id').eq('user_id', user.id).single();
+      console.log("studentRec from user.id:", studentRec)
       if (!studentRec) {
+        console.log("Student record not found")
         return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
       }
       finalStudentId = studentRec.id;
     } else {
       // Partner or admin: use student_id if provided, else look up via user_id
+      console.log("User is partner/admin, student_id from body:", student_id)
       if (student_id) {
         finalStudentId = student_id;
       } else if (user_id) {
@@ -218,21 +229,26 @@ export async function POST(request: NextRequest) {
         }
         finalStudentId = studentRec.id;
       } else {
+        console.log("Missing student_id or user_id")
         return NextResponse.json({ error: 'Either student_id or user_id is required' }, { status: 400 });
       }
     }
+    console.log("finalStudentId:", finalStudentId)
 
     // Determine partner ID
     const finalPartnerId: string | null = partnerId;
+    console.log("finalPartnerId:", finalPartnerId)
 
     // If program_id is provided, check if student already has an application for this program
     if (program_id) {
+      console.log("Checking existing application for program_id:", program_id, "student_id:", finalStudentId)
       const { data: existing } = await supabase
         .from('applications')
         .select('id')
         .eq('student_id', finalStudentId)
         .eq('program_id', program_id)
         .single();
+      console.log("existing application:", existing)
 
       if (existing) {
         return NextResponse.json(
@@ -272,7 +288,16 @@ export async function POST(request: NextRequest) {
       requested_university_program_note,
       selected_program_ids,
     };
+    console.log("profileSnapshot:", profileSnapshot, "intake:", intake)
 
+    console.log("Inserting into applications table with:", {
+      student_id: finalStudentId,
+      program_id,
+      partner_id: finalPartnerId,
+      status: 'draft',
+      intake,
+      profile_snapshot: profileSnapshot,
+    })
     const { data: application, error } = await supabase
       .from('applications')
       .insert({
@@ -285,12 +310,14 @@ export async function POST(request: NextRequest) {
       })
       .select('*')
       .single();
+    console.log("Supabase insert result: application:", application, "error:", error)
 
     if (error) {
       console.error('Error creating application:', error);
-      return NextResponse.json({ error: 'Failed to create application' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create application', details: error }, { status: 500 });
     }
 
+    console.log("Returning application:", application)
     return NextResponse.json({ application }, { status: 201 });
   } catch (error) {
     console.error('Error in applications POST:', error);
