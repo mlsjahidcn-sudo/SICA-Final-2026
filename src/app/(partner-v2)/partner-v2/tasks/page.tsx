@@ -37,19 +37,38 @@ interface Task {
 }
 
 const statuses = [
-  { value: 'todo', label: 'To Do', color: 'bg-slate-100 text-slate-800' },
-  { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
-  { value: 'review', label: 'Review', color: 'bg-amber-100 text-amber-800' },
-  { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800' },
-  { value: 'blocked', label: 'Blocked', color: 'bg-red-100 text-red-800' },
+  { value: 'todo', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'review', label: 'Review' },
+  { value: 'done', label: 'Done' },
+  { value: 'blocked', label: 'Blocked' },
 ];
 
 const priorities = [
-  { value: 'low', label: 'Low', color: 'bg-slate-100 text-slate-800' },
-  { value: 'medium', label: 'Medium', color: 'bg-blue-100 text-blue-800' },
-  { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
-  { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
 ];
+
+function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case 'done': return 'default';
+    case 'blocked': return 'destructive';
+    case 'in_progress': return 'secondary';
+    case 'review': return 'outline';
+    default: return 'outline';
+  }
+}
+
+function getPriorityBadgeVariant(priority: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (priority) {
+    case 'urgent': return 'destructive';
+    case 'high': return 'default';
+    case 'medium': return 'secondary';
+    default: return 'outline';
+  }
+}
 
 export default function PartnerTasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -241,10 +260,10 @@ export default function PartnerTasksPage() {
                                       </p>
                                     )}
                                     <div className="flex items-center gap-3 mt-3">
-                                      <Badge className={statusInfo.color} variant="secondary">
+                                      <Badge variant={getStatusBadgeVariant(task.status)}>
                                         {statusInfo.label}
                                       </Badge>
-                                      <Badge className={priorityInfo.color} variant="secondary">
+                                      <Badge variant={getPriorityBadgeVariant(task.priority)}>
                                         {priorityInfo.label}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
