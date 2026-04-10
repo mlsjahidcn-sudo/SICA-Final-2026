@@ -112,8 +112,8 @@ export async function isUserInPartnerTeam(
     return false;
   }
   
-  // Case 1: Target user is the partner admin themselves
-  if (user.id === partnerAdminId && user.partner_role === 'partner_admin') {
+  // Case 1: Target user is the partner admin themselves (null partner_role treated as admin)
+  if (user.id === partnerAdminId && (!user.partner_role || user.partner_role === 'partner_admin')) {
     return true;
   }
   
@@ -132,10 +132,11 @@ export async function getPartnerTeamMembers(partnerAdminId: string) {
   const supabase = getSupabaseClient();
   
   // Get all team members + the admin themselves
+  // Note: partner_role can be null for original partner accounts (backward compat)
   const { data: teamMembers, error } = await supabase
     .from('users')
     .select('id, email, full_name, partner_role, partner_id, created_at')
-    .or(`partner_id.eq.${partnerAdminId},and(id.eq.${partnerAdminId},partner_role.eq.partner_admin)`)
+    .or(`partner_id.eq.${partnerAdminId},and(id.eq.${partnerAdminId},or(partner_role.eq.partner_admin,partner_role.is.null))`)
     .order('partner_role', { ascending: false }) // Admin first
     .order('created_at', { ascending: true });
   

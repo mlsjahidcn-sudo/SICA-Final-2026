@@ -334,8 +334,8 @@ export default function PartnerV2TeamPage() {
       .slice(0, 2);
   };
 
-  const getRoleBadge = (role: string) => {
-    if (role === 'partner_admin') {
+  const getRoleBadge = (role: string | null) => {
+    if (!role || role === 'partner_admin') {
       return <Badge className="bg-primary text-primary-foreground"><IconShield className="h-3 w-3 mr-1" /> Admin</Badge>;
     }
     return <Badge variant="secondary"><IconUser className="h-3 w-3 mr-1" /> Member</Badge>;
@@ -372,7 +372,8 @@ export default function PartnerV2TeamPage() {
     member.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const isCurrentUserAdmin = teamMembers.find(m => m.id === user?.id)?.partner_role === 'partner_admin';
+  const currentUserMember = teamMembers.find(m => m.id === user?.id);
+  const isCurrentUserAdmin = !currentUserMember?.partner_role || currentUserMember?.partner_role === 'partner_admin';
 
   return (
     <>
