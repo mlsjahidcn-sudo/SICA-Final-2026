@@ -326,28 +326,30 @@ export function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center">
+                    <Link href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'} className="flex items-center">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center">
+                    <Link href={user.role === 'partner' ? '/partner-v2/profile' : user.role === 'student' ? '/student-v2/profile' : '/profile'} className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/assessment/track" className="flex items-center">
-                      <FileText className="mr-2 h-4 w-4" />
-                      My Assessments
-                    </Link>
-                  </DropdownMenuItem>
+                  {user.role === 'student' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/assessment/track" className="flex items-center">
+                        <FileText className="mr-2 h-4 w-4" />
+                        My Assessments
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {user.role === 'admin' && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/admin" className="flex items-center">
+                        <Link href="/admin/v2" className="flex items-center">
                           <Settings className="mr-2 h-4 w-4" />
                           Admin Panel
                         </Link>
@@ -358,7 +360,7 @@ export function Header() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/partner" className="flex items-center">
+                        <Link href="/partner-v2" className="flex items-center">
                           <Building2 className="mr-2 h-4 w-4" />
                           Partner Portal
                         </Link>
@@ -574,22 +576,24 @@ export function Header() {
                 {user && (
                   <div className="mt-4 pt-4 border-t space-y-1">
                     <Link
-                      href="/dashboard"
+                      href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'}
                       className="block py-3 text-foreground hover:text-primary transition-colors"
                       onClick={() => setIsOpen(false)}
                     >
                       Dashboard
                     </Link>
-                    <Link
-                      href="/assessment/track"
-                      className="block py-3 text-foreground hover:text-primary transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      My Assessments
-                    </Link>
+                    {user.role === 'student' && (
+                      <Link
+                        href="/assessment/track"
+                        className="block py-3 text-foreground hover:text-primary transition-colors"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        My Assessments
+                      </Link>
+                    )}
                     {user.role === 'admin' && (
                       <Link
-                        href="/admin"
+                        href="/admin/v2"
                         className="block py-3 text-foreground hover:text-primary transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
@@ -598,7 +602,7 @@ export function Header() {
                     )}
                     {user.role === 'partner' && (
                       <Link
-                        href="/partner"
+                        href="/partner-v2"
                         className="block py-3 text-foreground hover:text-primary transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
@@ -642,14 +646,14 @@ export function Header() {
                     </div>
                     <div className="flex gap-4">
                       <Link
-                        href="/partner/login"
+                        href="/login"
                         className="text-sm text-muted-foreground hover:text-primary transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
                         Partner
                       </Link>
                       <Link
-                        href="/admin/login"
+                        href="/login"
                         className="text-sm text-muted-foreground hover:text-primary transition-colors"
                         onClick={() => setIsOpen(false)}
                       >
