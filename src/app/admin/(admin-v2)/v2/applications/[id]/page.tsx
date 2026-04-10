@@ -918,10 +918,17 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
   return (
     <TooltipProvider>
-      <SidebarProvider>
-        <AppSidebar />
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader title="Application Details" />
+          <SiteHeader />
           <ApplicationDetailContent applicationId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

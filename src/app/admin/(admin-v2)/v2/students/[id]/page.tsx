@@ -460,10 +460,17 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <TooltipProvider>
-      <SidebarProvider>
-        <AppSidebar />
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader title="Student Details" />
+          <SiteHeader />
           <StudentDetailContent studentId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

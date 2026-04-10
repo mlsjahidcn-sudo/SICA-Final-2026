@@ -230,9 +230,16 @@ export default function EditUniversityPage({ params }: { params: Promise<{ id: s
   }
   
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
       <TooltipProvider>
-        <AppSidebar />
+        <AppSidebar variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <EditUniversityContent universityId={resolvedParams.id} />
