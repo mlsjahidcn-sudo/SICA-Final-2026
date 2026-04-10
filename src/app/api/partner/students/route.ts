@@ -114,7 +114,9 @@ export async function GET(request: NextRequest) {
         const userData = Array.isArray(studentData.users) ? studentData.users[0] : studentData.users;
         if (userData && !studentsMap.has(userData.id)) {
           studentsMap.set(userData.id, {
-            id: userData.id,
+            id: userData.id, // Keep user id for backwards compatibility
+            student_id: studentData.id, // Actual students table id
+            user_id: userData.id,
             email: userData.email,
             full_name: userData.full_name,
             phone: userData.phone,
@@ -139,7 +141,9 @@ export async function GET(request: NextRequest) {
         const studentRecords = Array.isArray(userData.students) ? userData.students : [userData.students];
         const studentRecord = studentRecords.find(Boolean);
         studentsMap.set(userData.id, {
-          id: userData.id,
+          id: userData.id, // Keep user id for backwards compatibility
+          student_id: studentRecord?.id, // Actual students table id
+          user_id: userData.id,
           email: userData.email,
           full_name: userData.full_name,
           phone: userData.phone,

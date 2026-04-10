@@ -70,7 +70,9 @@ import { cn } from "@/lib/utils"
 // ─── Types ───────────────────────────────────────────────────────────
 
 interface Student {
-  id: string
+  id: string // user id (backwards compatibility)
+  student_id: string // actual students table id
+  user_id: string
   full_name: string
   email: string
   nationality?: string
@@ -248,8 +250,12 @@ export default function PartnerNewApplicationPage() {
 
   // ─── Handlers ───────────────────────────────────────────────────────
 
-  const handleStudentSelect = (studentId: string) => {
-    setFormData((prev) => ({ ...prev, student_id: studentId }))
+  const handleStudentSelect = (userId: string) => {
+    // Find the student object to get the actual student_id (students table id)
+    const student = students.find(s => s.id === userId);
+    if (student && student.student_id) {
+      setFormData((prev) => ({ ...prev, student_id: student.student_id }));
+    }
     setStudentPopoverOpen(false)
   }
 
@@ -434,7 +440,7 @@ export default function PartnerNewApplicationPage() {
   }, [programs, programSearch, programDegreeFilter])
 
   const selectedStudent = React.useMemo(
-    () => students.find((s) => s.id === formData.student_id),
+    () => students.find((s) => s.student_id === formData.student_id || s.id === formData.student_id),
     [students, formData.student_id]
   )
 
@@ -442,6 +448,16 @@ export default function PartnerNewApplicationPage() {
     () => programs.filter(p => formData.program_ids.includes(p.id)),
     [programs, formData.program_ids]
   )
+
+  // Handle preselected student from search params
+  React.useEffect(() => {
+    if (preselectedStudentId && students.length > 0) {
+      const student = students.find(s => s.id === preselectedStudentId);
+      if (student?.student_id) {
+        setFormData(prev => ({ ...prev, student_id: student.student_id }));
+      }
+    }
+  }, [preselectedStudentId, students]);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
