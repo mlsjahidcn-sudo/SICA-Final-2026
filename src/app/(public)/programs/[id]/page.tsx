@@ -3,6 +3,7 @@ import { ProgramDetailContent } from '@/components/program-detail-content';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // UUID regex pattern for checking
+// Hot reload trigger: 2025-07-28
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function getProgramByIdOrSlug(idOrSlug: string) {
