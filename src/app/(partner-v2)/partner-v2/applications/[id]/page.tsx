@@ -85,6 +85,17 @@ interface TimelineEvent {
   notes?: string;
 }
 
+interface Document {
+  id: string;
+  document_type: string;
+  file_name: string;
+  file_size: number;
+  content_type: string;
+  status: string;
+  rejection_reason?: string;
+  created_at: string;
+}
+
 interface Application {
   id: string;
   status: string;
@@ -98,6 +109,7 @@ interface Application {
   career_goals?: string;
   programs: Program;
   students: Student;
+  application_documents: Document[];
 }
 
 const DOCUMENT_TYPES: Record<string, string> = {
@@ -477,14 +489,58 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   Uploaded Documents
                 </CardTitle>
                 <CardDescription>
-                  Check the Documents page for full document management
+                  {application.application_documents.length} document{application.application_documents.length !== 1 ? 's' : ''} uploaded
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {application.application_documents.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <IconFile className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No documents uploaded yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {application.application_documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <IconFile className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="font-medium">{DOCUMENT_TYPES[doc.document_type] || doc.document_type}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {doc.file_name} • 
+                              {doc.file_size / 1024 / 1024 < 1 
+                                ? `${(doc.file_size / 1024).toFixed(1)} KB` 
+                                : `${(doc.file_size / 1024 / 1024).toFixed(1)} MB`
+                              } • {new Date(doc.created_at).toLocaleDateString()}
+                            </p>
+                            {doc.rejection_reason && (
+                              <p className="text-sm text-destructive mt-1">
+                                Rejection reason: {doc.rejection_reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                            ${doc.status === 'verified'
+                              ? 'bg-green-100 text-green-800'
+                              : doc.status === 'rejected'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                            }
+                          `}>
+                            {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Separator />
                 <Button asChild>
                   <Link href={`/partner-v2/applications/${application.id}/documents`}>
                     <IconExternalLink className="h-4 w-4 mr-2" />
-                    View Documents
+                    Manage Documents
                   </Link>
                 </Button>
               </CardContent>

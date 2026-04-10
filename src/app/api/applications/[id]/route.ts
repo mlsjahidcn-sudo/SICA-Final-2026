@@ -54,6 +54,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             full_name,
             email
           )
+        ),
+        application_documents (
+          id,
+          document_type,
+          file_name,
+          file_size,
+          content_type,
+          status,
+          rejection_reason,
+          created_at
         )
       `)
       .eq('id', id);
@@ -85,6 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ...application,
       programs: Array.isArray(application.programs) ? application.programs[0] : application.programs,
       students: Array.isArray(application.students) ? application.students[0] : application.students,
+      application_documents: Array.isArray(application.application_documents) ? application.application_documents : [],
     };
 
     return NextResponse.json({ application: normalizedApplication });
