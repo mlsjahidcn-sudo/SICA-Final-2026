@@ -302,10 +302,21 @@ export async function POST(request: NextRequest) {
 
         if (!isAdmin) {
           // Member can only create apps for students they referred
+          // Resolve the user_id from the student record
+          let studentUserIdToCheck = user_id || '';
+          if (!studentUserIdToCheck && finalStudentId) {
+            const { data: studentRec } = await supabase
+              .from('students')
+              .select('user_id')
+              .eq('id', finalStudentId)
+              .maybeSingle();
+            studentUserIdToCheck = studentRec?.user_id || '';
+          }
+          
           const { data: studentUser } = await supabase
             .from('users')
             .select('referred_by_partner_id')
-            .eq('id', user_id || '')
+            .eq('id', studentUserIdToCheck)
             .maybeSingle();
           
           if (!studentUser || studentUser.referred_by_partner_id !== partnerUser.id) {
