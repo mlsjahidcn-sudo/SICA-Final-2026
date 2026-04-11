@@ -400,9 +400,56 @@ export function HomePageContent() {
 
             {/* Bento Grid - Mobile optimized */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {bentoFeatures.map((feature, index) => (
+              {bentoFeatures.slice(0, 3).map((feature, index) => (
                 <Card 
                   key={index} 
+                  className="transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+                >
+                  <CardHeader className="pb-2 sm:pb-4">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      </div>
+                      {feature.badge && (
+                        <Badge variant="outline" className="text-xs">
+                          {feature.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle className="text-base sm:text-lg">{feature.title}</CardTitle>
+                    <CardDescription className="text-sm">{feature.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2 sm:pb-4">
+                    <ItemGroup className="gap-1 sm:gap-2">
+                      {feature.bullets.map((bullet, bulletIndex) => (
+                        <Item key={bulletIndex} variant="muted" className="py-1 sm:py-1.5 px-2 rounded-lg">
+                          <ItemMedia variant="icon">
+                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                          </ItemMedia>
+                          <ItemContent>
+                            <ItemTitle className="text-xs sm:text-sm font-normal">{bullet}</ItemTitle>
+                          </ItemContent>
+                        </Item>
+                      ))}
+                    </ItemGroup>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild variant="outline" className="w-full h-9 sm:h-10 text-sm">
+                      <Link href={feature.cta.href}>
+                        {feature.cta.text}
+                        <ArrowRight className="ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Second Row - 3 cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4">
+              {bentoFeatures.slice(3, 6).map((feature, index) => (
+                <Card 
+                  key={index + 3} 
                   className="transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
                 >
                   <CardHeader className="pb-2 sm:pb-4">
