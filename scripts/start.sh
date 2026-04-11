@@ -3,24 +3,49 @@ set -Eeuo pipefail
 
 COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
-PORT=5000
+# Use PORT from environment or default to 5000
+PORT="${PORT:-5000}"
 DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-$PORT}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+echo "Current directory: $(pwd)"
+echo "Starting server on port: ${DEPLOY_RUN_PORT}"
+
 # Check for standalone build first (for shared hosting like Hostinger)
 if [ -f ".next/standalone/server.js" ]; then
-    echo "Starting Next.js standalone server on port ${DEPLOY_RUN_PORT}..."
+    echo "Found Next.js standalone server..."
+    
+    # Ensure directories exist
     mkdir -p .next/standalone/public
     mkdir -p .next/standalone/.next/static
-    cp -r public .next/standalone/ 2>/dev/null || true
-    cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+    
+    # Copy static files if they exist
+    if [ -d "public" ]; then
+        cp -r public .next/standalone/ 2>/dev/null || true
+    fi
+    if [ -d ".next/static" ]; then
+        cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+    fi
+    
     cd .next/standalone
-    PORT=${DEPLOY_RUN_PORT} HOSTNAME="0.0.0.0" node server.js
+    echo "Starting server from: $(pwd)"
+    
+    # Start the server - Next.js standalone uses PORT and HOSTNAME env vars
+    export PORT=${DEPLOY_RUN_PORT}
+    export HOSTNAME="0.0.0.0"
+    
+    echo "Environment: PORT=${PORT}, HOSTNAME=${HOSTNAME}"
+    exec node server.js
 elif [ -f "dist/server.js" ]; then
-    echo "Starting custom server on port ${DEPLOY_RUN_PORT}..."
+    echo "Found custom server..."
     PORT=${DEPLOY_RUN_PORT} node dist/server.js
 else
-    echo "Error: No server found. Build the project first."
+    echo "Error: No server found. Looking for:"
+    echo "  - .next/standalone/server.js"
+    echo "  - dist/server.js"
+    echo ""
+    echo "Directory contents:"
+    ls -la
     exit 1
 fi
