@@ -57,7 +57,6 @@ import {
   IconEdit,
   IconTrash
 } from "@tabler/icons-react"
-import { AddStudentDialog } from "@/components/admin/add-student-dialog"
 import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
 import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
 import { ExportStudentsButton } from "@/components/admin/export-students-button"
@@ -304,7 +303,12 @@ function StudentsListContent() {
             </div>
             <div className="flex gap-2">
               <ExportStudentsButton search={searchQuery} source={sourceFilter} />
-              <AddStudentDialog onStudentAdded={fetchStudents} />
+              <Button asChild>
+                <Link href="/admin/v2/students/new">
+                  <IconUserPlus className="mr-2 h-4 w-4" />
+                  Add Student
+                </Link>
+              </Button>
             </div>
           </div>
         </CardContent>
