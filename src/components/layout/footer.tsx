@@ -72,11 +72,11 @@ export function Footer() {
   return (
     <footer className="bg-background border-t">
       {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-4 py-12 sm:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-6">
+      <div className="max-w-7xl mx-auto px-6 py-12 sm:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-10 lg:gap-x-12">
           
           {/* Brand Column */}
-          <div className="sm:col-span-2 lg:col-span-1 space-y-4">
+          <div className="sm:col-span-2 lg:col-span-1 space-y-5">
             <Link href="/" className="inline-block">
               <Image
                 src="/logo.png"
@@ -86,18 +86,18 @@ export function Footer() {
                 className="h-10 w-auto"
               />
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               Your trusted partner for studying in China. We help international students find their dream universities.
             </p>
             {/* Social Links */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-4 pt-1">
               {socialLinks.map((social) => (
                 <Link
                   key={social.name}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
                   aria-label={social.name}
                 >
                   <social.icon className="h-4 w-4" />
@@ -107,9 +107,9 @@ export function Footer() {
           </div>
 
           {/* Quick Links Column */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <h3 className="text-sm font-semibold text-foreground">Quick Links</h3>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {[
                 { name: 'Universities', href: '/universities' },
                 { name: 'Programs', href: '/programs' },
@@ -129,9 +129,9 @@ export function Footer() {
           </div>
 
           {/* Resources Column */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <h3 className="text-sm font-semibold text-foreground">Resources</h3>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {[
                 { name: 'Free Assessment', href: '/assessment' },
                 { name: 'Study Guide', href: '/blog?category=guide' },
@@ -151,24 +151,24 @@ export function Footer() {
           </div>
 
           {/* Contact Column */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <h3 className="text-sm font-semibold text-foreground">Contact</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3 text-sm text-muted-foreground">
                 <Mail className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <a href="mailto:info@studyinchina.academy" className="hover:text-primary transition-colors">
                   info@studyinchina.academy
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+              <li className="flex items-start gap-3 text-sm text-muted-foreground">
                 <Phone className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <a href="tel:+8617325764171" className="hover:text-primary transition-colors">
                   +8617325764171
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+              <li className="flex items-start gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <address className="not-italic">
+                <address className="not-italic leading-relaxed">
                   128 City Road<br />
                   London EC1V 2NX
                 </address>
@@ -177,12 +177,12 @@ export function Footer() {
           </div>
 
           {/* Stay Updated Column */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <h3 className="text-sm font-semibold text-foreground">Stay Updated</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Get the latest scholarship news and application tips.
             </p>
-            <form onSubmit={handleSubscribe} className="space-y-3">
+            <form onSubmit={handleSubscribe} className="space-y-4">
               <div className="flex gap-2">
                 <Input
                   type="email"
@@ -208,7 +208,7 @@ export function Footer() {
                 <p className="text-xs text-destructive">Subscription failed. Please try again.</p>
               )}
             </form>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground pt-1">
               We respect your privacy. Unsubscribe anytime.
             </p>
           </div>
@@ -217,10 +217,10 @@ export function Footer() {
 
       {/* Trust Badges Section */}
       <div className="border-t border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-12">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16">
             {trustBadges.map((badge, index) => (
-              <div key={index} className="flex items-center gap-2 text-primary">
+              <div key={index} className="flex items-center gap-2.5 text-primary">
                 <badge.icon className="h-5 w-5" />
                 <span className="text-sm font-medium">{badge.text}</span>
               </div>
@@ -230,12 +230,12 @@ export function Footer() {
       </div>
 
       {/* Copyright Bar */}
-      <div className="max-w-7xl mx-auto px-4 py-5">
+      <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Study in China Academy. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8">
             <Link
               href="/privacy"
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
