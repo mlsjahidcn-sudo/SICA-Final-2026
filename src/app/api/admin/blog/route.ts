@@ -156,9 +156,11 @@ export async function POST(request: NextRequest) {
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
     // Create the post
+    // Note: 'title' and 'content' are legacy columns, we use title_en/content_en primarily
     const { data: post, error } = await supabase
       .from('blog_posts')
       .insert({
+        title: title_en, // Use English title as main title
         title_en,
         title_cn,
         slug,
@@ -166,6 +168,7 @@ export async function POST(request: NextRequest) {
         excerpt_cn,
         content_en,
         content_cn,
+        content: content_en, // Use English content as main content
         featured_image_url,
         featured_image_alt,
         category_id,

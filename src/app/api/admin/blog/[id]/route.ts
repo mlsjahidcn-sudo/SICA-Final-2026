@@ -125,12 +125,18 @@ export async function PUT(
       updated_at: new Date().toISOString(),
     };
 
-    if (title_en !== undefined) updateData.title_en = title_en;
+    if (title_en !== undefined) {
+      updateData.title_en = title_en;
+      updateData.title = title_en; // Keep legacy column in sync
+    }
     if (title_cn !== undefined) updateData.title_cn = title_cn;
     if (slug !== undefined) updateData.slug = slug;
     if (excerpt_en !== undefined) updateData.excerpt_en = excerpt_en;
     if (excerpt_cn !== undefined) updateData.excerpt_cn = excerpt_cn;
-    if (content_en !== undefined) updateData.content_en = content_en;
+    if (content_en !== undefined) {
+      updateData.content_en = content_en;
+      updateData.content = content_en; // Keep legacy column in sync
+    }
     if (content_cn !== undefined) updateData.content_cn = content_cn;
     if (featured_image_url !== undefined) updateData.featured_image_url = featured_image_url;
     if (featured_image_alt !== undefined) updateData.featured_image_alt = featured_image_alt;
