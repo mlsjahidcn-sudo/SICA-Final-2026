@@ -64,6 +64,15 @@ const generateId = () => {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
 };
 
+// Regenerate all message IDs to ensure uniqueness (fixes old localStorage data)
+const regenerateMessageIds = (messages: any[]): Message[] => {
+  return messages.map(msg => ({
+    ...msg,
+    id: generateId(), // Always generate new unique ID
+    timestamp: new Date(msg.timestamp),
+  }));
+};
+
 // Card data types matching API response
 interface UniversityCardData {
   id: string;
@@ -121,6 +130,8 @@ const DEFAULT_QUICK_ACTIONS = [
 ];
 
 const STORAGE_KEY = 'sica-chat-history';
+const STORAGE_VERSION_KEY = 'sica-chat-version';
+const STORAGE_VERSION = 2; // Increment this to force clear old data with duplicate IDs
 const LEAD_CAPTURE_KEY = 'sica-lead-captured';
 const LEAD_CAPTURE_AFTER_MESSAGES = 5;
 const MAX_HISTORY_CONVERSATIONS = 10;
@@ -197,38 +208,31 @@ export function ChatWidget() {
   // Load history from localStorage
   useEffect(() => {
     try {
+      // Check storage version - clear old data if version mismatch
+      const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+      if (storedVersion !== String(STORAGE_VERSION)) {
+        // Version mismatch - clear old data to prevent duplicate key errors
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
+        return;
+      }
+
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const conversations = parsed.map((conv: any) => ({
+        const loadedConversations = parsed.map((conv: any) => ({
           ...conv,
+          id: generateId(), // Regenerate conversation ID too
           createdAt: new Date(conv.createdAt),
           updatedAt: new Date(conv.updatedAt),
-          messages: deduplicateMessageIds(conv.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          }))),
+          messages: regenerateMessageIds(conv.messages), // Regenerate all message IDs
         }));
-        setConversations(conversations);
+        setConversations(loadedConversations);
       }
     } catch (e) {
       console.error('Failed to load chat history:', e);
     }
   }, []);
-
-  // Deduplicate message IDs to prevent React key errors
-  function deduplicateMessageIds(messages: Message[]): Message[] {
-    const seenIds = new Set<string>();
-    return messages.map(msg => {
-      if (seenIds.has(msg.id)) {
-        // Generate new ID for duplicate
-        const newId = generateId();
-        return { ...msg, id: newId };
-      }
-      seenIds.add(msg.id);
-      return msg;
-    });
-  }
 
   // Save to localStorage
   useEffect(() => {
