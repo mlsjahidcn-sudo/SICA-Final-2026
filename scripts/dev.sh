@@ -30,12 +30,12 @@ kill_port_if_listening() {
 echo "Clearing port ${PORT} before start."
 kill_port_if_listening
 
-# Function to run pnpm (handles both installed and npx fallback)
+# Function to run pnpm (handles both installed and pnpm fallback)
 run_pnpm() {
     if command -v pnpm &> /dev/null; then
         pnpm "$@"
     else
-        npx pnpm "$@"
+        pnpm pnpm "$@"
     fi
 }
 

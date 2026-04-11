@@ -192,3 +192,123 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// POST /api/admin/applications - Create a new application (admin only)
+export async function POST(request: NextRequest) {
+  try {
+    const user = await verifyAuthToken(request);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabase = getSupabaseClient();
+    const body = await request.json();
+    
+    const {
+      student_id, // students.id (required)
+      program_id, // programs.id (optional if requested_university_program_note provided)
+      requested_university_program_note, // Free text if no program selected
+      intake, // Intake period (e.g., "Fall 2025")
+      personal_statement,
+      study_plan,
+      notes, // Admin notes
+      priority = 0, // 0=normal, 1=low, 2=high, 3=urgent
+      partner_id, // Optional: partner who referred this student
+    } = body;
+
+    // Validate required fields
+    if (!student_id) {
+      return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
+    }
+
+    if (!program_id && !requested_university_program_note) {
+      return NextResponse.json(
+        { error: 'Either program_id or requested_university_program_note is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify student exists
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, user_id')
+      .eq('id', student_id)
+      .maybeSingle();
+
+    if (studentError || !student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // Verify program exists if provided
+    if (program_id) {
+      const { data: program, error: programError } = await supabase
+        .from('programs')
+        .select('id')
+        .eq('id', program_id)
+        .maybeSingle();
+
+      if (programError || !program) {
+        return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+      }
+    }
+
+    // Build profile_snapshot
+    const profileSnapshot: Record<string, unknown> = {};
+    if (intake) profileSnapshot.intake = intake;
+    if (personal_statement) profileSnapshot.personal_statement = personal_statement;
+    if (study_plan) profileSnapshot.study_plan = study_plan;
+    if (requested_university_program_note) {
+      profileSnapshot.requested_university_program_note = requested_university_program_note;
+    }
+
+    // Create the application
+    const { data: application, error } = await supabase
+      .from('applications')
+      .insert({
+        student_id,
+        program_id: program_id || null,
+        partner_id: partner_id || null,
+        status: 'draft',
+        priority,
+        notes,
+        profile_snapshot: Object.keys(profileSnapshot).length > 0 ? profileSnapshot : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select(`
+        id,
+        status,
+        priority,
+        notes,
+        created_at,
+        students (
+          id,
+          users (
+            id,
+            full_name,
+            email
+          )
+        ),
+        programs (
+          id,
+          name,
+          degree_level,
+          universities (
+            id,
+            name_en
+          )
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error creating application:', error);
+      return NextResponse.json({ error: 'Failed to create application', details: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ application }, { status: 201 });
+  } catch (error) {
+    console.error('Error in admin applications POST:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

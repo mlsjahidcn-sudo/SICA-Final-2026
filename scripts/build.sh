@@ -5,18 +5,18 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
-# Function to run pnpm (handles both installed and npx fallback)
+# Function to run pnpm (handles both installed and pnpm fallback)
 run_pnpm() {
     if command -v pnpm &> /dev/null; then
         pnpm "$@"
     else
-        npx pnpm "$@"
+        pnpm pnpm "$@"
     fi
 }
 
 echo "Checking for pnpm..."
 if ! command -v pnpm &> /dev/null; then
-    echo "pnpm not found globally, will use npx pnpm..."
+    echo "pnpm not found globally, will use pnpm pnpm..."
     # Try corepack enable (might fail due to permissions, ignore error)
     if command -v corepack &> /dev/null; then
         echo "Attempting corepack enable (may fail on shared hosting)..."
@@ -28,7 +28,7 @@ fi
 if command -v pnpm &> /dev/null; then
     echo "pnpm version: $(pnpm --version)"
 else
-    echo "Using npx pnpm (no global install needed)"
+    echo "Using pnpm pnpm (no global install needed)"
 fi
 
 echo "Installing dependencies..."

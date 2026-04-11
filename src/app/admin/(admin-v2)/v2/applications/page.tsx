@@ -53,17 +53,27 @@ import {
   IconMapPin,
   IconFilter,
   IconList,
-  IconLayoutGrid
+  IconLayoutGrid,
+  IconPlus,
+  IconEdit
 } from "@tabler/icons-react"
+import { AddApplicationDialog } from "@/components/admin/add-application-dialog"
+import { EditApplicationDialog } from "@/components/admin/edit-application-dialog"
 
 interface Application {
   id: string
   status: string
-  priority: string | null
+  priority: number | null
   notes: string | null
   submitted_at: string | null
   created_at: string
   updated_at: string
+  profile_snapshot?: {
+    intake?: string
+    personal_statement?: string
+    study_plan?: string
+    requested_university_program_note?: string
+  } | null
   program: {
     id: string
     name: string
@@ -274,41 +284,44 @@ function ApplicationsListContent() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search applications..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 flex-1">
+              <div className="flex-1">
+                <div className="relative">
+                  <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search applications..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
               </div>
+              <Select value={universityFilter} onValueChange={setUniversityFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="University" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Universities</SelectItem>
+                  {universities.map((uni) => (
+                    <SelectItem key={uni.id} value={uni.id}>{uni.name_en}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={degreeFilter} onValueChange={setDegreeFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Degree" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Degrees</SelectItem>
+                  <SelectItem value="bachelor">Bachelor</SelectItem>
+                  <SelectItem value="master">Master</SelectItem>
+                  <SelectItem value="phd">PhD</SelectItem>
+                  <SelectItem value="language">Language</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={universityFilter} onValueChange={setUniversityFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="University" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Universities</SelectItem>
-                {universities.map((uni) => (
-                  <SelectItem key={uni.id} value={uni.id}>{uni.name_en}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={degreeFilter} onValueChange={setDegreeFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Degree" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Degrees</SelectItem>
-                <SelectItem value="bachelor">Bachelor</SelectItem>
-                <SelectItem value="master">Master</SelectItem>
-                <SelectItem value="phd">PhD</SelectItem>
-                <SelectItem value="language">Language</SelectItem>
-              </SelectContent>
-            </Select>
+            <AddApplicationDialog onApplicationAdded={fetchApplications} />
           </div>
         </CardContent>
       </Card>
@@ -387,6 +400,38 @@ function ApplicationsListContent() {
                                 <IconEye className="mr-2 h-4 w-4" />
                                 View Details
                               </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <EditApplicationDialog 
+                                application={{
+                                  id: app.id,
+                                  status: app.status,
+                                  priority: app.priority ?? undefined,
+                                  notes: app.notes ?? undefined,
+                                  profile_snapshot: app.profile_snapshot ?? undefined,
+                                  program: app.program ? {
+                                    id: app.program.id,
+                                    name: app.program.name,
+                                    degree_level: app.program.degree_level,
+                                    university: app.program.university ? {
+                                      id: app.program.university.id,
+                                      name_en: app.program.university.name_en
+                                    } : undefined
+                                  } : undefined,
+                                  student: app.student ? {
+                                    id: app.student.id,
+                                    full_name: app.student.full_name ?? undefined,
+                                    email: app.student.email ?? undefined
+                                  } : undefined
+                                }}
+                                onApplicationUpdated={fetchApplications}
+                                trigger={
+                                  <button className="flex w-full items-center px-2 py-1.5 text-sm">
+                                    <IconEdit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </button>
+                                }
+                              />
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>

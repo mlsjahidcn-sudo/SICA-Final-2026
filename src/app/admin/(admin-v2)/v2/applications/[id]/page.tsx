@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
+import { EditApplicationDialog } from "@/components/admin/edit-application-dialog"
 import { 
   IconArrowLeft,
   IconUser,
@@ -346,6 +347,48 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
           </Button>
         </div>
         <div className="flex items-center gap-3">
+          <EditApplicationDialog 
+            application={{
+              id: application.id,
+              status: application.status,
+              priority: application.priority ?? undefined,
+              notes: application.notes ?? undefined,
+              profile_snapshot: application.profile_snapshot ?? undefined,
+              program: application.programs ? {
+                id: application.programs.id,
+                name: application.programs.name,
+                degree_level: application.programs.degree_level,
+                university: application.programs.universities ? {
+                  id: application.programs.universities.id,
+                  name_en: application.programs.universities.name_en,
+                } : undefined,
+              } : undefined,
+              student: application.students?.users ? {
+                id: application.students.id,
+                full_name: application.students.users.full_name ?? undefined,
+                email: application.students.users.email ?? undefined,
+              } : undefined,
+            }}
+            onApplicationUpdated={() => {
+              // Refetch application data
+              const fetchApplication = async () => {
+                try {
+                  const { getValidToken } = await import('@/lib/auth-token')
+                  const token = await getValidToken()
+                  const response = await fetch(`/api/admin/applications/${applicationId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                  })
+                  if (response.ok) {
+                    const data = await response.json()
+                    setApplication(data.application || data)
+                  }
+                } catch (error) {
+                  console.error('Error refetching application:', error)
+                }
+              }
+              fetchApplication()
+            }}
+          />
           {application.priority !== null && application.priority > 0 && (
             <Badge variant={application.priority >= 2 ? 'destructive' : 'secondary'}>
               {application.priority === 1 ? 'Low' : application.priority === 2 ? 'High' : 'Urgent'} Priority
