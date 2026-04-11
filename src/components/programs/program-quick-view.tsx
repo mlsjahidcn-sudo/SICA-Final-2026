@@ -28,6 +28,8 @@ import {
   IconExternalLink,
   IconCalendar,
   IconPercentage,
+  IconTrash,
+  IconArchive,
 } from "@tabler/icons-react"
 
 interface University {
@@ -71,6 +73,8 @@ interface ProgramQuickViewProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onDuplicate?: (id: string) => void
+  onArchive?: (id: string) => void
+  onDelete?: (id: string) => void
   editUrl?: string
   viewUrl?: string
   showAdminActions?: boolean
@@ -81,6 +85,8 @@ export function ProgramQuickView({
   open,
   onOpenChange,
   onDuplicate,
+  onArchive,
+  onDelete,
   editUrl,
   viewUrl,
   showAdminActions = false,
@@ -295,6 +301,26 @@ export function ProgramQuickView({
               >
                 <IconCopy className="mr-2 h-4 w-4" />
                 Duplicate Program
+              </Button>
+            )}
+            {showAdminActions && onArchive && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => program && onArchive(program.id)}
+              >
+                <IconArchive className="mr-2 h-4 w-4" />
+                Archive Program
+              </Button>
+            )}
+            {showAdminActions && onDelete && (
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => program && onDelete(program.id)}
+              >
+                <IconTrash className="mr-2 h-4 w-4" />
+                Delete Permanently
               </Button>
             )}
           </div>

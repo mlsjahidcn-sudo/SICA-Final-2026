@@ -138,7 +138,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/admin/programs/[id] - Soft delete (archive) a program
+// DELETE /api/admin/programs/[id] - Soft delete (archive) or permanent delete a program
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -151,19 +151,51 @@ export async function DELETE(
 
     const { id } = await params;
     const supabase = getSupabaseClient();
+    
+    // Check for permanent delete query parameter
+    const url = new URL(request.url);
+    const permanent = url.searchParams.get('permanent') === 'true';
 
-    // Soft delete by setting is_active to false
-    const { error } = await supabase
-      .from('programs')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', id);
+    if (permanent) {
+      // Permanent delete - check for related applications first
+      const { data: applications } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('program_id', id)
+        .limit(1);
 
-    if (error) {
-      console.error('Error archiving program:', error);
-      return NextResponse.json({ error: 'Failed to archive program' }, { status: 500 });
+      if (applications && applications.length > 0) {
+        return NextResponse.json({ 
+          error: 'Cannot delete program with existing applications. Archive it instead.' 
+        }, { status: 400 });
+      }
+
+      // Hard delete
+      const { error } = await supabase
+        .from('programs')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting program:', error);
+        return NextResponse.json({ error: 'Failed to delete program' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Program permanently deleted' });
+    } else {
+      // Soft delete by setting is_active to false
+      const { error } = await supabase
+        .from('programs')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error archiving program:', error);
+        return NextResponse.json({ error: 'Failed to archive program' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Program archived' });
     }
-
-    return NextResponse.json({ success: true, message: 'Program archived' });
   } catch (error) {
     console.error('Error in program DELETE:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

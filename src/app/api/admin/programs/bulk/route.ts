@@ -26,50 +26,121 @@ interface BulkProgramRequest {
   programs: BulkProgramInput[];
 }
 
-// POST /api/admin/programs/bulk - Bulk create programs
+interface BulkActionRequest {
+  action: 'activate' | 'deactivate' | 'archive' | 'delete';
+  programIds: string[];
+}
+
+// Helper to verify admin access
+async function verifyAdmin(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return { error: 'No authorization token provided', status: 401 };
+  }
+
+  const supabaseAuth = getSupabaseClient(token);
+  const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
+
+  if (authError || !authUser) {
+    return { error: 'Invalid or expired token', status: 401 };
+  }
+
+  const supabase = getSupabaseClient();
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', authUser.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+    return { error: 'Admin access required', status: 403 };
+  }
+
+  return { supabase, userId: authUser.id };
+}
+
+// POST /api/admin/programs/bulk - Bulk create programs OR bulk actions
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    const authResult = await verifyAdmin(request);
+    if ('error' in authResult) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    const { supabase } = authResult;
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No authorization token provided' },
-        { status: 401 }
-      );
+    const body = await request.json();
+
+    // Check if this is a bulk action request
+    if ('action' in body && 'programIds' in body) {
+      const { action, programIds } = body as BulkActionRequest;
+
+      if (!action || !programIds || !Array.isArray(programIds) || programIds.length === 0) {
+        return NextResponse.json({ error: 'Action and programIds are required' }, { status: 400 });
+      }
+
+      switch (action) {
+        case 'activate':
+          await supabase
+            .from('programs')
+            .update({ is_active: true, updated_at: new Date().toISOString() })
+            .in('id', programIds);
+          return NextResponse.json({ success: true, message: `Activated ${programIds.length} program(s)` });
+
+        case 'deactivate':
+          await supabase
+            .from('programs')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .in('id', programIds);
+          return NextResponse.json({ success: true, message: `Deactivated ${programIds.length} program(s)` });
+
+        case 'archive':
+          await supabase
+            .from('programs')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .in('id', programIds);
+          return NextResponse.json({ success: true, message: `Archived ${programIds.length} program(s)` });
+
+        case 'delete':
+          // Check for related applications first
+          const { data: appsWithPrograms } = await supabase
+            .from('applications')
+            .select('program_id')
+            .in('program_id', programIds);
+
+          const programIdsWithApps = new Set(appsWithPrograms?.map(a => a.program_id) || []);
+          const programIdsToDelete = programIds.filter(id => !programIdsWithApps.has(id));
+
+          if (programIdsToDelete.length === 0) {
+            return NextResponse.json({ 
+              error: 'Cannot delete programs with existing applications. Archive them instead.' 
+            }, { status: 400 });
+          }
+
+          const { error: deleteError } = await supabase
+            .from('programs')
+            .delete()
+            .in('id', programIdsToDelete);
+
+          if (deleteError) {
+            return NextResponse.json({ error: 'Failed to delete programs' }, { status: 500 });
+          }
+
+          const skippedCount = programIds.length - programIdsToDelete.length;
+          const message = skippedCount > 0 
+            ? `Deleted ${programIdsToDelete.length} program(s). ${skippedCount} skipped due to existing applications.`
+            : `Deleted ${programIdsToDelete.length} program(s)`;
+
+          return NextResponse.json({ success: true, message });
+
+        default:
+          return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+      }
     }
 
-    // Use anon key client for auth verification
-    const supabaseAuth = getSupabaseClient(token);
-    
-    // Verify user token
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
-
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Use service role key client for database operations (bypasses RLS)
-    const supabase = getSupabaseClient();
-    
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', authUser.id)
-      .single();
-
-    if (profile?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    const body: BulkProgramRequest = await request.json();
-    const { university_id, programs } = body;
+    // Otherwise, handle bulk create
+    const { university_id, programs } = body as BulkProgramRequest;
 
     // Validate
     if (!university_id) {

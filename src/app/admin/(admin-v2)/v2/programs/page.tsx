@@ -329,6 +329,35 @@ export default function ProgramsPage() {
     }
   }
 
+  // Permanent delete program
+  const handleDelete = async (programId: string) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/admin/programs/${programId}?permanent=true`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        toast.success('Program permanently deleted')
+        fetchPrograms()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to delete program')
+      }
+    } catch {
+      toast.error('An error occurred')
+    }
+  }
+
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; programId: string; programName: string }>({ 
+    open: false, 
+    programId: '', 
+    programName: '' 
+  })
+
   // Clear filters
   const clearFilters = () => {
     setSearchQuery('')
@@ -524,8 +553,11 @@ export default function ProgramsPage() {
                         <Button size="sm" variant="outline" onClick={() => handleBulkAction('deactivate')}>
                           Deactivate
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleBulkAction('archive')}>
+                        <Button size="sm" variant="outline" onClick={() => handleBulkAction('archive')}>
                           Archive
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleBulkAction('delete')}>
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -645,6 +677,16 @@ export default function ProgramsPage() {
                                   <IconArchive className="mr-2 h-4 w-4" />
                                   Archive
                                 </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDeleteConfirm({ open: true, programId: program.id, programName: program.name })
+                                  }}
+                                >
+                                  <IconTrash className="mr-2 h-4 w-4" />
+                                  Delete Permanently
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -718,6 +760,8 @@ export default function ProgramsPage() {
         onOpenChange={setQuickViewOpen}
         editUrl={quickViewProgram ? `/admin/v2/programs/${quickViewProgram.id}/edit` : undefined}
         onDuplicate={handleDuplicate}
+        onArchive={handleArchive}
+        onDelete={(id) => setDeleteConfirm({ open: true, programId: id, programName: quickViewProgram?.name || '' })}
         showAdminActions
       />
 
@@ -742,6 +786,34 @@ export default function ProgramsPage() {
             >
               {bulkActionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Program Permanently</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete <strong>&quot;{deleteConfirm.programName}&quot;</strong>?
+              This action cannot be undone. If the program has existing applications, you must archive it instead.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm({ open: false, programId: '', programName: '' })}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={async () => {
+                await handleDelete(deleteConfirm.programId)
+                setDeleteConfirm({ open: false, programId: '', programName: '' })
+              }}
+            >
+              <IconTrash className="mr-2 h-4 w-4" />
+              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>
