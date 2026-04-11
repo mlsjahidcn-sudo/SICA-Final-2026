@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAdmin } from '@/lib/auth-utils';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { invokeLLM, ChatMessage } from '@/lib/llm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +10,6 @@ export async function POST(request: NextRequest) {
       return adminCheck;
     }
 
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const config = new Config();
-    const llmClient = new LLMClient(config, customHeaders);
     const supabase = getSupabaseClient();
 
     // Get existing posts to avoid duplicates
@@ -39,18 +36,20 @@ Return the topics as a JSON array of strings only, no other text.`;
 
     const userPrompt = `Suggest 10 blog post topics. Avoid these existing topics:\n${existingTitles}`;
 
-    const response = await llmClient.invoke(
-      [{ role: 'system' as const, content: systemPrompt }, { role: 'user' as const, content: userPrompt }],
-      { model: 'doubao-seed-2-0-lite-260215', temperature: 0.9 }
-    );
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ];
+
+    const response = await invokeLLM(messages, { temperature: 0.9 });
 
     // Try to parse JSON from response
     let topics;
     try {
-      const jsonMatch = response.content.match(/\[[\s\S]*\]/);
-      topics = jsonMatch ? JSON.parse(jsonMatch[0]) : [response.content.trim()];
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      topics = jsonMatch ? JSON.parse(jsonMatch[0]) : [response.trim()];
     } catch {
-      topics = [response.content.trim()];
+      topics = [response.trim()];
     }
 
     return NextResponse.json({ topics });

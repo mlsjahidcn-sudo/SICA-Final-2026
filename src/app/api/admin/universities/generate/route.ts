@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { invokeLLM, ChatMessage } from '@/lib/llm';
 
 export async function POST(request: NextRequest) {
   try {
     const { name_en, name_cn } = await request.json();
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
 
     if (!name_en) {
       return NextResponse.json(
@@ -13,9 +11,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const config = new Config();
-    const client = new LLMClient(config, customHeaders);
 
     const systemPrompt = `You are an expert in Chinese higher education, SEO optimization, and university data. When given a university name (in English or Chinese), you will generate comprehensive, accurate information about that university in both English and Chinese.
 
@@ -63,35 +58,32 @@ Important guidelines:
 - meta_keywords should include: university name, location, "study in China", "international students", "Chinese university", degree types offered, etc.
 - Return ONLY the JSON, no other text or markdown`;
 
-    const messages = [
-      { role: "system" as const, content: systemPrompt },
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
       { 
-        role: "user" as const, 
+        role: 'user', 
         content: `Generate comprehensive university information for: ${name_en}${name_cn ? ` (${name_cn})` : ''}. 
 
 Important: Provide accurate, real information if this is a well-known university. Include realistic rankings, student numbers, and the official website.` 
       },
     ];
 
-    const response = await client.invoke(messages, { 
-      model: "doubao-seed-2-0-lite-260215", 
-      temperature: 0.3 // Lower temperature for more factual responses
-    });
+    const response = await invokeLLM(messages, { temperature: 0.3 });
 
     // Parse the JSON response
     let generatedData;
     try {
       // Try to extract JSON from response (in case there's extra text)
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         generatedData = JSON.parse(jsonMatch[0]);
       } else {
-        generatedData = JSON.parse(response.content);
+        generatedData = JSON.parse(response);
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       return NextResponse.json(
-        { error: 'Failed to parse AI response', rawResponse: response.content },
+        { error: 'Failed to parse AI response', rawResponse: response },
         { status: 500 }
       );
     }

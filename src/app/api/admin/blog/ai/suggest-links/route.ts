@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAdmin } from '@/lib/auth-utils';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { invokeLLM, ChatMessage } from '@/lib/llm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +11,6 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const config = new Config();
-    const llmClient = new LLMClient(config, customHeaders);
 
     const body = await request.json();
     const { topic, content = '' } = body;
@@ -55,21 +52,12 @@ ${JSON.stringify(postsForPrompt, null, 2)}`;
 
     const userPrompt = `Suggest internal links for a new blog post about: ${topic}\n\nPost content preview: ${content}`;
 
-    const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: userPrompt },
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
     ];
 
-    // Use streaming to get the full response
-    let fullContent = '';
-    for await (const chunk of llmClient.stream(messages, {
-      model: 'doubao-seed-2-0-lite-260215',
-      temperature: 0.3,
-    })) {
-      if (chunk.content) {
-        fullContent += chunk.content.toString();
-      }
-    }
+    const fullContent = await invokeLLM(messages, { temperature: 0.3 });
 
     let suggestions = [];
     try {

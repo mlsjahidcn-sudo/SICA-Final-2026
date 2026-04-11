@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAdmin } from '@/lib/auth-utils';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { streamLLM, ChatMessage } from '@/lib/llm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +8,6 @@ export async function POST(request: NextRequest) {
     if (adminCheck instanceof NextResponse) {
       return adminCheck;
     }
-
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const config = new Config();
-    const llmClient = new LLMClient(config, customHeaders);
 
     const body = await request.json();
     const {
@@ -98,9 +93,9 @@ Requirements:
         break;
     }
 
-    const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: userPrompt },
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
     ];
 
     // Use streaming response
@@ -110,24 +105,21 @@ Requirements:
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of llmClient.stream(messages, {
-            model: 'doubao-seed-2-0-lite-260215',
-            temperature: type === 'full_content' ? 0.3 : 0.7,
+          // Stream from Moonshot API
+          for await (const chunk of streamLLM(messages, { 
+            temperature: type === 'full_content' ? 0.3 : 0.7 
           })) {
-            if (chunk.content) {
-              const contentStr = chunk.content.toString();
-              fullContent += contentStr;
-              
-              if (type === 'full_content') {
-                // For full_content, send progress updates
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                  type: 'progress', 
-                  content: contentStr
-                })}\n\n`));
-              } else {
-                // For other types, send content chunks
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: contentStr })}\n\n`));
-              }
+            fullContent += chunk;
+            
+            if (type === 'full_content') {
+              // For full_content, send progress updates
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+                type: 'progress', 
+                content: chunk
+              })}\n\n`));
+            } else {
+              // For other types, send content chunks
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`));
             }
           }
           

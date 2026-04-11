@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { LLMClient } from 'coze-coding-dev-sdk';
 import { retrieveRelevantContext, formatRAGContext } from '@/lib/chat/rag-pipeline';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { streamLLM, ChatMessage } from '@/lib/llm';
 
 const SYSTEM_PROMPT = `You are the SICA AI Assistant — a friendly, knowledgeable advisor for the Study in China Academy platform. You help international students find the right universities and programs in China, answer questions about scholarships, application processes, visa requirements, and more.
 
@@ -390,13 +390,13 @@ export async function POST(request: NextRequest) {
       (ragContext ? '\n\n' + ragContext : '');
 
     // Prepare LLM messages
-    const llmMessages = [
-      { role: 'system' as const, content: fullSystemPrompt },
-      ...messages.slice(-16),
+    const llmMessages: ChatMessage[] = [
+      { role: 'system', content: fullSystemPrompt },
+      ...messages.slice(-16).map(m => ({
+        role: m.role as 'user' | 'assistant' | 'system',
+        content: m.content,
+      })),
     ];
-
-    // Initialize LLM client
-    const client = new LLMClient();
 
     // Create SSE stream
     const encoder = new TextEncoder();
@@ -411,19 +411,12 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          const llmStream = client.stream(llmMessages, {
-            model: 'doubao-seed-2-0-lite-260215',
-            temperature: 0.7,
-          });
-
-          for await (const chunk of llmStream) {
-            if (chunk.content) {
-              const text = chunk.content.toString();
-              fullResponse += text;
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ type: 'content', content: text })}\n\n`)
-              );
-            }
+          // Stream from Moonshot API
+          for await (const chunk of streamLLM(llmMessages, { temperature: 0.7 })) {
+            fullResponse += chunk;
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'content', content: chunk })}\n\n`)
+            );
           }
 
           // Save assistant response for authenticated users

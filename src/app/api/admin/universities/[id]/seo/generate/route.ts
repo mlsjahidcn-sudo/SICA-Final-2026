@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { invokeLLM, ChatMessage } from '@/lib/llm';
 
 export async function POST(
   request: NextRequest,
@@ -61,10 +61,6 @@ export async function POST(
       );
     }
 
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const config = new Config();
-    const client = new LLMClient(config, customHeaders);
-
     const currentYear = new Date().getFullYear();
 
     const systemPrompt = `You are an SEO expert specializing in educational content and Chinese universities. Generate SEO-optimized content for a university profile page.
@@ -97,32 +93,29 @@ World Ranking: ${university.ranking_world || 'N/A'}
 Description: ${university.description || 'No description available'}
     `.trim();
 
-    const messages = [
-      { role: "system" as const, content: systemPrompt },
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
       { 
-        role: "user" as const, 
+        role: 'user', 
         content: `Generate SEO content for this university:\n\n${universityContext}` 
       },
     ];
 
-    const response = await client.invoke(messages, { 
-      model: "doubao-seed-2-0-lite-260215", 
-      temperature: 0.5
-    });
+    const response = await invokeLLM(messages, { temperature: 0.5 });
 
     // Parse the JSON response
     let seoData;
     try {
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         seoData = JSON.parse(jsonMatch[0]);
       } else {
-        seoData = JSON.parse(response.content);
+        seoData = JSON.parse(response);
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       return NextResponse.json(
-        { error: 'Failed to parse AI response', rawResponse: response.content },
+        { error: 'Failed to parse AI response', rawResponse: response },
         { status: 500 }
       );
     }

@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/storage/database/supabase-client";
-import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
+import { invokeLLM, ChatMessage } from "@/lib/llm";
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail, getAssessmentReportReadyTemplate } from "@/lib/email";
 
@@ -158,26 +158,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Generate AI report
-    const config = new Config();
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const client = new LLMClient(config, customHeaders);
-
     const prompt = buildReportPrompt(assessment as AssessmentData);
-    const messages = [
+    const messages: ChatMessage[] = [
       {
-        role: "system" as const,
+        role: "system",
         content:
           "You are an expert education consultant specializing in helping international students study in China. Generate detailed, personalized, and actionable evaluation reports.",
       },
-      { role: "user" as const, content: prompt },
+      { role: "user", content: prompt },
     ];
 
-    const response = await client.invoke(messages, {
-      model: "doubao-seed-2-0-lite-260215",
-      temperature: 0.7,
-    });
-
-    const reportContent = response.content;
+    const reportContent = await invokeLLM(messages, { temperature: 0.7 });
 
     // Save report to database (store content directly, no file upload needed)
     const { data: report, error: reportError } = await supabase
