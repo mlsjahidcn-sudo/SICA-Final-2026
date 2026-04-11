@@ -16,29 +16,25 @@ export async function GET(
     const supabase = getSupabaseClient();
     const { id } = await params;
 
-    // Use RPC function to bypass schema cache issue
     const { data: post, error } = await supabase
-      .rpc('get_blog_post_by_id', { p_id: id });
+      .from('blog_posts')
+      .select(`
+        *,
+        blog_categories (
+          id,
+          name_en,
+          name_cn,
+          slug
+        )
+      `)
+      .eq('id', id)
+      .single();
 
-    if (error || !post || post.length === 0) {
+    if (error || !post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    const postData = post[0];
-
-    // Transform to match expected format
-    return NextResponse.json({
-      post: {
-        ...postData,
-        blog_categories: postData.category_id ? {
-          id: postData.category_id,
-          name_en: postData.category_name_en,
-          name_cn: postData.category_name_cn,
-          slug: postData.category_slug,
-        } : null,
-        tags: [], // Tags will be loaded separately if needed
-      },
-    });
+    return NextResponse.json({ post });
   } catch (error) {
     console.error('Error fetching blog post:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -59,72 +55,54 @@ export async function PUT(
     const supabase = getSupabaseClient();
     const { id } = await params;
     const body = await request.json();
-    const {
-      title_en,
-      title_cn,
-      slug,
-      excerpt_en,
-      excerpt_cn,
-      content_en,
-      content_cn,
-      featured_image_url,
-      featured_image_alt,
-      category_id,
-      author_name,
-      author_avatar_url,
-      status,
-      is_featured,
-      allow_comments,
-      seo_title,
-      seo_description,
-      seo_keywords,
-      faqs,
-      internal_links,
-    } = body;
 
-    // Calculate reading time if content changed
-    let readingTime;
-    if (content_en) {
-      const wordCount = content_en.split(/\s+/).length;
-      readingTime = Math.max(1, Math.ceil(wordCount / 200));
+    // Build update object
+    const updateData: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Copy all provided fields
+    const fields = [
+      'title_en', 'title_cn', 'slug', 'excerpt_en', 'excerpt_cn',
+      'content_en', 'content_cn', 'featured_image_url', 'featured_image_alt',
+      'category_id', 'author_name', 'author_avatar_url', 'status',
+      'is_featured', 'allow_comments', 'seo_title', 'seo_description',
+      'seo_keywords', 'faqs', 'internal_links'
+    ];
+
+    for (const field of fields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field];
+      }
     }
 
-    // Use RPC function to bypass schema cache issue
-    const { data: success, error } = await supabase
-      .rpc('update_blog_post', {
-        p_id: id,
-        p_title: title_en,
-        p_title_en: title_en,
-        p_title_cn: title_cn,
-        p_slug: slug,
-        p_content: content_en,
-        p_content_en: content_en,
-        p_content_cn: content_cn,
-        p_excerpt_en: excerpt_en,
-        p_excerpt_cn: excerpt_cn,
-        p_featured_image_url: featured_image_url,
-        p_featured_image_alt: featured_image_alt,
-        p_category_id: category_id,
-        p_author_name: author_name,
-        p_author_avatar_url: author_avatar_url,
-        p_status: status,
-        p_is_featured: is_featured,
-        p_allow_comments: allow_comments,
-        p_seo_title: seo_title,
-        p_seo_description: seo_description,
-        p_seo_keywords: seo_keywords,
-        p_faqs: faqs,
-        p_internal_links: internal_links,
-        p_reading_time_minutes: readingTime,
-      });
+    // Sync title and content with _en versions
+    if (body.title_en !== undefined) {
+      updateData.title = body.title_en;
+    }
+    if (body.content_en !== undefined) {
+      updateData.content = body.content_en;
+    }
+
+    // Calculate reading time if content changed
+    if (body.content_en) {
+      const wordCount = body.content_en.split(/\s+/).length;
+      updateData.reading_time_minutes = Math.max(1, Math.ceil(wordCount / 200));
+    }
+
+    // Handle published_at for newly published posts
+    if (body.status === 'published') {
+      updateData.published_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('blog_posts')
+      .update(updateData)
+      .eq('id', id);
 
     if (error) {
       console.error('Error updating blog post:', error);
-      return NextResponse.json({ error: 'Failed to update post' }, { status: 500 });
-    }
-
-    if (!success) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Failed to update post', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -148,7 +126,6 @@ export async function DELETE(
     const supabase = getSupabaseClient();
     const { id } = await params;
 
-    // Delete the post (this will cascade to blog_post_tags)
     const { error } = await supabase
       .from('blog_posts')
       .delete()
@@ -156,7 +133,7 @@ export async function DELETE(
 
     if (error) {
       console.error('Error deleting blog post:', error);
-      return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to delete post', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
