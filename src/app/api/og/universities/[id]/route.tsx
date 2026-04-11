@@ -1,18 +1,17 @@
 import { ImageResponse } from 'next/og';
+import { NextRequest, NextResponse } from 'next/server';
 
-export const alt = 'University Profile';
-export const size = {
-  width: 1200,
-  height: 630,
-};
-export const contentType = 'image/png';
+export const runtime = 'nodejs';
 
-export default async function Image({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+    
     // Fetch university data
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/api/universities/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000'}/api/universities/${id}`, {
       cache: 'no-store',
     });
     
@@ -31,6 +30,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               backgroundColor: '#1e3a5f',
               color: 'white',
               padding: '40px',
+              fontFamily: 'sans-serif',
             }}
           >
             <div style={{ fontSize: 60, fontWeight: 'bold', marginBottom: 20 }}>
@@ -63,6 +63,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             backgroundColor: '#1e3a5f',
             color: 'white',
             padding: '60px',
+            fontFamily: 'sans-serif',
           }}
         >
           {/* Header */}
@@ -197,6 +198,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             backgroundColor: '#1e3a5f',
             color: 'white',
             padding: '40px',
+            fontFamily: 'sans-serif',
           }}
         >
           <div style={{ fontSize: 60, fontWeight: 'bold', marginBottom: 20 }}>

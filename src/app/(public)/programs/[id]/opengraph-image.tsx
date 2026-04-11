@@ -1,17 +1,16 @@
 import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+export const alt = 'Program Details';
+export const size = {
+  width: 1200,
+  height: 630,
+};
+export const contentType = 'image/png';
 
-const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export default async function Image({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  
   try {
-    const { id } = await params;
-    
     // Fetch program data
     const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/api/programs/${id}`, {
       cache: 'no-store',
@@ -62,15 +61,15 @@ export async function GET(
       switch (level?.toLowerCase()) {
         case 'bachelor':
         case 'undergraduate':
-          return '#22c55e'; // green
+          return '#22c55e';
         case 'master':
         case 'graduate':
-          return '#3b82f6'; // blue
+          return '#3b82f6';
         case 'phd':
         case 'doctoral':
-          return '#8b5cf6'; // purple
+          return '#8b5cf6';
         default:
-          return '#f59e0b'; // amber
+          return '#f59e0b';
       }
     };
     

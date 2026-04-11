@@ -155,6 +155,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const uniName = universityData?.name_en || 'University';
   const uniCity = universityData?.city || '';
   
+  // Use dynamic OG image API
+  const ogImageUrl = `${baseUrl}/api/og/programs/${id}`;
+
   return {
     title: `${program.name} - ${degreeLabel} | ${uniName}`,
     description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160) || `Study ${program.name} at ${uniName} in ${uniCity}. ${degreeLabel} program.`,
@@ -173,13 +176,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160),
       type: 'article',
       url: `${baseUrl}/programs/${id}`,
-      images: program.cover_image ? [{ url: program.cover_image, width: 1200, height: 630 }] : [],
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${program.name} at ${uniName}`,
       description: program.description_en?.slice(0, 160) || program.description?.slice(0, 160),
-      images: program.cover_image ? [{ url: program.cover_image, width: 1200, height: 630 }] : [],
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
     alternates: {
       canonical: `${baseUrl}/programs/${id}`,

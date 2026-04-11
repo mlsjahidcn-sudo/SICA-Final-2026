@@ -1,15 +1,16 @@
 import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+export const alt = 'Blog Post';
+export const size = {
+  width: 1200,
+  height: 630,
+};
+export const contentType = 'image/png';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  
   try {
-    const { slug } = await params;
-    
     // Fetch blog post data
     const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000'}/api/blog/${slug}`, {
       cache: 'no-store',
