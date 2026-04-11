@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const nationality = searchParams.get('nationality') || '';
     const offset = (page - 1) * limit;
 
-    // Build query - only select columns that actually exist in the Supabase users table
+    // Query 1: Students with user accounts (from users table with role='student')
     let query = supabaseAdmin
       .from('users')
       .select(`
@@ -81,6 +81,26 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching students:', error);
       return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
+    }
+
+    // Query 2: Students without user accounts (orphan students)
+    // These are students where user_id is null
+    let orphanQuery = supabaseAdmin
+      .from('students')
+      .select('id, user_id, nationality, gender, current_address, wechat_id, created_at', { count: 'exact' })
+      .is('user_id', null)
+      .order('created_at', { ascending: false });
+
+    if (search) {
+      // Search in admin_notes or other fields for orphan students
+      orphanQuery = orphanQuery.or(`admin_notes.ilike.%${search}%`);
+    }
+
+    const { data: orphanStudents, error: orphanError, count: orphanCount } = await orphanQuery;
+
+    if (orphanError) {
+      console.error('Error fetching orphan students:', orphanError);
+      // Don't fail the whole request, just log the error
     }
 
     // Get partner info for referred students
@@ -137,7 +157,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge data - extract nationality from students join
-    let enrichedStudents = students?.map(student => {
+    let enrichedStudents: Array<Record<string, unknown>> = students?.map(student => {
       // students is an array or single object depending on the join
       const studentRecord = Array.isArray(student.students) ? student.students[0] : student.students;
       return {
@@ -148,14 +168,41 @@ export async function GET(request: NextRequest) {
           ? partnerMap.get(student.referred_by_partner_id) || null
           : null,
         applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
+        has_user_account: true,
       };
-    });
+    }) || [];
+
+    // Add orphan students (students without user accounts)
+    if (orphanStudents && orphanStudents.length > 0) {
+      const formattedOrphanStudents = orphanStudents.map(orphan => ({
+        id: orphan.id,
+        email: null,
+        full_name: 'Unknown (No User Account)', // No user account, so no name
+        phone: null,
+        avatar_url: null,
+        is_active: true,
+        created_at: orphan.created_at,
+        updated_at: null,
+        referred_by_partner_id: null,
+        nationality: orphan.nationality,
+        gender: orphan.gender,
+        current_address: orphan.current_address,
+        wechat_id: orphan.wechat_id,
+        source: 'orphan' as const,
+        referred_by_partner: null,
+        applications: { total: 0, pending: 0 },
+        has_user_account: false,
+        students: [], // Empty since no user account
+      }));
+      enrichedStudents = [...enrichedStudents, ...formattedOrphanStudents];
+    }
 
     // Apply nationality filter in-memory (nationality is on students table, not users)
     if (nationality) {
-      enrichedStudents = enrichedStudents?.filter(s =>
-        s.nationality?.toLowerCase() === nationality.toLowerCase()
-      );
+      enrichedStudents = enrichedStudents.filter(s => {
+        const sNationality = s.nationality as string | null;
+        return sNationality?.toLowerCase() === nationality.toLowerCase();
+      });
     }
 
     // Compute stats
@@ -213,13 +260,14 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: (count || 0) + (orphanCount || 0),
+        totalPages: Math.ceil(((count || 0) + (orphanCount || 0)) / limit),
       },
       stats: {
-        total: individualCount + partnerReferredCount,
+        total: individualCount + partnerReferredCount + (orphanCount || 0),
         individual: individualCount,
         partnerReferred: partnerReferredCount,
+        orphan: orphanCount || 0,
         active: activeCount || 0,
         newThisMonth: newThisMonthCount || 0,
         withApplications: applicationMap.size,
@@ -285,91 +333,134 @@ export async function POST(request: NextRequest) {
       personal_statement,
       study_plan,
       admin_notes,
+      phone,
+      wechat_id,
+      skip_user_creation = false, // Flag to skip user account creation
     } = body;
 
-    // Validate required fields
-    if (!email || !full_name || !password) {
-      return NextResponse.json(
-        { error: 'Email, full name, and password are required' },
-        { status: 400 }
-      );
+    // Validate required fields based on mode
+    if (skip_user_creation) {
+      // Only require full_name when skipping user creation
+      if (!full_name) {
+        return NextResponse.json(
+          { error: 'Full name is required' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Require email, full_name, and password when creating user account
+      if (!email || !full_name || !password) {
+        return NextResponse.json(
+          { error: 'Email, full name, and password are required' },
+          { status: 400 }
+        );
+      }
+
+      // Check if user already exists
+      const { data: existingUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 409 }
+        );
+      }
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    let userId: string | null = null;
+    let newUser: Record<string, unknown> | null = null;
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
-    // Create auth user first
-    const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
-      email,
-      password,
-    });
-
-    if (signUpError || !authData.user) {
-      console.error('Error creating auth user:', signUpError);
-      return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
-    }
-
-    // Create user in users table
-    const { data: newUser, error: userError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        id: authData.user.id,
+    // Only create user account if not skipping
+    if (!skip_user_creation) {
+      // Create auth user first
+      const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
         email,
-        full_name,
-        role,
-        referred_by_partner_id: partner_id || null,
-      })
-      .select('*')
-      .single();
+        password,
+      });
 
-    if (userError) {
-      console.error('Error creating user record:', userError);
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+      if (signUpError || !authData.user) {
+        console.error('Error creating auth user:', signUpError);
+        return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
+      }
+
+      userId = authData.user.id;
+
+      // Create user in users table
+      const { data: createdUser, error: userError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: userId,
+          email,
+          full_name,
+          role,
+          phone: phone || null,
+          referred_by_partner_id: partner_id || null,
+        })
+        .select('*')
+        .single();
+
+      if (userError) {
+        console.error('Error creating user record:', userError);
+        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+      }
+
+      newUser = createdUser;
     }
 
     // Create student record in students table
+    const studentId = crypto.randomUUID();
     const { data: newStudent, error: studentError } = await supabaseAdmin
       .from('students')
       .insert({
-        id: crypto.randomUUID(),
-        user_id: authData.user.id,
+        id: studentId,
+        user_id: userId, // Will be null if skip_user_creation is true
         nationality: nationality || null,
         date_of_birth: date_of_birth || null,
         gender: gender || null,
         passport_number: passport_number || null,
         passport_expiry_date: passport_expiry_date || null,
+        current_address: current_address || null,
+        permanent_address: permanent_address || null,
+        emergency_contact_name: emergency_contact_name || null,
+        emergency_contact_phone: emergency_contact_phone || null,
+        emergency_contact_relationship: emergency_contact_relationship || null,
         highest_education: highest_education || null,
         institution_name: institution_name || null,
         field_of_study: field_of_study || null,
         graduation_date: graduation_date || null,
-        gpa: gpa ? parseFloat(gpa) : null,
+        gpa: gpa || null,
         hsk_level: hsk_level ? parseInt(hsk_level) : null,
         hsk_score: hsk_score ? parseInt(hsk_score) : null,
-        ielts_score: ielts_score ? parseFloat(ielts_score) : null,
+        ielts_score: ielts_score || null,
         toefl_score: toefl_score ? parseInt(toefl_score) : null,
+        wechat_id: wechat_id || null,
+        personal_statement: personal_statement || null,
+        study_plan: study_plan || null,
+        admin_notes: admin_notes || null,
         partner_id: partner_id || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select('*')
       .single();
 
     if (studentError) {
       console.error('Error creating student record:', studentError);
+      return NextResponse.json({ error: 'Failed to create student record', details: studentError.message }, { status: 500 });
     }
 
     return NextResponse.json({
       student: {
-        ...newUser,
+        id: studentId,
+        full_name,
+        email: email || null,
+        phone: phone || null,
+        user_id: userId,
+        user: newUser,
         student: newStudent,
       },
     }, { status: 201 });

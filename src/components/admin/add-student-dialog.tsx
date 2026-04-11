@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2 } from "lucide-react"
 import { IconUserPlus } from "@tabler/icons-react"
@@ -29,11 +28,11 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
-    // Account info
-    email: "",
-    password: "",
+    // Personal info (required)
     full_name: "",
-    // Personal info
+    email: "",
+    phone: "",
+    // Personal details
     nationality: "",
     date_of_birth: "",
     gender: "",
@@ -63,14 +62,9 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
   }
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.email || !formData.full_name || !formData.password) {
-      toast.error("Email, full name, and password are required")
-      return
-    }
-
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters")
+    // Only require full_name
+    if (!formData.full_name) {
+      toast.error("Full name is required")
       return
     }
 
@@ -85,7 +79,10 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          skip_user_creation: true, // Flag to skip user account creation
+        }),
       })
 
       const data = await response.json()
@@ -97,9 +94,9 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
       toast.success('Student created successfully')
       setOpen(false)
       setFormData({
-        email: "",
-        password: "",
         full_name: "",
+        email: "",
+        phone: "",
         nationality: "",
         date_of_birth: "",
         gender: "",
@@ -129,13 +126,6 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
     }
   }
 
-  const nationalities = [
-    'China', 'Nigeria', 'Pakistan', 'India', 'Bangladesh', 'Indonesia', 
-    'Thailand', 'Vietnam', 'Russia', 'Kazakhstan', 'South Korea', 'Japan',
-    'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany',
-    'France', 'Italy', 'Spain', 'Brazil', 'Mexico', 'Egypt', 'Turkey'
-  ]
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -150,77 +140,63 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
           <DialogDescription>
-            Create a new student account. Fill in the required fields and any optional information.
+            Enter student information. Only full name is required.
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="personal">Personal</TabsTrigger>
-            <TabsTrigger value="education">Education</TabsTrigger>
-            <TabsTrigger value="language">Language</TabsTrigger>
-          </TabsList>
-          
-          <ScrollArea className="h-[400px] w-full pr-4">
-            <TabsContent value="account" className="space-y-4 mt-4">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="student@example.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Minimum 6 characters"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-6 py-4">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Basic Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="full_name">Full Name *</Label>
                   <Input
                     id="full_name"
-                    placeholder="John Doe"
                     value={formData.full_name}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
+                    onChange={(e) => handleInputChange("full_name", e.target.value)}
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="Enter email (optional)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    placeholder="Enter phone (optional)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Input
+                    id="nationality"
+                    value={formData.nationality}
+                    onChange={(e) => handleInputChange("nationality", e.target.value)}
+                    placeholder="Enter nationality"
                   />
                 </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="personal" className="space-y-4 mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="nationality">Nationality</Label>
-                  <Select
-                    value={formData.nationality}
-                    onValueChange={(value) => handleInputChange('nationality', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select nationality" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nationalities.map(n => (
-                        <SelectItem key={n} value={n}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
+            </div>
+
+            {/* Personal Details */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Personal Details</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
-                  <Select
-                    value={formData.gender}
-                    onValueChange={(value) => handleInputChange('gender', value)}
-                  >
+                  <Select value={formData.gender} onValueChange={(v) => handleInputChange("gender", v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
@@ -231,204 +207,207 @@ export function AddStudentDialog({ onStudentAdded, trigger }: AddStudentDialogPr
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="date_of_birth">Date of Birth</Label>
                   <Input
                     id="date_of_birth"
                     type="date"
                     value={formData.date_of_birth}
-                    onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+                    onChange={(e) => handleInputChange("date_of_birth", e.target.value)}
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="passport_number">Passport Number</Label>
                   <Input
                     id="passport_number"
-                    placeholder="AB1234567"
                     value={formData.passport_number}
-                    onChange={(e) => handleInputChange('passport_number', e.target.value)}
+                    onChange={(e) => handleInputChange("passport_number", e.target.value)}
+                    placeholder="Enter passport number"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="passport_expiry_date">Passport Expiry</Label>
                   <Input
                     id="passport_expiry_date"
                     type="date"
                     value={formData.passport_expiry_date}
-                    onChange={(e) => handleInputChange('passport_expiry_date', e.target.value)}
+                    onChange={(e) => handleInputChange("passport_expiry_date", e.target.value)}
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="current_address">Current Address</Label>
+                  <Input
+                    id="current_address"
+                    value={formData.current_address}
+                    onChange={(e) => handleInputChange("current_address", e.target.value)}
+                    placeholder="Enter current address"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="wechat_id">WeChat ID</Label>
                   <Input
                     id="wechat_id"
-                    placeholder="wechat_id"
                     value={formData.wechat_id}
-                    onChange={(e) => handleInputChange('wechat_id', e.target.value)}
+                    onChange={(e) => handleInputChange("wechat_id", e.target.value)}
+                    placeholder="Enter WeChat ID"
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="current_address">Current Address</Label>
-                <Input
-                  id="current_address"
-                  placeholder="123 Main St, City, Country"
-                  value={formData.current_address}
-                  onChange={(e) => handleInputChange('current_address', e.target.value)}
-                />
-              </div>
-              <div className="border-t pt-4 mt-4">
-                <h4 className="font-medium mb-3">Emergency Contact</h4>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="emergency_contact_name">Name</Label>
-                    <Input
-                      id="emergency_contact_name"
-                      placeholder="Contact name"
-                      value={formData.emergency_contact_name}
-                      onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="emergency_contact_phone">Phone</Label>
-                    <Input
-                      id="emergency_contact_phone"
-                      placeholder="+1 234 567 8900"
-                      value={formData.emergency_contact_phone}
-                      onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="emergency_contact_relationship">Relationship</Label>
-                    <Input
-                      id="emergency_contact_relationship"
-                      placeholder="Parent, Spouse, etc."
-                      value={formData.emergency_contact_relationship}
-                      onChange={(e) => handleInputChange('emergency_contact_relationship', e.target.value)}
-                    />
-                  </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Emergency Contact</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="emergency_contact_name">Contact Name</Label>
+                  <Input
+                    id="emergency_contact_name"
+                    value={formData.emergency_contact_name}
+                    onChange={(e) => handleInputChange("emergency_contact_name", e.target.value)}
+                    placeholder="Enter contact name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emergency_contact_phone">Contact Phone</Label>
+                  <Input
+                    id="emergency_contact_phone"
+                    value={formData.emergency_contact_phone}
+                    onChange={(e) => handleInputChange("emergency_contact_phone", e.target.value)}
+                    placeholder="Enter contact phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emergency_contact_relationship">Relationship</Label>
+                  <Input
+                    id="emergency_contact_relationship"
+                    value={formData.emergency_contact_relationship}
+                    onChange={(e) => handleInputChange("emergency_contact_relationship", e.target.value)}
+                    placeholder="Enter relationship"
+                  />
                 </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="education" className="space-y-4 mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
+            </div>
+
+            {/* Education */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Education Background</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="highest_education">Highest Education</Label>
-                  <Select
-                    value={formData.highest_education}
-                    onValueChange={(value) => handleInputChange('highest_education', value)}
-                  >
+                  <Select value={formData.highest_education} onValueChange={(v) => handleInputChange("highest_education", v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
+                      <SelectValue placeholder="Select education level" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="high_school">High School</SelectItem>
                       <SelectItem value="associate">Associate Degree</SelectItem>
                       <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
                       <SelectItem value="master">Master's Degree</SelectItem>
-                      <SelectItem value="phd">PhD</SelectItem>
+                      <SelectItem value="doctorate">Doctorate</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="gpa">GPA</Label>
-                  <Input
-                    id="gpa"
-                    placeholder="3.5 / 4.0"
-                    value={formData.gpa}
-                    onChange={(e) => handleInputChange('gpa', e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="institution_name">Institution Name</Label>
                   <Input
                     id="institution_name"
-                    placeholder="University name"
                     value={formData.institution_name}
-                    onChange={(e) => handleInputChange('institution_name', e.target.value)}
+                    onChange={(e) => handleInputChange("institution_name", e.target.value)}
+                    placeholder="Enter institution name"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="field_of_study">Field of Study</Label>
                   <Input
                     id="field_of_study"
-                    placeholder="Computer Science"
                     value={formData.field_of_study}
-                    onChange={(e) => handleInputChange('field_of_study', e.target.value)}
+                    onChange={(e) => handleInputChange("field_of_study", e.target.value)}
+                    placeholder="Enter field of study"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="graduation_date">Graduation Date</Label>
                   <Input
                     id="graduation_date"
                     type="date"
                     value={formData.graduation_date}
-                    onChange={(e) => handleInputChange('graduation_date', e.target.value)}
+                    onChange={(e) => handleInputChange("graduation_date", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gpa">GPA</Label>
+                  <Input
+                    id="gpa"
+                    value={formData.gpa}
+                    onChange={(e) => handleInputChange("gpa", e.target.value)}
+                    placeholder="Enter GPA"
                   />
                 </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="language" className="space-y-4 mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
+            </div>
+
+            {/* Language Scores */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Language Scores</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="hsk_level">HSK Level</Label>
-                  <Select
-                    value={formData.hsk_level}
-                    onValueChange={(value) => handleInputChange('hsk_level', value)}
-                  >
+                  <Select value={formData.hsk_level} onValueChange={(v) => handleInputChange("hsk_level", v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
+                      <SelectValue placeholder="Select HSK level" />
                     </SelectTrigger>
                     <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map(level => (
-                        <SelectItem key={level} value={level.toString()}>HSK {level}</SelectItem>
-                      ))}
+                      <SelectItem value="1">HSK 1</SelectItem>
+                      <SelectItem value="2">HSK 2</SelectItem>
+                      <SelectItem value="3">HSK 3</SelectItem>
+                      <SelectItem value="4">HSK 4</SelectItem>
+                      <SelectItem value="5">HSK 5</SelectItem>
+                      <SelectItem value="6">HSK 6</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="hsk_score">HSK Score</Label>
                   <Input
                     id="hsk_score"
                     type="number"
-                    placeholder="180"
                     value={formData.hsk_score}
-                    onChange={(e) => handleInputChange('hsk_score', e.target.value)}
+                    onChange={(e) => handleInputChange("hsk_score", e.target.value)}
+                    placeholder="Enter HSK score"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="ielts_score">IELTS Score</Label>
                   <Input
                     id="ielts_score"
-                    placeholder="7.0"
                     value={formData.ielts_score}
-                    onChange={(e) => handleInputChange('ielts_score', e.target.value)}
+                    onChange={(e) => handleInputChange("ielts_score", e.target.value)}
+                    placeholder="e.g., 6.5"
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="toefl_score">TOEFL Score</Label>
                   <Input
                     id="toefl_score"
                     type="number"
-                    placeholder="100"
                     value={formData.toefl_score}
-                    onChange={(e) => handleInputChange('toefl_score', e.target.value)}
+                    onChange={(e) => handleInputChange("toefl_score", e.target.value)}
+                    placeholder="Enter TOEFL score"
                   />
                 </div>
               </div>
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
-        
+            </div>
+          </div>
+        </ScrollArea>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Student
+            Add Student
           </Button>
         </DialogFooter>
       </DialogContent>
