@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,14 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AppSidebar } from '@/components/dashboard-v2-sidebar';
+import { SiteHeader } from '@/components/dashboard-v2-header';
+import { useAuth } from '@/contexts/auth-context';
+import { Loader2 } from 'lucide-react';
 import {
   IconArrowLeft,
-  IconLoader2,
   IconUser,
   IconEPassport,
   IconSchool,
@@ -98,11 +103,9 @@ interface ResearchExperienceEntry {
 }
 
 interface FormData {
-  // User fields
   email: string;
   full_name: string;
   phone: string;
-  // Personal information
   nationality: string;
   date_of_birth: string;
   gender: string;
@@ -112,35 +115,27 @@ interface FormData {
   chinese_name: string;
   marital_status: string;
   religion: string;
-  // Emergency contact
   emergency_contact_name: string;
   emergency_contact_phone: string;
   emergency_contact_relationship: string;
-  // Passport information
   passport_number: string;
   passport_expiry_date: string;
   passport_issuing_country: string;
-  // Academic information (JSONB arrays)
   education_history: EducationHistoryEntry[];
   work_experience: WorkExperienceEntry[];
-  // Language test scores
   hsk_level: string;
   hsk_score: string;
   ielts_score: string;
   toefl_score: string;
-  // Family information
   family_members: FamilyMemberEntry[];
-  // Additional information
   extracurricular_activities: ExtracurricularActivityEntry[];
   awards: AwardEntry[];
   publications: PublicationEntry[];
   research_experience: ResearchExperienceEntry[];
   scholarship_application: Record<string, string>;
   financial_guarantee: Record<string, string>;
-  // Study preferences
   study_mode: string;
   funding_source: string;
-  // Communication
   wechat_id: string;
 }
 
@@ -183,6 +178,51 @@ const initialFormData: FormData = {
 
 export default function AdminAddStudentPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/admin/login');
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
+
+  return (
+    <TooltipProvider>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <AddStudentFormContent />
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  );
+}
+
+function AddStudentFormContent() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -191,7 +231,6 @@ export default function AdminAddStudentPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Array field helpers
   const addArrayItem = <T,>(field: keyof FormData, item: T) => {
     setFormData(prev => ({
       ...prev,
@@ -213,7 +252,6 @@ export default function AdminAddStudentPage() {
     }));
   };
 
-  // Object field helpers
   const updateObjectField = (field: 'scholarship_application' | 'financial_guarantee', key: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -270,9 +308,9 @@ export default function AdminAddStudentPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 md:gap-6 md:p-6 md:pt-0">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <IconArrowLeft className="h-5 w-5" />
         </Button>
@@ -314,7 +352,6 @@ export default function AdminAddStudentPage() {
 
             {/* ============ Personal Tab ============ */}
             <TabsContent value="personal" className="space-y-4">
-              {/* Basic Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -340,7 +377,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Personal Details */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Personal Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -384,7 +420,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Contact Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
                 <div className="space-y-4">
@@ -453,7 +488,6 @@ export default function AdminAddStudentPage() {
 
             {/* ============ Academic Tab ============ */}
             <TabsContent value="academic" className="space-y-4">
-              {/* Education History */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -504,14 +538,6 @@ export default function AdminAddStudentPage() {
                               <Label>End Date</Label>
                               <Input type="date" value={edu.end_date || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, end_date: e.target.value })} />
                             </div>
-                            <div className="space-y-2">
-                              <Label>City</Label>
-                              <Input value={edu.city || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, city: e.target.value })} placeholder="City" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Country</Label>
-                              <Input value={edu.country || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, country: e.target.value })} placeholder="Country" />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -522,7 +548,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Work Experience */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -565,10 +590,6 @@ export default function AdminAddStudentPage() {
                               <Label>End Date</Label>
                               <Input type="date" value={work.end_date || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, end_date: e.target.value })} />
                             </div>
-                            <div className="space-y-2 md:col-span-2">
-                              <Label>Description</Label>
-                              <Textarea value={work.description || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, description: e.target.value })} placeholder="Job description" />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -579,7 +600,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Language Test Scores */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <IconLanguage className="h-5 w-5" />
@@ -647,14 +667,6 @@ export default function AdminAddStudentPage() {
                               <Label>Phone</Label>
                               <Input value={member.phone || ''} onChange={(e) => updateArrayItem('family_members', idx, { ...member, phone: e.target.value })} placeholder="Phone number" />
                             </div>
-                            <div className="space-y-2">
-                              <Label>Email</Label>
-                              <Input value={member.email || ''} onChange={(e) => updateArrayItem('family_members', idx, { ...member, email: e.target.value })} placeholder="Email address" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Address</Label>
-                              <Input value={member.address || ''} onChange={(e) => updateArrayItem('family_members', idx, { ...member, address: e.target.value })} placeholder="Address" />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -666,7 +678,6 @@ export default function AdminAddStudentPage() {
 
             {/* ============ Additional Tab ============ */}
             <TabsContent value="additional" className="space-y-4">
-              {/* Extracurricular Activities */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -698,14 +709,6 @@ export default function AdminAddStudentPage() {
                               <Label>Role</Label>
                               <Input value={act.role || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, role: e.target.value })} placeholder="Your role" />
                             </div>
-                            <div className="space-y-2">
-                              <Label>Organization</Label>
-                              <Input value={act.organization || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, organization: e.target.value })} placeholder="Organization" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Start Date</Label>
-                              <Input type="date" value={act.start_date} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, start_date: e.target.value })} />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -716,7 +719,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Awards */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -748,10 +750,6 @@ export default function AdminAddStudentPage() {
                               <Label>Issuing Organization</Label>
                               <Input value={award.issuing_organization || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, issuing_organization: e.target.value })} placeholder="Organization" />
                             </div>
-                            <div className="space-y-2">
-                              <Label>Date</Label>
-                              <Input type="date" value={award.date || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, date: e.target.value })} />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -762,7 +760,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Publications */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -794,14 +791,6 @@ export default function AdminAddStudentPage() {
                               <Label>Publisher</Label>
                               <Input value={pub.publisher || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, publisher: e.target.value })} placeholder="Publisher" />
                             </div>
-                            <div className="space-y-2">
-                              <Label>Publication Date</Label>
-                              <Input type="date" value={pub.publication_date || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, publication_date: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>URL</Label>
-                              <Input value={pub.url || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, url: e.target.value })} placeholder="Publication URL" />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -812,7 +801,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Research Experience */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -844,18 +832,6 @@ export default function AdminAddStudentPage() {
                               <Label>Institution</Label>
                               <Input value={res.institution || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, institution: e.target.value })} placeholder="Institution" />
                             </div>
-                            <div className="space-y-2">
-                              <Label>Supervisor</Label>
-                              <Input value={res.supervisor || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, supervisor: e.target.value })} placeholder="Supervisor name" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Start Date</Label>
-                              <Input type="date" value={res.start_date} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, start_date: e.target.value })} />
-                            </div>
-                            <div className="space-y-2 md:col-span-2">
-                              <Label>Description</Label>
-                              <Textarea value={res.description || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, description: e.target.value })} placeholder="Research description" />
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -867,7 +843,6 @@ export default function AdminAddStudentPage() {
 
             {/* ============ Preferences Tab ============ */}
             <TabsContent value="preferences" className="space-y-4">
-              {/* Study Preferences */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Study Preferences</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -899,7 +874,6 @@ export default function AdminAddStudentPage() {
 
               <Separator className="my-6" />
 
-              {/* Scholarship Application */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <IconCurrencyDollar className="h-5 w-5" />
@@ -927,13 +901,12 @@ export default function AdminAddStudentPage() {
             </TabsContent>
           </Tabs>
 
-          {/* Action Buttons */}
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
             <Button variant="outline" onClick={() => router.push('/admin/v2/students')}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting && <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <IconCheck className="h-4 w-4 mr-2" />
               Add Student
             </Button>
