@@ -311,31 +311,48 @@ export async function POST(request: NextRequest) {
       password,
       role = 'student',
       partner_id,
+      // Personal info
       nationality,
       date_of_birth,
       gender,
-      passport_number,
-      passport_expiry_date,
       current_address,
       permanent_address,
+      postal_code,
+      chinese_name,
+      marital_status,
+      religion,
+      // Emergency contact
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
-      highest_education,
-      institution_name,
-      field_of_study,
-      graduation_date,
-      gpa,
+      // Passport
+      passport_number,
+      passport_expiry_date,
+      passport_issuing_country,
+      // Academic (JSONB arrays)
+      education_history,
+      work_experience,
+      // Language scores
       hsk_level,
       hsk_score,
       ielts_score,
       toefl_score,
-      personal_statement,
-      study_plan,
-      admin_notes,
+      // Family (JSONB array)
+      family_members,
+      // Additional (JSONB arrays)
+      extracurricular_activities,
+      awards,
+      publications,
+      research_experience,
+      // Preferences
+      study_mode,
+      funding_source,
+      scholarship_application,
+      financial_guarantee,
+      // Communication
       phone,
       wechat_id,
-      skip_user_creation = false, // Flag to skip user account creation
+      skip_user_creation = false,
     } = body;
 
     // Validate required fields based on mode
@@ -427,26 +444,59 @@ export async function POST(request: NextRequest) {
     if (date_of_birth) studentInsertData.date_of_birth = date_of_birth;
     if (passport_number) studentInsertData.passport_number = passport_number;
     if (passport_expiry_date) studentInsertData.passport_expiry_date = passport_expiry_date;
+    if (passport_issuing_country) studentInsertData.passport_issuing_country = passport_issuing_country;
     if (current_address) studentInsertData.current_address = current_address;
     if (permanent_address) studentInsertData.permanent_address = permanent_address;
+    if (postal_code) studentInsertData.postal_code = postal_code;
+    if (chinese_name) studentInsertData.chinese_name = chinese_name;
+    if (marital_status) studentInsertData.marital_status = marital_status;
+    if (religion) studentInsertData.religion = religion;
     if (wechat_id) studentInsertData.wechat_id = wechat_id;
     if (emergency_contact_name) studentInsertData.emergency_contact_name = emergency_contact_name;
     if (emergency_contact_phone) studentInsertData.emergency_contact_phone = emergency_contact_phone;
     if (emergency_contact_relationship) studentInsertData.emergency_contact_relationship = emergency_contact_relationship;
-    if (highest_education) studentInsertData.highest_education = highest_education;
-    if (institution_name) studentInsertData.institution_name = institution_name;
-    if (field_of_study) studentInsertData.field_of_study = field_of_study;
-    if (graduation_date) studentInsertData.graduation_date = graduation_date;
-    if (gpa) studentInsertData.gpa = gpa;
     if (hsk_level) studentInsertData.hsk_level = parseInt(hsk_level);
     if (hsk_score) studentInsertData.hsk_score = parseInt(hsk_score);
     if (ielts_score) studentInsertData.ielts_score = ielts_score;
     if (toefl_score) studentInsertData.toefl_score = parseInt(toefl_score);
+    if (study_mode) studentInsertData.study_mode = study_mode;
+    if (funding_source) studentInsertData.funding_source = funding_source;
+    
+    // JSONB arrays - only add if non-empty
+    if (education_history && Array.isArray(education_history) && education_history.length > 0) {
+      studentInsertData.education_history = education_history;
+    }
+    if (work_experience && Array.isArray(work_experience) && work_experience.length > 0) {
+      studentInsertData.work_experience = work_experience;
+    }
+    if (family_members && Array.isArray(family_members) && family_members.length > 0) {
+      studentInsertData.family_members = family_members;
+    }
+    if (extracurricular_activities && Array.isArray(extracurricular_activities) && extracurricular_activities.length > 0) {
+      studentInsertData.extracurricular_activities = extracurricular_activities;
+    }
+    if (awards && Array.isArray(awards) && awards.length > 0) {
+      studentInsertData.awards = awards;
+    }
+    if (publications && Array.isArray(publications) && publications.length > 0) {
+      studentInsertData.publications = publications;
+    }
+    if (research_experience && Array.isArray(research_experience) && research_experience.length > 0) {
+      studentInsertData.research_experience = research_experience;
+    }
+    
+    // JSONB objects - only add if non-empty
+    if (scholarship_application && Object.keys(scholarship_application).length > 0) {
+      studentInsertData.scholarship_application = scholarship_application;
+    }
+    if (financial_guarantee && Object.keys(financial_guarantee).length > 0) {
+      studentInsertData.financial_guarantee = financial_guarantee;
+    }
 
     const { data: newStudent, error: studentError } = await supabaseAdmin
       .from('students')
       .insert(studentInsertData)
-      .select('id, nationality, gender, highest_education, created_at')
+      .select('id, nationality, gender, created_at')
       .single();
 
     if (studentError) {
