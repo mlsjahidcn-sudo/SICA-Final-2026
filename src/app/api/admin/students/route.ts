@@ -412,40 +412,41 @@ export async function POST(request: NextRequest) {
     }
 
     // Create student record in students table
+    // Only use columns that are known to work with PostgREST schema cache
     const studentId = crypto.randomUUID();
+    const studentInsertData: Record<string, unknown> = {
+      id: studentId,
+      user_id: userId, // Will be null if skip_user_creation is true
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Add optional fields only if they have values
+    if (nationality) studentInsertData.nationality = nationality;
+    if (gender) studentInsertData.gender = gender;
+    if (date_of_birth) studentInsertData.date_of_birth = date_of_birth;
+    if (passport_number) studentInsertData.passport_number = passport_number;
+    if (passport_expiry_date) studentInsertData.passport_expiry_date = passport_expiry_date;
+    if (current_address) studentInsertData.current_address = current_address;
+    if (permanent_address) studentInsertData.permanent_address = permanent_address;
+    if (wechat_id) studentInsertData.wechat_id = wechat_id;
+    if (emergency_contact_name) studentInsertData.emergency_contact_name = emergency_contact_name;
+    if (emergency_contact_phone) studentInsertData.emergency_contact_phone = emergency_contact_phone;
+    if (emergency_contact_relationship) studentInsertData.emergency_contact_relationship = emergency_contact_relationship;
+    if (highest_education) studentInsertData.highest_education = highest_education;
+    if (institution_name) studentInsertData.institution_name = institution_name;
+    if (field_of_study) studentInsertData.field_of_study = field_of_study;
+    if (graduation_date) studentInsertData.graduation_date = graduation_date;
+    if (gpa) studentInsertData.gpa = gpa;
+    if (hsk_level) studentInsertData.hsk_level = parseInt(hsk_level);
+    if (hsk_score) studentInsertData.hsk_score = parseInt(hsk_score);
+    if (ielts_score) studentInsertData.ielts_score = ielts_score;
+    if (toefl_score) studentInsertData.toefl_score = parseInt(toefl_score);
+
     const { data: newStudent, error: studentError } = await supabaseAdmin
       .from('students')
-      .insert({
-        id: studentId,
-        user_id: userId, // Will be null if skip_user_creation is true
-        nationality: nationality || null,
-        date_of_birth: date_of_birth || null,
-        gender: gender || null,
-        passport_number: passport_number || null,
-        passport_expiry_date: passport_expiry_date || null,
-        current_address: current_address || null,
-        permanent_address: permanent_address || null,
-        emergency_contact_name: emergency_contact_name || null,
-        emergency_contact_phone: emergency_contact_phone || null,
-        emergency_contact_relationship: emergency_contact_relationship || null,
-        highest_education: highest_education || null,
-        institution_name: institution_name || null,
-        field_of_study: field_of_study || null,
-        graduation_date: graduation_date || null,
-        gpa: gpa || null,
-        hsk_level: hsk_level ? parseInt(hsk_level) : null,
-        hsk_score: hsk_score ? parseInt(hsk_score) : null,
-        ielts_score: ielts_score || null,
-        toefl_score: toefl_score ? parseInt(toefl_score) : null,
-        wechat_id: wechat_id || null,
-        personal_statement: personal_statement || null,
-        study_plan: study_plan || null,
-        // admin_notes is in the schema but PostgREST may not have it cached
-        // Use raw SQL if needed, or omit for now
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select('*')
+      .insert(studentInsertData)
+      .select('id, nationality, gender, highest_education, created_at')
       .single();
 
     if (studentError) {
