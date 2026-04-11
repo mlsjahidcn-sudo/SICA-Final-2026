@@ -55,11 +55,13 @@ import {
   getFollowUpQuestions
 } from '@/lib/chat-utils';
 
-// Generate unique IDs
-let idCounter = 0;
+// Generate unique IDs using crypto API with fallback
 const generateId = () => {
-  idCounter += 1;
-  return `${Date.now()}_${idCounter}_${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback: timestamp + random string
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${Math.random().toString(36).substring(2, 15)}`;
 };
 
 // Card data types matching API response
@@ -202,10 +204,10 @@ export function ChatWidget() {
           ...conv,
           createdAt: new Date(conv.createdAt),
           updatedAt: new Date(conv.updatedAt),
-          messages: conv.messages.map((msg: any) => ({
+          messages: deduplicateMessageIds(conv.messages.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp),
-          })),
+          }))),
         }));
         setConversations(conversations);
       }
@@ -213,6 +215,20 @@ export function ChatWidget() {
       console.error('Failed to load chat history:', e);
     }
   }, []);
+
+  // Deduplicate message IDs to prevent React key errors
+  function deduplicateMessageIds(messages: Message[]): Message[] {
+    const seenIds = new Set<string>();
+    return messages.map(msg => {
+      if (seenIds.has(msg.id)) {
+        // Generate new ID for duplicate
+        const newId = generateId();
+        return { ...msg, id: newId };
+      }
+      seenIds.add(msg.id);
+      return msg;
+    });
+  }
 
   // Save to localStorage
   useEffect(() => {
@@ -629,16 +645,18 @@ export function ChatWidget() {
     return (
       <div className="space-y-3">
         {parts.map((part, index) => {
+          const uniqueKey = `${message.id}-${index}-${part.type}`;
+          
           if (part.type === 'text') {
             return (
-              <ChatMarkdown key={index} content={part.content} />
+              <ChatMarkdown key={uniqueKey} content={part.content} />
             );
           } else if (part.type === 'uni-card' && part.index !== undefined) {
             const uniData = message.universityData?.get(part.index);
             if (uniData) {
               return (
                 <ChatUniversityCard
-                  key={index}
+                  key={uniqueKey}
                   id={uniData.id}
                   name={uniData.name}
                   nameCn={uniData.nameCn}
@@ -655,7 +673,7 @@ export function ChatWidget() {
               );
             }
             if (message.loading) {
-              return <ChatUniversityCardSkeleton key={index} />;
+              return <ChatUniversityCardSkeleton key={uniqueKey} />;
             }
             return null;
           } else if (part.type === 'prog-card' && part.index !== undefined) {
@@ -663,7 +681,7 @@ export function ChatWidget() {
             if (progData) {
               return (
                 <ChatProgramCard
-                  key={index}
+                  key={uniqueKey}
                   id={progData.id}
                   name={progData.name}
                   nameCn={progData.nameCn}
@@ -681,7 +699,7 @@ export function ChatWidget() {
               );
             }
             if (message.loading) {
-              return <ChatProgramCardSkeleton key={index} />;
+              return <ChatProgramCardSkeleton key={uniqueKey} />;
             }
             return null;
           }
@@ -961,7 +979,7 @@ export function ChatWidget() {
                 <div className="flex flex-wrap gap-1.5">
                   {followUpQuestions.slice(0, 3).map((question, index) => (
                     <Button
-                      key={index}
+                      key={`followup-${index}-${question.slice(0, 20)}`}
                       variant="outline"
                       size="sm"
                       className="text-xs rounded-full h-7 px-3"
@@ -978,9 +996,9 @@ export function ChatWidget() {
             {messages.length <= 3 && !isLoading && !isTyping && (
               <div className="px-3 sm:px-4 pb-2">
                 <div className="flex flex-wrap gap-1.5">
-                  {quickActions.slice(0, 4).map((action) => (
+                  {quickActions.slice(0, 4).map((action, index) => (
                     <Button
-                      key={action.label}
+                      key={`quick-${index}-${action.label}`}
                       variant="outline"
                       size="sm"
                       className="text-xs rounded-full h-7 px-3"
