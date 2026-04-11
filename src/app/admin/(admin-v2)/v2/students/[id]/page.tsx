@@ -29,6 +29,8 @@ import {
   IconExternalLink,
   IconUserPlus
 } from "@tabler/icons-react"
+import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
+import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
 
 interface ReferredByPartner {
   id: string
@@ -184,13 +186,45 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Back Button */}
-      <Button variant="ghost" size="sm" asChild className="w-fit">
-        <Link href="/admin/v2/students">
-          <IconArrowLeft className="mr-2 h-4 w-4" />
-          Back to Students
-        </Link>
-      </Button>
+      {/* Back Button and Actions */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="sm" asChild className="w-fit">
+          <Link href="/admin/v2/students">
+            <IconArrowLeft className="mr-2 h-4 w-4" />
+            Back to Students
+          </Link>
+        </Button>
+        <div className="flex gap-2">
+          <EditStudentDialog 
+            student={student} 
+            onStudentUpdated={() => {
+              // Refetch student data
+              const fetchStudent = async () => {
+                try {
+                  const { getValidToken } = await import('@/lib/auth-token')
+                  const token = await getValidToken()
+                  const response = await fetch(`/api/admin/students/${studentId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                  })
+                  if (response.ok) {
+                    const data = await response.json()
+                    setStudent(data.student || data)
+                  }
+                } catch (error) {
+                  console.error('Error refetching student:', error)
+                }
+              }
+              fetchStudent()
+            }}
+          />
+          <DeleteStudentDialog 
+            studentId={student.id}
+            studentName={student.full_name}
+            hasApplications={student.applications.length > 0}
+            onStudentDeleted={() => router.push('/admin/v2/students')}
+          />
+        </div>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Card */}

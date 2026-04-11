@@ -53,8 +53,14 @@ import {
   IconMail,
   IconFileText,
   IconUser,
-  IconUserPlus
+  IconUserPlus,
+  IconEdit,
+  IconTrash
 } from "@tabler/icons-react"
+import { AddStudentDialog } from "@/components/admin/add-student-dialog"
+import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
+import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
+import { ExportStudentsButton } from "@/components/admin/export-students-button"
 
 interface ReferredByPartner {
   full_name: string
@@ -248,52 +254,58 @@ function StudentsListContent() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters and Actions */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search students..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 flex-1">
+              <div className="flex-1">
+                <div className="relative">
+                  <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search students..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
               </div>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="partner_referred">Partner-Referred</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Nationality" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Nationalities</SelectItem>
+                  {nationalities.map((nat) => (
+                    <SelectItem key={nat} value={nat}>{nat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="individual">Individual</SelectItem>
-                <SelectItem value="partner_referred">Partner-Referred</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Nationality" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Nationalities</SelectItem>
-                {nationalities.map((nat) => (
-                  <SelectItem key={nat} value={nat}>{nat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <ExportStudentsButton search={searchQuery} source={sourceFilter} />
+              <AddStudentDialog onStudentAdded={fetchStudents} />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -414,12 +426,39 @@ function StudentsListContent() {
                               View Details
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <EditStudentDialog 
+                              student={student} 
+                              onStudentUpdated={fetchStudents}
+                              trigger={
+                                <button className="flex w-full items-center px-2 py-1.5 text-sm">
+                                  <IconEdit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </button>
+                              }
+                            />
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
                             <a href={`mailto:${student.email}`}>
                               <IconMail className="mr-2 h-4 w-4" />
                               Send Email
                             </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
+                            <DeleteStudentDialog 
+                              studentId={student.id}
+                              studentName={student.full_name}
+                              hasApplications={(student.applications?.total || 0) > 0}
+                              onStudentDeleted={fetchStudents}
+                              trigger={
+                                <button className="flex w-full items-center px-2 py-1.5 text-sm text-destructive">
+                                  <IconTrash className="mr-2 h-4 w-4" />
+                                  Delete
+                                </button>
+                              }
+                            />
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
