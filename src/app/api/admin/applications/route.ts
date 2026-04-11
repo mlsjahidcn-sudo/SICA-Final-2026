@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         status,
         priority,
         notes,
+        profile_snapshot,
         submitted_at,
         created_at,
         updated_at,

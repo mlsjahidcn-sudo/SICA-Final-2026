@@ -218,7 +218,7 @@ export async function GET(
   }
 }
 
-// PUT /api/admin/applications/[id] - Update application status (review)
+// PUT /api/admin/applications/[id] - Update application (status review or content edit)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -226,136 +226,199 @@ export async function PUT(
   try {
     const user = await verifyAuthToken(request);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Only admins can update application status' }, { status: 403 });
+      return NextResponse.json({ error: 'Only admins can update applications' }, { status: 403 });
     }
 
     const { id } = await params;
     const body = await request.json();
-    const { status, review_notes, rejection_reason } = body;
-
-    const validStatuses = [
-      'under_review', 'document_request', 'interview_scheduled',
-      'accepted', 'rejected'
-    ];
-
-    if (!status || !validStatuses.includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-    }
-
     const supabase = getSupabaseClient();
 
-    // Get current application
-    const { data: existing, error: fetchError } = await supabase
-      .from('applications')
-      .select('id, status')
-      .eq('id', id)
-      .single();
+    // Check if this is a status update (review) or content update (edit)
+    const { 
+      status, 
+      review_notes, 
+      rejection_reason,
+      // Content update fields
+      program_id,
+      priority,
+      notes,
+      profile_snapshot
+    } = body;
 
-    if (fetchError || !existing) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    // Status update mode (review)
+    if (status) {
+      const validStatuses = [
+        'under_review', 'document_request', 'interview_scheduled',
+        'accepted', 'rejected', 'draft', 'submitted'
+      ];
+
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+
+      // Get current application
+      const { data: existing, error: fetchError } = await supabase
+        .from('applications')
+        .select('id, status')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !existing) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+
+      const now = new Date().toISOString();
+
+      // Update application - only use columns that exist
+      const updateData: Record<string, unknown> = {
+        status,
+        reviewed_by: user.id,
+        reviewed_at: now,
+        updated_at: now,
+      };
+
+      if (review_notes) updateData.notes = review_notes;
+      if (rejection_reason) updateData.notes = rejection_reason;
+
+      const { error: updateError } = await supabase
+        .from('applications')
+        .update(updateData)
+        .eq('id', id);
+
+      if (updateError) {
+        console.error('Error updating application:', updateError);
+        return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
+      }
+
+      // Record status history in assessment_status_history
+      await supabase
+        .from('assessment_status_history')
+        .insert({
+          application_id: id,
+          old_status: existing.status,
+          new_status: status,
+          notes: review_notes || rejection_reason || `Status changed to ${status}`,
+          changed_by: user.id,
+        });
+
+      // Send email notification to student (async, don't block response)
+      (async () => {
+        try {
+          // Get full application details for email
+          const { data: fullApp } = await supabase
+            .from('applications')
+            .select(`
+              id,
+              students (
+                users (
+                  full_name,
+                  email
+                )
+              ),
+              programs (
+                name,
+                universities (
+                  name_en
+                )
+              )
+            `)
+            .eq('id', id)
+            .single();
+
+          if (fullApp) {
+            const student = Array.isArray(fullApp.students) ? fullApp.students[0] : fullApp.students;
+            const studentUser = student?.users
+              ? (Array.isArray(student.users) ? student.users[0] : student.users)
+              : null;
+            const program = Array.isArray(fullApp.programs) ? fullApp.programs[0] : fullApp.programs;
+            const university = program?.universities
+              ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+              : null;
+            
+            const studentEmail = studentUser?.email || '';
+            const studentName = studentUser?.full_name || 'Student';
+            
+            const emailPayload = getApplicationStatusUpdateTemplate({
+              applicationId: id,
+              studentName,
+              studentEmail,
+              programName: program?.name || 'Program',
+              universityName: university?.name_en || 'Unknown University',
+              status,
+              rejectionReason: rejection_reason,
+            });
+
+            const result = await sendEmail(emailPayload);
+            
+            await logEmail({
+              userId: user.id,
+              emailType: 'application_status_update',
+              recipient: studentEmail,
+              subject: emailPayload.subject,
+              status: result.success ? 'sent' : 'failed',
+              error: result.error,
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send status update email:', emailError);
+        }
+      })();
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Application ${status}` 
+      });
     }
 
+    // Content update mode (edit)
     const now = new Date().toISOString();
-
-    // Update application - only use columns that exist
     const updateData: Record<string, unknown> = {
-      status,
-      reviewed_by: user.id,
-      reviewed_at: now,
       updated_at: now,
     };
 
-    if (review_notes) updateData.notes = review_notes;
-    if (rejection_reason) updateData.notes = rejection_reason;
+    if (program_id !== undefined) updateData.program_id = program_id;
+    if (priority !== undefined) updateData.priority = priority;
+    if (notes !== undefined) updateData.notes = notes;
+    if (profile_snapshot !== undefined) updateData.profile_snapshot = profile_snapshot;
 
-    const { error: updateError } = await supabase
+    const { data: updatedApp, error: updateError } = await supabase
       .from('applications')
       .update(updateData)
-      .eq('id', id);
+      .eq('id', id)
+      .select(`
+        id,
+        status,
+        priority,
+        notes,
+        profile_snapshot,
+        students (
+          id,
+          users (
+            id,
+            full_name,
+            email
+          )
+        ),
+        programs (
+          id,
+          name,
+          degree_level,
+          universities (
+            id,
+            name_en
+          )
+        )
+      `)
+      .single();
 
     if (updateError) {
-      console.error('Error updating application:', updateError);
-      return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
+      console.error('Error updating application content:', updateError);
+      return NextResponse.json({ error: 'Failed to update application', details: updateError.message }, { status: 500 });
     }
-
-    // Record status history in assessment_status_history
-    // (application_status_history doesn't exist)
-    await supabase
-      .from('assessment_status_history')
-      .insert({
-        application_id: id,
-        old_status: existing.status,
-        new_status: status,
-        notes: review_notes || rejection_reason || `Status changed to ${status}`,
-        changed_by: user.id,
-      });
-
-    // Send email notification to student (async, don't block response)
-    (async () => {
-      try {
-        // Get full application details for email
-        const { data: fullApp } = await supabase
-          .from('applications')
-          .select(`
-            id,
-            students (
-              users (
-                full_name,
-                email
-              )
-            ),
-            programs (
-              name,
-              universities (
-                name_en
-              )
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        if (fullApp) {
-          const student = Array.isArray(fullApp.students) ? fullApp.students[0] : fullApp.students;
-          const studentUser = student?.users
-            ? (Array.isArray(student.users) ? student.users[0] : student.users)
-            : null;
-          const program = Array.isArray(fullApp.programs) ? fullApp.programs[0] : fullApp.programs;
-          const university = program?.universities
-            ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-            : null;
-          
-          const studentEmail = studentUser?.email || '';
-          const studentName = studentUser?.full_name || 'Student';
-          
-          const emailPayload = getApplicationStatusUpdateTemplate({
-            applicationId: id,
-            studentName,
-            studentEmail,
-            programName: program?.name || 'Program',
-            universityName: university?.name_en || 'Unknown University',
-            status,
-            rejectionReason: rejection_reason,
-          });
-
-          const result = await sendEmail(emailPayload);
-          
-          await logEmail({
-            userId: user.id,
-            emailType: 'application_status_update',
-            recipient: studentEmail,
-            subject: emailPayload.subject,
-            status: result.success ? 'sent' : 'failed',
-            error: result.error,
-          });
-        }
-      } catch (emailError) {
-        console.error('Failed to send status update email:', emailError);
-      }
-    })();
 
     return NextResponse.json({ 
       success: true, 
-      message: `Application ${status}` 
+      application: updatedApp 
     });
   } catch (error) {
     console.error('Error in admin application PUT:', error);
