@@ -123,6 +123,8 @@ export default function NewUniversityPage() {
     tuition_currency: 'CNY',
     scholarship_available: false,
     scholarship_percentage: '',
+    scholarship_info: '',
+    scholarship_info_cn: '',
     established_year: '',
     is_active: true,
   })
@@ -737,17 +739,39 @@ export default function NewUniversityPage() {
                   </div>
                   
                   {formData.scholarship_available && (
-                    <div className="space-y-2">
-                      <Label htmlFor="scholarship_percentage">Scholarship Coverage (%)</Label>
-                      <Input
-                        id="scholarship_percentage"
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="e.g., 50"
-                        value={formData.scholarship_percentage}
-                        onChange={(e) => setFormData({ ...formData, scholarship_percentage: e.target.value })}
-                      />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="scholarship_percentage">Scholarship Coverage (%)</Label>
+                        <Input
+                          id="scholarship_percentage"
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="e.g., 50"
+                          value={formData.scholarship_percentage}
+                          onChange={(e) => setFormData({ ...formData, scholarship_percentage: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="scholarship_info">Scholarship Information (English)</Label>
+                        <Textarea
+                          id="scholarship_info"
+                          placeholder="Enter detailed scholarship information in English..."
+                          rows={4}
+                          value={formData.scholarship_info}
+                          onChange={(e) => setFormData({ ...formData, scholarship_info: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="scholarship_info_cn">Scholarship Information (Chinese)</Label>
+                        <Textarea
+                          id="scholarship_info_cn"
+                          placeholder="输入奖学金详细信息（中文）..."
+                          rows={4}
+                          value={formData.scholarship_info_cn}
+                          onChange={(e) => setFormData({ ...formData, scholarship_info_cn: e.target.value })}
+                        />
+                      </div>
                     </div>
                   )}
                 </CardContent>

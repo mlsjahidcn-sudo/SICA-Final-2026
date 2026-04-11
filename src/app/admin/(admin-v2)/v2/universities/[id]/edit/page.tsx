@@ -145,6 +145,8 @@ interface UniversityFormData {
   use_default_tuition: boolean
   scholarship_available: boolean
   scholarship_percentage: string
+  scholarship_info: string
+  scholarship_info_cn: string
   
   // Admissions
   has_application_fee: boolean
@@ -197,6 +199,8 @@ const initialFormData: UniversityFormData = {
   use_default_tuition: false,
   scholarship_available: false,
   scholarship_percentage: '',
+  scholarship_info: '',
+  scholarship_info_cn: '',
   has_application_fee: false,
   application_deadline: '',
   intake_months: [],
@@ -303,6 +307,8 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
             use_default_tuition: u.use_default_tuition || false,
             scholarship_available: u.scholarship_available || false,
             scholarship_percentage: u.scholarship_percentage?.toString() || '',
+            scholarship_info: u.scholarship_info || '',
+            scholarship_info_cn: u.scholarship_info_cn || '',
             has_application_fee: u.has_application_fee || false,
             application_deadline: u.application_deadline || '',
             intake_months: Array.isArray(u.intake_months) ? u.intake_months.map(String) : [],
@@ -999,6 +1005,30 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
                       placeholder="e.g., 50 (for 50%)"
                     />
                   </div>
+                  {formData.scholarship_available && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="scholarship_info">Scholarship Information (English)</Label>
+                        <Textarea
+                          id="scholarship_info"
+                          value={formData.scholarship_info}
+                          onChange={(e) => handleInputChange('scholarship_info', e.target.value)}
+                          placeholder="Enter detailed scholarship information in English..."
+                          rows={4}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="scholarship_info_cn">Scholarship Information (Chinese)</Label>
+                        <Textarea
+                          id="scholarship_info_cn"
+                          value={formData.scholarship_info_cn}
+                          onChange={(e) => handleInputChange('scholarship_info_cn', e.target.value)}
+                          placeholder="输入奖学金详细信息（中文）..."
+                          rows={4}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

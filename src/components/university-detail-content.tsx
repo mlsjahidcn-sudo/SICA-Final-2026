@@ -77,6 +77,8 @@ interface University {
   faculty_count: number | null;
   teaching_languages: string[] | null;
   scholarship_available: boolean;
+  scholarship_info: string | null;
+  scholarship_info_cn: string | null;
   description: string | null;
   description_en: string | null;
   description_cn: string | null;
@@ -987,38 +989,26 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                     <CardContent>
                       {university.scholarship_available ? (
                         <div className="space-y-4">
-                          <p className="text-sm text-muted-foreground">
-                            This university offers scholarship opportunities for international students.
-                          </p>
-                          <ItemGroup>
-                            <Item variant="outline">
-                              <ItemMedia variant="icon">
-                                <IconAward className="h-4 w-4 text-primary" />
-                              </ItemMedia>
-                              <ItemContent>
-                                <ItemTitle>Chinese Government Scholarship (CGS)</ItemTitle>
-                                <ItemDescription>Full scholarship covering tuition, accommodation, stipend, and medical insurance.</ItemDescription>
-                              </ItemContent>
-                            </Item>
-                            <Item variant="outline">
-                              <ItemMedia variant="icon">
-                                <IconStar className="h-4 w-4 text-primary" />
-                              </ItemMedia>
-                              <ItemContent>
-                                <ItemTitle>Provincial Government Scholarship</ItemTitle>
-                                <ItemDescription>Partial scholarship covering tuition and accommodation.</ItemDescription>
-                              </ItemContent>
-                            </Item>
-                            <Item variant="outline">
-                              <ItemMedia variant="icon">
-                                <IconSchool className="h-4 w-4 text-primary" />
-                              </ItemMedia>
-                              <ItemContent>
-                                <ItemTitle>University Scholarship</ItemTitle>
-                                <ItemDescription>Merit-based scholarships for outstanding students.</ItemDescription>
-                              </ItemContent>
-                            </Item>
-                          </ItemGroup>
+                          {university.scholarship_info ? (
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                {university.scholarship_info}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              This university offers scholarship opportunities for international students. Please contact the university directly for detailed scholarship information.
+                            </p>
+                          )}
+                          {university.scholarship_percentage && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <IconAward className="h-4 w-4 text-amber-500" />
+                              <span className="font-medium">Scholarship Coverage:</span>
+                              <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                                Up to {university.scholarship_percentage}%
+                              </Badge>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">
