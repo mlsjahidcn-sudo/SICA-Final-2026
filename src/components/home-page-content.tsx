@@ -609,43 +609,106 @@ export function HomePageContent() {
         <PartnersSection />
 
         {/* CTA Section */}
-        <section className="relative overflow-hidden">
-          <Card className="relative w-full rounded-none border-x-0 bg-gradient-to-r from-primary via-primary to-primary/90 overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary-foreground/10 rounded-full blur-2xl" />
-              <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-primary-foreground/5 rounded-full blur-2xl" />
-            </div>
-            
-            <CardContent className="relative px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
-                {/* Content */}
-                <div className="flex-1 text-center lg:text-left">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-foreground mb-1">
-                    Ready to Study in China?
-                  </h2>
-                  <p className="text-sm text-primary-foreground/80 max-w-lg lg:max-w-none">
-                    Join thousands of international students who have successfully started their academic journey.
-                  </p>
+        <section className="relative py-12 sm:py-16 md:py-20 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4">
+            <Card className="relative w-full bg-gradient-to-br from-primary via-primary to-primary/95 overflow-hidden shadow-2xl">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {/* Grid pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+                {/* Decorative circles */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-foreground/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-primary-foreground/5 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary-foreground/5 rounded-full blur-3xl" />
+              </div>
+              
+              <CardContent className="relative px-6 py-10 sm:px-10 sm:py-14 lg:px-16 lg:py-16">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
+                  {/* Content */}
+                  <div className="flex-1 text-center lg:text-left max-w-2xl">
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 mb-4 sm:mb-6">
+                      <Sparkles className="h-4 w-4 text-primary-foreground" />
+                      <span className="text-xs sm:text-sm font-medium text-primary-foreground">
+                        Start Your Journey Today
+                      </span>
+                    </div>
+                    
+                    {/* Heading */}
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-3 sm:mb-4 leading-tight">
+                      Ready to Study in China?
+                    </h2>
+                    
+                    {/* Description */}
+                    <p className="text-sm sm:text-base lg:text-lg text-primary-foreground/80 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                      Join thousands of international students who have successfully started their academic journey. 
+                      Let us help you achieve your dreams with expert guidance every step of the way.
+                    </p>
+                    
+                    {/* Trust indicators */}
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 mt-6 sm:mt-8">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground/70" />
+                        <span className="text-xs sm:text-sm text-primary-foreground/70">Free consultation</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground/70" />
+                        <span className="text-xs sm:text-sm text-primary-foreground/70">No hidden fees</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground/70" />
+                        <span className="text-xs sm:text-sm text-primary-foreground/70">95% success rate</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-end shrink-0">
+                    <Button 
+                      asChild 
+                      size="lg" 
+                      className="bg-primary-foreground text-primary hover:bg-primary-foreground/95 shadow-lg shadow-primary-foreground/20 transition-all duration-300 hover:scale-105 px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-semibold"
+                    >
+                      <Link href="/register">
+                        Create Free Account
+                        <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" data-icon="inline-end" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      size="lg" 
+                      className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/50 hover:text-primary-foreground transition-all duration-300 px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-semibold"
+                    >
+                      <Link href="/contact">
+                        <MessageSquare className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        Contact Us
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
                 
-                {/* Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center lg:justify-end shrink-0">
-                  <Button asChild size="default" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                    <Link href="/register">
-                      Create Free Account
-                      <ArrowRight className="ml-2 h-4 w-4" data-icon="inline-end" />
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="default" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                    <Link href="/contact">
-                      Contact Us
-                    </Link>
-                  </Button>
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mt-10 sm:mt-14 pt-8 sm:pt-10 border-t border-primary-foreground/10">
+                  {[
+                    { value: '50K+', label: 'Students Placed' },
+                    { value: '500+', label: 'Universities' },
+                    { value: '95%', label: 'Success Rate' },
+                    { value: '100+', label: 'Countries' },
+                  ].map((stat, index) => (
+                    <div key={index} className="text-center sm:text-left">
+                      <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-foreground">
+                        {stat.value}
+                      </div>
+                      <div className="text-xs sm:text-sm text-primary-foreground/60 mt-0.5">
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </section>
       </div>
     </>
