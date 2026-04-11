@@ -49,6 +49,7 @@ import {
   IconLanguage,
   IconCategory,
   IconCoinYuan,
+  IconClipboardCheck,
 } from '@tabler/icons-react';
 
 interface University {
@@ -761,15 +762,33 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
               {/* Info */}
               <div className="flex-1 flex flex-col items-center lg:items-start">
                 <h1 className="text-2xl lg:text-3xl font-bold">{university.name_en}</h1>
-                {university.name_cn && (
-                  <p className="text-base text-muted-foreground mt-0.5">{university.name_cn}</p>
-                )}
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <IconMapPin className="h-4 w-4" />
-                  {university.city}, {university.province}
+                
+                {/* Chinese name + Location inline */}
+                <div className="flex flex-wrap items-center gap-2 mt-1 justify-center lg:justify-start">
+                  {university.name_cn && (
+                    <p className="text-base text-muted-foreground">{university.name_cn}</p>
+                  )}
+                  <span className="text-muted-foreground/50">•</span>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <IconMapPin className="h-4 w-4" />
+                    {university.city}, {university.province}
+                  </div>
                 </div>
+                
+                {/* Type Badge */}
+                {university.type && (
+                  <div className="mt-2">
+                    <Badge variant="outline" className={cn(
+                      "text-sm px-3 py-1",
+                      getTypeBadgeStyle(university.type)
+                    )}>
+                      {getTypeLabel(university.type)}
+                    </Badge>
+                  </div>
+                )}
+                
                 {/* Rankings */}
-                <div className="flex items-center gap-4 mt-2 justify-center lg:justify-start">
+                <div className="flex items-center gap-4 mt-3 justify-center lg:justify-start">
                   {university.ranking_national && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <IconTrophy className="h-4 w-4 text-amber-500" />
@@ -791,8 +810,14 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                   <Button asChild size="lg">
                     <Link href={`/apply?university_id=${university.id}`}>Apply Now</Link>
                   </Button>
+                  <Button variant="outline" size="lg" asChild>
+                    <Link href="/assessment">
+                      <IconClipboardCheck className="mr-2 h-4 w-4" />
+                      Free Assessment
+                    </Link>
+                  </Button>
                   {university.website && (
-                    <Button variant="outline" asChild size="lg">
+                    <Button variant="ghost" asChild size="lg">
                       <a href={university.website} target="_blank" rel="noopener noreferrer">
                         <IconGlobe className="mr-2 h-4 w-4" />
                         Visit Website
