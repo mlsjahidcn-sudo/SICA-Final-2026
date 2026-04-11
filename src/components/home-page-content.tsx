@@ -67,6 +67,7 @@ const bentoFeatures = [
     bullets: ['985 & 211 Universities', 'Double First-Class', 'All provinces covered'],
     cta: { text: 'Browse Universities', href: '/universities' },
     size: 'large',
+    badge: 'Featured',
   },
   {
     icon: BookOpen,
@@ -75,6 +76,7 @@ const bentoFeatures = [
     bullets: ['English-taught options', 'All degree levels', 'STEM, Business, Arts'],
     cta: { text: 'Explore Programs', href: '/programs' },
     size: 'medium',
+    badge: 'Popular',
   },
   {
     icon: Users,
@@ -83,6 +85,7 @@ const bentoFeatures = [
     bullets: ['Application review', 'Document preparation', 'Visa assistance'],
     cta: { text: 'Get Started', href: '/apply' },
     size: 'small',
+    badge: 'Trusted',
   },
   {
     icon: FileText,
@@ -91,6 +94,7 @@ const bentoFeatures = [
     bullets: ['One-click apply', 'Track status', 'Document upload'],
     cta: { text: 'Apply Now', href: '/apply' },
     size: 'small',
+    badge: 'Fast',
   },
   {
     icon: MessageSquare,
@@ -99,6 +103,16 @@ const bentoFeatures = [
     bullets: ['Live chat', 'Email support', 'Video consultations'],
     cta: { text: 'Contact Us', href: '/contact' },
     size: 'small',
+    badge: 'Helpful',
+  },
+  {
+    icon: Award,
+    title: 'High Success Rate',
+    description: '95% acceptance rate',
+    bullets: ['Expert review', 'Interview prep', 'Document check'],
+    cta: { text: 'Learn More', href: '/about' },
+    size: 'small',
+    badge: 'Proven',
   },
 ];
 
@@ -389,19 +403,18 @@ export function HomePageContent() {
               {bentoFeatures.map((feature, index) => (
                 <Card 
                   key={index} 
-                  className={cn(
-                    "transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
-                    feature.size === 'large' && 'sm:col-span-2 lg:col-span-2'
-                  )}
+                  className="transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
                 >
                   <CardHeader className="pb-2 sm:pb-4">
                     <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
                       <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10">
                         <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {feature.size === 'large' ? 'Featured' : feature.size === 'medium' ? 'Popular' : ''}
-                      </Badge>
+                      {feature.badge && (
+                        <Badge variant="outline" className="text-xs">
+                          {feature.badge}
+                        </Badge>
+                      )}
                     </div>
                     <CardTitle className="text-base sm:text-lg">{feature.title}</CardTitle>
                     <CardDescription className="text-sm">{feature.description}</CardDescription>
