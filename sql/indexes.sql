@@ -3,15 +3,21 @@
 -- Run this script in Supabase SQL Editor
 -- ============================================
 
+-- Enable pg_trgm extension for text search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- ============================================
 -- UNIVERSITIES TABLE
 -- ============================================
 
--- Index for status filtering (active/inactive)
-CREATE INDEX IF NOT EXISTS idx_universities_status ON universities(status);
+-- Index for is_active filtering
+CREATE INDEX IF NOT EXISTS idx_universities_is_active ON universities(is_active);
 
 -- Index for province filtering
 CREATE INDEX IF NOT EXISTS idx_universities_province ON universities(province);
+
+-- Index for city filtering
+CREATE INDEX IF NOT EXISTS idx_universities_city ON universities(city);
 
 -- Index for type filtering (985, 211, etc.)
 CREATE INDEX IF NOT EXISTS idx_universities_type ON universities(type);
@@ -22,11 +28,10 @@ CREATE INDEX IF NOT EXISTS idx_universities_category ON universities(category);
 -- Index for scholarship availability
 CREATE INDEX IF NOT EXISTS idx_universities_scholarship ON universities(scholarship_available);
 
--- Composite index for common query patterns
-CREATE INDEX IF NOT EXISTS idx_universities_status_type ON universities(status, type);
+-- Composite index for active universities by type
+CREATE INDEX IF NOT EXISTS idx_universities_active_type ON universities(is_active, type);
 
 -- Index for text search (GIN for trigram search)
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_universities_name_search ON universities USING gin(name_en gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_universities_name_cn_search ON universities USING gin(name_cn gin_trgm_ops);
 
@@ -43,14 +48,14 @@ CREATE INDEX IF NOT EXISTS idx_programs_degree_level ON programs(degree_level);
 -- Index for active status
 CREATE INDEX IF NOT EXISTS idx_programs_is_active ON programs(is_active);
 
--- Index for language of instruction
-CREATE INDEX IF NOT EXISTS idx_programs_language ON programs(language);
-
 -- Index for category filtering
 CREATE INDEX IF NOT EXISTS idx_programs_category ON programs(category);
 
 -- Index for sub-category filtering
 CREATE INDEX IF NOT EXISTS idx_programs_sub_category ON programs(sub_category);
+
+-- Index for scholarship availability
+CREATE INDEX IF NOT EXISTS idx_programs_scholarship ON programs(scholarship_available);
 
 -- Composite index for active programs by university
 CREATE INDEX IF NOT EXISTS idx_programs_university_active ON programs(university_id, is_active);
@@ -93,7 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_applications_submitted_at ON applications(submitt
 -- USERS TABLE
 -- ============================================
 
--- Index for email lookup
+-- Index for email lookup (unique)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Index for role filtering
@@ -125,9 +130,6 @@ CREATE INDEX IF NOT EXISTS idx_partners_user_id ON partners(user_id);
 -- Index for status
 CREATE INDEX IF NOT EXISTS idx_partners_status ON partners(status);
 
--- Index for organization
-CREATE INDEX IF NOT EXISTS idx_partners_organization_id ON partners(organization_id);
-
 -- ============================================
 -- MEETINGS TABLE
 -- ============================================
@@ -148,169 +150,78 @@ CREATE INDEX IF NOT EXISTS idx_meetings_status ON meetings(status);
 CREATE INDEX IF NOT EXISTS idx_meetings_status_date ON meetings(status, meeting_date);
 
 -- ============================================
--- NOTIFICATIONS TABLE
--- ============================================
-
--- Index for user relationship
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-
--- Index for is_read
-CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
-
--- Composite index for user's unread notifications
-CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
-
--- Index for created_at
-CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
-
--- ============================================
--- DOCUMENTS TABLE
--- ============================================
-
--- Index for user relationship
-CREATE INDEX IF NOT EXISTS idx_documents_user_id ON application_documents(user_id);
-
--- Index for application relationship
-CREATE INDEX IF NOT EXISTS idx_documents_application_id ON application_documents(application_id);
-
--- Index for status
-CREATE INDEX IF NOT EXISTS idx_documents_status ON application_documents(status);
-
--- Index for document type
-CREATE INDEX IF NOT EXISTS idx_documents_type ON application_documents(document_type);
-
--- ============================================
 -- BLOG POSTS TABLE
 -- ============================================
 
 -- Index for status
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
 
--- Index for slug
-CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
-
--- Index for published_at
-CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(published_at DESC);
+-- Index for category
+CREATE INDEX IF NOT EXISTS idx_blog_posts_category_id ON blog_posts(category_id);
 
 -- Index for author
 CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
 
--- Index for category
-CREATE INDEX IF NOT EXISTS idx_blog_posts_category_id ON blog_posts(category_id);
+-- Index for published_at
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(published_at DESC);
+
+-- Composite index for published posts
+CREATE INDEX IF NOT EXISTS idx_blog_posts_status_published ON blog_posts(status, published_at DESC);
 
 -- Index for text search
 CREATE INDEX IF NOT EXISTS idx_blog_posts_title_search ON blog_posts USING gin(title gin_trgm_ops);
 
--- ============================================
--- TESTIMONIALS TABLE
--- ============================================
-
--- Index for status
-CREATE INDEX IF NOT EXISTS idx_testimonials_status ON testimonials(status);
-
--- Index for featured
-CREATE INDEX IF NOT EXISTS idx_testimonials_featured ON testimonials(is_featured);
-
--- Index for display order
-CREATE INDEX IF NOT EXISTS idx_testimonials_display_order ON testimonials(display_order);
+-- Index for slug lookup
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 
 -- ============================================
--- PARTNER SHOWCASES TABLE
--- ============================================
-
--- Index for status
-CREATE INDEX IF NOT EXISTS idx_partner_showcases_status ON partner_showcases(status);
-
--- Index for type
-CREATE INDEX IF NOT EXISTS idx_partner_showcases_type ON partner_showcases(partner_type);
-
--- Index for featured
-CREATE INDEX IF NOT EXISTS idx_partner_showcases_featured ON partner_showcases(is_featured);
-
--- Index for display order
-CREATE INDEX IF NOT EXISTS idx_partner_showcases_display_order ON partner_showcases(display_order);
-
--- ============================================
--- FAVORITES TABLE
+-- NOTIFICATIONS TABLE
 -- ============================================
 
 -- Index for user relationship
-CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 
--- Index for program relationship
-CREATE INDEX IF NOT EXISTS idx_favorites_program_id ON favorites(program_id);
+-- Index for read status
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
--- Index for university relationship
-CREATE INDEX IF NOT EXISTS idx_favorites_university_id ON favorites(university_id);
+-- Composite index for user's unread notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read, created_at DESC);
 
--- Composite unique index to prevent duplicates
-CREATE UNIQUE INDEX IF NOT EXISTS idx_favorites_user_program ON favorites(user_id, program_id) WHERE program_id IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_favorites_user_university ON favorites(user_id, university_id) WHERE university_id IS NOT NULL;
-
--- ============================================
--- CHAT TABLES
--- ============================================
-
--- Index for chat sessions by user
-CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
-
--- Index for chat messages by session
-CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
-
--- Index for chat messages created_at
-CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+-- Index for created_at
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 -- ============================================
--- ANALYZE TABLES (update statistics)
--- ============================================
-ANALYZE universities;
-ANALYZE programs;
-ANALYZE applications;
-ANALYZE users;
-ANALYZE students;
-ANALYZE partners;
-ANALYZE meetings;
-ANALYZE notifications;
-ANALYZE application_documents;
-ANALYZE blog_posts;
-ANALYZE testimonials;
-ANALYZE partner_showcases;
-ANALYZE favorites;
-ANALYZE chat_sessions;
-ANALYZE chat_messages;
-
--- ============================================
--- MATERIALIZED VIEWS FOR DASHBOARD STATS
+-- APPLICATION DOCUMENTS TABLE
 -- ============================================
 
--- Dashboard statistics materialized view
-CREATE MATERIALIZED VIEW IF NOT EXISTS dashboard_statistics AS
+-- Index for application relationship
+CREATE INDEX IF NOT EXISTS idx_application_documents_application_id ON application_documents(application_id);
+
+-- Index for document type
+CREATE INDEX IF NOT EXISTS idx_application_documents_type ON application_documents(document_type);
+
+-- Index for status
+CREATE INDEX IF NOT EXISTS idx_application_documents_status ON application_documents(status);
+
+-- Composite index for application's documents by status
+CREATE INDEX IF NOT EXISTS idx_application_documents_app_status ON application_documents(application_id, status);
+
+-- ============================================
+-- ANALYTICS MATERIALIZED VIEW (Optional)
+-- ============================================
+
+-- Materialized view for dashboard statistics
+-- Refresh periodically with: REFRESH MATERIALIZED VIEW dashboard_stats;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS dashboard_stats AS
 SELECT 
   (SELECT COUNT(*) FROM applications) as total_applications,
-  (SELECT COUNT(*) FROM applications WHERE status = 'pending') as pending_applications,
-  (SELECT COUNT(*) FROM applications WHERE status = 'under_review') as under_review_applications,
-  (SELECT COUNT(*) FROM applications WHERE status = 'approved') as approved_applications,
-  (SELECT COUNT(*) FROM applications WHERE status = 'rejected') as rejected_applications,
-  (SELECT COUNT(DISTINCT student_id) FROM applications) as total_students,
-  (SELECT COUNT(*) FROM universities WHERE status = 'active') as total_universities,
-  (SELECT COUNT(*) FROM programs WHERE is_active = true) as total_programs,
-  (SELECT COUNT(*) FROM users WHERE role = 'student') as total_users_students,
-  (SELECT COUNT(*) FROM users WHERE role = 'partner') as total_users_partners;
+  (SELECT COUNT(*) FROM applications WHERE status = 'submitted') as pending_applications,
+  (SELECT COUNT(*) FROM applications WHERE status = 'accepted') as accepted_applications,
+  (SELECT COUNT(*) FROM students) as total_students,
+  (SELECT COUNT(*) FROM partners WHERE status = 'approved') as active_partners,
+  (SELECT COUNT(*) FROM universities WHERE is_active = true) as active_universities,
+  (SELECT COUNT(*) FROM programs WHERE is_active = true) as active_programs;
 
--- Create index on materialized view
-CREATE UNIQUE INDEX IF NOT EXISTS idx_dashboard_statistics ON dashboard_statistics (total_applications);
-
--- ============================================
--- REFRESH MATERIALIZED VIEW (run via cron job)
--- ============================================
--- To refresh: REFRESH MATERIALIZED VIEW dashboard_statistics;
--- Recommended: Create a pg_cron job to refresh every 5-15 minutes
-
--- ============================================
--- QUERY OPTIMIZATION HINTS
--- ============================================
--- Add these comments to remind developers of best practices:
-
-COMMENT ON TABLE applications IS 'Use idx_applications_status_created for status-filtered listings';
-COMMENT ON TABLE programs IS 'Use idx_programs_university_active for fetching programs by university';
-COMMENT ON TABLE universities IS 'Use gin indexes for text search on name_en/name_cn';
+-- Create index on materialized view for concurrent refresh
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dashboard_stats ON dashboard_stats (total_applications);
