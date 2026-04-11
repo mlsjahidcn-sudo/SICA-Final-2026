@@ -6,21 +6,31 @@ import { UniversitySchema, BreadcrumbSchema } from '@/components/seo/json-ld';
 
 const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
 
+// Helper to check if string is a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const supabase = getSupabaseClient();
   
-  const { data: university } = await supabase
-    .from('universities')
-    .select('id, name_en, name_cn, city, province, description, meta_title, meta_description, og_image')
-    .eq('id', id)
-    .single();
+  // Query by slug or id
+  const query = isUUID(id) 
+    ? supabase.from('universities').select('id, slug, name_en, name_cn, city, province, description, meta_title, meta_description, og_image').eq('id', id).single()
+    : supabase.from('universities').select('id, slug, name_en, name_cn, city, province, description, meta_title, meta_description, og_image').eq('slug', id).single();
+  
+  const { data: university } = await query;
 
   if (!university) {
     return {
       title: 'University Not Found',
     };
   }
+
+  // Use slug for URL if available, otherwise use id
+  const urlSlug = university.slug || university.id;
 
   return {
     title: university.meta_title || `${university.name_en} - Study in China`,
@@ -38,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description: university.meta_description || university.description || `Study at ${university.name_en} in ${university.city}, ${university.province}`,
       images: university.og_image ? [{ url: university.og_image, width: 1200, height: 630 }] : [],
       type: 'website',
-      url: `${baseUrl}/universities/${id}`,
+      url: `${baseUrl}/universities/${urlSlug}`,
     },
     twitter: {
       card: 'summary_large_image',
@@ -47,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       images: university.og_image ? [university.og_image] : [],
     },
     alternates: {
-      canonical: `${baseUrl}/universities/${id}`,
+      canonical: `${baseUrl}/universities/${urlSlug}`,
     },
   };
 }
@@ -56,11 +66,12 @@ export default async function UniversityDetailPage({ params }: { params: Promise
   const { id } = await params;
   const supabase = getSupabaseClient();
   
-  const { data: university } = await supabase
-    .from('universities')
-    .select('id, name_en, name_cn, city, province, description, website_url, logo_url')
-    .eq('id', id)
-    .single();
+  // Query by slug or id
+  const query = isUUID(id) 
+    ? supabase.from('universities').select('id, slug, name_en, name_cn, city, province, description, website_url, logo_url').eq('id', id).single()
+    : supabase.from('universities').select('id, slug, name_en, name_cn, city, province, description, website_url, logo_url').eq('slug', id).single();
+  
+  const { data: university } = await query;
 
   if (!university) {
     notFound();
@@ -77,10 +88,12 @@ export default async function UniversityDetailPage({ params }: { params: Promise
     logo_url: university.logo_url,
   };
 
+  const urlSlug = university.slug || university.id;
+  
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
     { name: 'Universities', url: '/universities' },
-    { name: university.name_en, url: `/universities/${id}` },
+    { name: university.name_en, url: `/universities/${urlSlug}` },
   ];
 
   return (
@@ -88,7 +101,7 @@ export default async function UniversityDetailPage({ params }: { params: Promise
       {/* Structured Data for SEO */}
       <UniversitySchema university={universitySchemaData} />
       <BreadcrumbSchema items={breadcrumbItems} />
-      <UniversityDetailContent universityId={id} />
+      <UniversityDetailContent universityId={university.id} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { SchemaOrg } from './schema-org';
+import { Breadcrumbs } from './breadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardAction, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -754,15 +755,14 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
         <div className="border-b bg-card">
           <div className="max-w-7xl mx-auto px-4 py-6">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-              <Link href="/" className="hover:text-foreground">
-                <IconBuilding className="w-4 h-4" />
-              </Link>
-              <span>›</span>
-              <Link href="/universities" className="hover:text-foreground">Universities</Link>
-              <span>›</span>
-              <span className="text-foreground truncate">{university.name_en}</span>
-            </nav>
+            <Breadcrumbs 
+              items={[
+                { label: 'Home', href: '/' },
+                { label: 'Universities', href: '/universities' },
+                { label: university.name_en },
+              ]} 
+              className="mb-6"
+            />
 
             {/* Hero Section */}
             <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6 text-center lg:text-left">

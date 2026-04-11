@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import {
   IconSchool as Building2,
   IconStar as Award,
@@ -194,11 +195,13 @@ export function ProgramDetailContent({ program }: { program: Program }) {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Link href="/programs" className="hover:text-foreground">Programs</Link>
-              <IconChevronRight className="h-4 w-4" />
-              <span className="text-foreground">{program.name}</span>
-            </nav>
+            <Breadcrumbs 
+              items={[
+                { label: 'Home', href: '/' },
+                { label: 'Programs', href: '/programs' },
+                { label: program.name },
+              ]} 
+            />
 
             {/* Program Header */}
             <div>

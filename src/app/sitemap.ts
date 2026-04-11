@@ -3,6 +3,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 interface University {
   id: string;
+  slug: string | null;
   name_en: string;
   updated_at: string | null;
 }
@@ -46,11 +47,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = getSupabaseClient();
   const { data: universities } = await supabase
     .from('universities')
-    .select('id, name_en, updated_at')
+    .select('id, slug, name_en, updated_at')
     .eq('is_active', true);
 
   const universityEntries: MetadataRoute.Sitemap = (universities || []).map((uni: University) => ({
-    url: `${baseUrl}/universities/${uni.id}`,
+    url: `${baseUrl}/universities/${uni.slug || uni.id}`,
     lastModified: uni.updated_at ? new Date(uni.updated_at) : new Date(),
     changeFrequency: 'monthly' as const,
     priority: 0.7,

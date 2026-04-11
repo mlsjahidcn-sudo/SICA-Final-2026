@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name_en: body.name_en,
         name_cn: body.name_cn || null,
+        slug: body.slug || null,
         logo_url: body.logo_url || null,
         province: body.province,
         city: body.city,

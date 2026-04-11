@@ -76,7 +76,7 @@ async function getProgramByIdOrSlug(idOrSlug: string) {
     if (programById) return programById;
   }
 
-  // Try by name (slug-like behavior since slug column doesn't exist)
+  // Try by name (slug-like behavior)
   const { data: programBySlug } = await supabase
     .from('programs')
     .select(`
