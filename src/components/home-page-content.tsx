@@ -53,7 +53,7 @@ interface FeaturedUniversity {
   logo_url: string | null;
   city: string;
   province: string;
-  tags: string[];
+  type: string | null;
   ranking_national: number | null;
   scholarship_available: boolean;
 }
@@ -318,23 +318,20 @@ export function HomePageContent() {
                                 
                                 {/* Meta info */}
                                 <div className="flex items-center flex-wrap gap-2 mt-2">
-                                  {/* Type */}
-                                  {university.tags && university.tags.length > 0 && university.tags.map((t) => (
+                                  {/* Type Badge */}
+                                  {university.type && (
                                     <span
-                                      key={t}
                                       className={`
                                         inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                        ${t === '985' ? 'bg-destructive/10 text-destructive' : ''}
-                                        ${t === '211' ? 'bg-primary/10 text-primary' : ''}
-                                        ${t === 'double_first_class' ? 'bg-chart-3/10 text-chart-3' : ''}
-                                        ${t === 'Double First-Class' ? 'bg-chart-3/10 text-chart-3' : ''}
-                                        ${t === 'public' ? 'bg-chart-2/10 text-chart-2' : ''}
-                                        ${t === 'private' ? 'bg-chart-4/10 text-chart-4' : ''}
+                                        ${university.type === '985' ? 'bg-destructive/10 text-destructive' : ''}
+                                        ${university.type === '211' ? 'bg-primary/10 text-primary' : ''}
+                                        ${university.type === 'Double First-Class' ? 'bg-chart-3/10 text-chart-3' : ''}
+                                        ${university.type === 'Provincial' ? 'bg-chart-2/10 text-chart-2' : ''}
                                       `}
                                     >
-                                      {t === 'double_first_class' ? 'DOUBLE FIRST CLASS' : t.toUpperCase()}
+                                      {university.type === 'Double First-Class' ? 'DOUBLE FIRST CLASS' : university.type.toUpperCase()}
                                     </span>
-                                  ))}
+                                  )}
                                   
                                   {/* Location */}
                                   <span className="inline-flex items-center text-xs text-muted-foreground">
