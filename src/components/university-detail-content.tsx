@@ -930,8 +930,11 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                             className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
                           >
                             {/* Degree Badge */}
-                            <Badge variant="secondary" className="font-semibold px-2 py-0.5 text-[10px] shrink-0">
-                              {program.degree_level?.toUpperCase().slice(0, 3) || 'N/A'}
+                            <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px] shrink-0">
+                              {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
+                               program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
+                               program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
+                               program.degree_level || 'N/A'}
                             </Badge>
 
                             {/* Program Name */}
