@@ -85,9 +85,10 @@ export async function GET(request: NextRequest) {
 
     // Query 2: Students without user accounts (orphan students)
     // These are students where user_id is null
+    // Use admin_notes as fallback for name storage
     let orphanQuery = supabaseAdmin
       .from('students')
-      .select('id, user_id, nationality, gender, current_address, wechat_id, created_at', { count: 'exact' })
+      .select('id, user_id, admin_notes, nationality, gender, current_address, wechat_id, created_at', { count: 'exact' })
       .is('user_id', null)
       .order('created_at', { ascending: false });
 
@@ -174,26 +175,41 @@ export async function GET(request: NextRequest) {
 
     // Add orphan students (students without user accounts)
     if (orphanStudents && orphanStudents.length > 0) {
-      const formattedOrphanStudents = orphanStudents.map(orphan => ({
-        id: orphan.id,
-        email: null,
-        full_name: 'Unknown (No User Account)', // No user account, so no name
-        phone: null,
-        avatar_url: null,
-        is_active: true,
-        created_at: orphan.created_at,
-        updated_at: null,
-        referred_by_partner_id: null,
-        nationality: orphan.nationality,
-        gender: orphan.gender,
-        current_address: orphan.current_address,
-        wechat_id: orphan.wechat_id,
-        source: 'orphan' as const,
-        referred_by_partner: null,
-        applications: { total: 0, pending: 0 },
-        has_user_account: false,
-        students: [], // Empty since no user account
-      }));
+      const formattedOrphanStudents = orphanStudents.map(orphan => {
+        // Extract name from admin_notes if stored with "NAME:" prefix
+        // Format: "NAME: John Doe" or just the name
+        let displayName = 'Unknown (No User Account)';
+        if (orphan.admin_notes) {
+          const notes = orphan.admin_notes;
+          if (notes.startsWith('NAME:')) {
+            displayName = notes.substring(5).trim();
+          } else if (!notes.includes(' ') || notes.length < 50) {
+            // If it's a short string without spaces, it might be just a name
+            displayName = notes;
+          }
+        }
+        
+        return {
+          id: orphan.id,
+          email: null,
+          full_name: displayName,
+          phone: null,
+          avatar_url: null,
+          is_active: true,
+          created_at: orphan.created_at,
+          updated_at: null,
+          referred_by_partner_id: null,
+          nationality: orphan.nationality,
+          gender: orphan.gender,
+          current_address: orphan.current_address,
+          wechat_id: orphan.wechat_id,
+          source: 'orphan' as const,
+          referred_by_partner: null,
+          applications: { total: 0, pending: 0 },
+          has_user_account: false,
+          students: [], // Empty since no user account
+        };
+      });
       enrichedStudents = [...enrichedStudents, ...formattedOrphanStudents];
     }
 
@@ -439,6 +455,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Add optional fields only if they have values
+    // Store full_name in admin_notes for orphan students (format: "NAME: full_name")
+    if (full_name && skip_user_creation) {
+      studentInsertData.admin_notes = `NAME: ${full_name}`;
+    }
     if (nationality) studentInsertData.nationality = nationality;
     if (gender) studentInsertData.gender = gender;
     if (date_of_birth) studentInsertData.date_of_birth = date_of_birth;
