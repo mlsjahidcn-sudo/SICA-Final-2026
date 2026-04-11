@@ -440,8 +440,8 @@ export async function POST(request: NextRequest) {
         wechat_id: wechat_id || null,
         personal_statement: personal_statement || null,
         study_plan: study_plan || null,
-        admin_notes: admin_notes || null,
-        partner_id: partner_id || null,
+        // admin_notes is in the schema but PostgREST may not have it cached
+        // Use raw SQL if needed, or omit for now
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
