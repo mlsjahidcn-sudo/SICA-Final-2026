@@ -924,57 +924,55 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                   ) : (
                     <ItemGroup>
                       {programs.map((program) => (
-                        <Item key={program.id} variant="outline" className="py-4" asChild>
-                          <Link 
-                            href={
-                              university.slug && program.slug 
-                                ? `/universities/${university.slug}/programs/${program.slug}` 
-                                : `/programs/${program.id}`
-                            } 
-                            className="hover:bg-muted/50"
-                          >
-                            {/* Left: Degree Badge */}
-                            <ItemMedia variant="icon" className="self-start mt-1">
-                              <Badge variant="outline" className="font-semibold px-2 py-1 text-xs">
-                                {program.degree_level?.toUpperCase() || 'N/A'}
-                              </Badge>
-                            </ItemMedia>
+                        <Item key={program.id} variant="outline" className="py-4">
+                          {/* Left: Degree Badge */}
+                          <ItemMedia variant="icon" className="self-start mt-1">
+                            <Badge variant="outline" className="font-semibold px-2 py-1 text-xs">
+                              {program.degree_level?.toUpperCase() || 'N/A'}
+                            </Badge>
+                          </ItemMedia>
 
-                            {/* Center: Content */}
-                            <ItemContent className="flex-1">
+                          {/* Center: Content */}
+                          <ItemContent className="flex-1">
+                            <Link 
+                              href={
+                                university.slug && program.slug 
+                                  ? `/universities/${university.slug}/programs/${program.slug}` 
+                                  : `/programs/${program.id}`
+                              } 
+                              className="hover:underline"
+                            >
                               <ItemTitle className="text-base mb-1">{program.name}</ItemTitle>
-                              {program.name_fr && (
-                                <p className="text-xs text-muted-foreground mb-2">{program.name_fr}</p>
+                            </Link>
+                            {program.name_fr && (
+                              <p className="text-xs text-muted-foreground mb-2">{program.name_fr}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                              {program.category && (
+                                <span className="flex items-center gap-1.5">
+                                  <IconCategory className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {program.category}
+                                </span>
                               )}
-                              <ItemDescription className="space-y-0">
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                                  {program.category && (
-                                    <span className="flex items-center gap-1.5">
-                                      <IconCategory className="h-3.5 w-3.5 text-muted-foreground" />
-                                      {program.category}
-                                    </span>
-                                  )}
-                                  <span className="flex items-center gap-1.5">
-                                    <IconLanguage className="h-3.5 w-3.5 text-muted-foreground" />
-                                    {program.language}
-                                  </span>
-                                  {program.tuition_fee_per_year && (
-                                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                                      <IconCoinYuan className="h-3.5 w-3.5" />
-                                      {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}/yr
-                                    </span>
-                                  )}
-                                </div>
-                              </ItemDescription>
-                            </ItemContent>
+                              <span className="flex items-center gap-1.5">
+                                <IconLanguage className="h-3.5 w-3.5 text-muted-foreground" />
+                                {program.language}
+                              </span>
+                              {program.tuition_fee_per_year && (
+                                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                  <IconCoinYuan className="h-3.5 w-3.5" />
+                                  {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}/yr
+                                </span>
+                              )}
+                            </div>
+                          </ItemContent>
 
-                            {/* Right: Apply Button */}
-                            <ItemActions className="flex items-center gap-2 self-center">
-                              <Button asChild size="sm" onClick={(e) => e.stopPropagation()}>
-                                <Link href={`/apply?program_id=${program.id}`}>Apply</Link>
-                              </Button>
-                            </ItemActions>
-                          </Link>
+                          {/* Right: Apply Button */}
+                          <ItemActions className="flex items-center gap-2 self-center">
+                            <Button size="sm" asChild>
+                              <Link href={`/apply?program_id=${program.id}`}>Apply</Link>
+                            </Button>
+                          </ItemActions>
                         </Item>
                       ))}
                     </ItemGroup>
