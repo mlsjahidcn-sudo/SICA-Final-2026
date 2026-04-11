@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { ContentAnalysisPanel } from '@/components/admin-v2/content-analysis-panel';
 import {
   IconFileText,
   IconArrowLeft,
@@ -473,16 +474,20 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
       </Card>
 
       <form onSubmit={handleSubmit}>
-        <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="content">Content</TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
-            <TabsTrigger value="seo">SEO</TabsTrigger>
-            <TabsTrigger value="links">Internal Links</TabsTrigger>
-            <TabsTrigger value="faqs">FAQs</TabsTrigger>
-            <TabsTrigger value="schema">Schema</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content Area */}
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="content" className="w-full">
+              <TabsList className="grid w-full grid-cols-8">
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="seo">SEO</TabsTrigger>
+                <TabsTrigger value="links">Links</TabsTrigger>
+                <TabsTrigger value="faqs">FAQs</TabsTrigger>
+                <TabsTrigger value="schema">Schema</TabsTrigger>
+                <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+              </TabsList>
 
           {/* Content Tab */}
           <TabsContent value="content" className="space-y-6 mt-6">
@@ -824,6 +829,20 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
             </Card>
           </TabsContent>
 
+          {/* Analysis Tab */}
+          <TabsContent value="analysis" className="space-y-6 mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ContentAnalysisPanel
+                title={formData.title_en}
+                content={formData.content_en}
+                seoTitle={formData.seo_title}
+                seoDescription={formData.seo_description}
+                seoKeywords={formData.seo_keywords}
+                excerpt={formData.excerpt_en}
+              />
+            </div>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6 mt-6">
             <div className="space-y-4">
@@ -878,6 +897,8 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
             </div>
           </TabsContent>
         </Tabs>
+            </div>
+        </div>
       </form>
     </div>
   );
