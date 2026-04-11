@@ -8,7 +8,7 @@
  * Environment Variables:
  * - MOONSHOT_API_KEY: Moonshot API key (required)
  * - MOONSHOT_BASE_URL: Moonshot API base URL (default: https://api.moonshot.cn/v1)
- * - MOONSHOT_MODEL: Model to use (default: moonshot-v1-128k)
+ * - MOONSHOT_MODEL: Model to use (default: kimi-k2-5)
  */
 
 import OpenAI from 'openai';
@@ -16,12 +16,14 @@ import OpenAI from 'openai';
 // Moonshot API configuration
 const MOONSHOT_API_KEY = process.env.MOONSHOT_API_KEY || '';
 const MOONSHOT_BASE_URL = process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1';
-const MOONSHOT_MODEL = process.env.MOONSHOT_MODEL || 'moonshot-v1-128k';
+const MOONSHOT_MODEL = process.env.MOONSHOT_MODEL || 'kimi-k2.5';
 
 // Available Moonshot models
 export const MOONSHOT_MODELS = {
   // Kimi K2.5 models (latest, most capable)
-  KIMI_K2_5: 'kimi-k2-5', // Kimi K2.5 - most intelligent
+  KIMI_K2_5: 'kimi-k2.5', // Kimi K2.5 - most intelligent, 262K context
+  KIMI_K2_THINKING: 'kimi-k2-thinking', // Kimi K2 with thinking mode
+  KIMI_K2_TURBO: 'kimi-k2-turbo-preview', // Kimi K2 Turbo preview
   
   // Moonshot V1 models (legacy)
   V1_8K: 'moonshot-v1-8k',
@@ -76,6 +78,26 @@ export interface ChatMessage {
 export type StreamCallback = (chunk: string) => void;
 
 /**
+ * Check if the model requires temperature = 1
+ * Kimi K2.5 and related models only accept temperature = 1
+ */
+function isKimiModel(model: string): boolean {
+  return model.startsWith('kimi-');
+}
+
+/**
+ * Get the effective temperature for the model
+ * Kimi models only accept temperature = 1
+ */
+function getEffectiveTemperature(model: string, requestedTemp?: number): number {
+  if (isKimiModel(model)) {
+    // Kimi models only accept temperature = 1
+    return 1;
+  }
+  return requestedTemp ?? 0.7;
+}
+
+/**
  * Invoke LLM with messages and return the full response
  */
 export async function invokeLLM(
@@ -88,6 +110,7 @@ export async function invokeLLM(
 ): Promise<string> {
   const client = getLLMClient();
   const model = options.model || getModel();
+  const temperature = getEffectiveTemperature(model, options.temperature);
 
   const response = await client.chat.completions.create({
     model,
@@ -95,7 +118,7 @@ export async function invokeLLM(
       role: m.role,
       content: m.content,
     })),
-    temperature: options.temperature ?? 0.7,
+    temperature,
     max_tokens: options.maxTokens,
   });
 
@@ -116,6 +139,7 @@ export async function* streamLLM(
 ): AsyncGenerator<string> {
   const client = getLLMClient();
   const model = options.model || getModel();
+  const temperature = getEffectiveTemperature(model, options.temperature);
 
   const stream = await client.chat.completions.create({
     model,
@@ -123,7 +147,7 @@ export async function* streamLLM(
       role: m.role,
       content: m.content,
     })),
-    temperature: options.temperature ?? 0.7,
+    temperature,
     max_tokens: options.maxTokens,
     stream: true,
   });
