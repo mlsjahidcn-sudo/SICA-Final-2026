@@ -447,6 +447,26 @@ function InfoSidebarCard({ university }: { university: University }) {
           <CardTitle>Quick Info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {university.ranking_national && (
+            <Field orientation="horizontal">
+              <FieldTitle className="text-muted-foreground flex items-center gap-1.5">
+                <IconTrophy className="h-4 w-4 text-amber-500" />
+                National Rank
+              </FieldTitle>
+              <FieldDescription className="font-semibold">#{university.ranking_national}</FieldDescription>
+            </Field>
+          )}
+
+          {university.ranking_international && (
+            <Field orientation="horizontal">
+              <FieldTitle className="text-muted-foreground flex items-center gap-1.5">
+                <IconGlobe className="h-4 w-4 text-blue-500" />
+                World Rank
+              </FieldTitle>
+              <FieldDescription className="font-semibold">#{university.ranking_international}</FieldDescription>
+            </Field>
+          )}
+
           {university.founded_year && (
             <Field orientation="horizontal">
               <FieldTitle className="text-muted-foreground">Founded</FieldTitle>
@@ -787,24 +807,6 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                   </div>
                 )}
                 
-                {/* Rankings */}
-                <div className="flex items-center gap-4 mt-3 justify-center lg:justify-start">
-                  {university.ranking_national && (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <IconTrophy className="h-4 w-4 text-amber-500" />
-                      <span className="font-semibold">#{university.ranking_national}</span>
-                      <span className="text-muted-foreground">National</span>
-                    </div>
-                  )}
-                  {university.ranking_international && (
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <IconGlobe className="h-4 w-4 text-blue-500" />
-                      <span className="font-semibold">#{university.ranking_international}</span>
-                      <span className="text-muted-foreground">World</span>
-                    </div>
-                  )}
-                </div>
-
                 {/* CTA Buttons */}
                 <div className="flex flex-wrap gap-3 mt-4 justify-center lg:justify-start">
                   <Button asChild size="lg">
