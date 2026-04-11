@@ -3,7 +3,18 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import { 
   MessageSquare, 
   X, 
@@ -17,7 +28,20 @@ import {
   History, 
   Plus,
   Trash2,
-  Clock
+  Clock,
+  Expand,
+  Shrink,
+  Mic,
+  MicOff,
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  Download,
+  Mail,
+  ArrowRight,
+  ExternalLink,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChatMarkdown } from '@/components/chat-markdown';
@@ -73,6 +97,7 @@ interface Message {
   universityData?: Map<number, UniversityCardData>;
   programData?: Map<number, ProgramCardData>;
   loading?: boolean;
+  rating?: 'positive' | 'negative';
 }
 
 const WHATSAPP_NUMBER = '+8617325764171';
@@ -80,13 +105,15 @@ const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER.replace(/\+/g, '')}`;
 
 // Default quick actions shown at start
 const DEFAULT_QUICK_ACTIONS = [
-  { label: 'Scholarships', query: 'What scholarship options are available for international students?' },
-  { label: 'Apply Now', query: 'How do I apply to a Chinese university?' },
-  { label: 'Programs', query: 'What types of programs are available?' },
-  { label: 'Top Universities', query: 'What are the top universities in China?' },
+  { label: '🎓 Scholarships', query: 'What scholarship options are available for international students?' },
+  { label: '📝 Apply Now', query: 'How do I apply to a Chinese university?' },
+  { label: '📚 Programs', query: 'What types of programs are available?' },
+  { label: '🏆 Top Universities', query: 'What are the top universities in China?' },
 ];
 
 const STORAGE_KEY = 'sica-chat-history';
+const LEAD_CAPTURE_KEY = 'sica-lead-captured';
+const LEAD_CAPTURE_AFTER_MESSAGES = 5;
 const MAX_HISTORY_CONVERSATIONS = 10;
 
 interface Conversation {
@@ -99,205 +126,195 @@ interface Conversation {
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentConversationId, setCurrentConversationId] = useState<string>('default');
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
+  const [messageCount, setMessageCount] = useState(0);
   
-  // Load conversations from localStorage on mount
+  // Voice input state
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  
+  // Lead capture state
+  const [showLeadCapture, setShowLeadCapture] = useState(false);
+  const [leadEmail, setLeadEmail] = useState('');
+  const [leadName, setLeadName] = useState('');
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+  
+  // Share dialog state
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize speech recognition
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Convert string dates back to Date objects
-        const hydrated = parsed.map((conv: Conversation) => ({
-          ...conv,
-          createdAt: new Date(conv.createdAt),
-          updatedAt: new Date(conv.updatedAt),
-          messages: conv.messages.map((msg: Message) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }));
-        setConversations(hydrated);
-        
-        // Load the most recent conversation or default
-        if (hydrated.length > 0) {
-          const mostRecent = hydrated[0];
-          setCurrentConversationId(mostRecent.id);
-          setMessages(mostRecent.messages);
-        }
-      } catch (e) {
-        console.error('Failed to load chat history:', e);
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = Array.from(event.results)
+            .map((result: any) => result[0].transcript)
+            .join('');
+          setInputValue(transcript);
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current.onerror = () => {
+          setIsListening(false);
+        };
       }
     }
   }, []);
-  
-  // Save conversations to localStorage whenever they change
+
+  // Load history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const conversations = parsed.map((conv: any) => ({
+          ...conv,
+          createdAt: new Date(conv.createdAt),
+          updatedAt: new Date(conv.updatedAt),
+          messages: conv.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })),
+        }));
+        setConversations(conversations);
+      }
+    } catch (e) {
+      console.error('Failed to load chat history:', e);
+    }
+  }, []);
+
+  // Save to localStorage
   useEffect(() => {
     if (conversations.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.slice(0, MAX_HISTORY_CONVERSATIONS)));
+      } catch (e) {
+        console.error('Failed to save chat history:', e);
+      }
     }
   }, [conversations]);
-  
-  // Default greeting message
-  const defaultMessages: Message[] = [
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Hello! 👋 I'm **SICA AI Assistant**. I can help you:\n\n• Find universities and programs in China\n• Understand scholarship options\n• Navigate the application process\n• Answer questions about studying in China\n\nHow can I help you today?",
-      timestamp: new Date(),
-    },
-  ];
-  
-  const [messages, setMessages] = useState<Message[]>(defaultMessages);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  
-  // Create a new conversation
-  const createNewConversation = useCallback(() => {
-    const newId = Date.now().toString();
-    const newConversation: Conversation = {
-      id: newId,
-      title: 'New Conversation',
-      messages: defaultMessages,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    setConversations(prev => [newConversation, ...prev].slice(0, MAX_HISTORY_CONVERSATIONS));
-    setCurrentConversationId(newId);
-    setMessages(defaultMessages);
-    setShowHistory(false);
-    setFollowUpQuestions([]);
-    setSessionId(null);
-  }, [defaultMessages]);
-  
-  // Switch to a different conversation
-  const switchConversation = useCallback((conversationId: string) => {
-    const conversation = conversations.find(c => c.id === conversationId);
-    if (conversation) {
-      setCurrentConversationId(conversationId);
-      setMessages(conversation.messages);
-      setShowHistory(false);
-      setFollowUpQuestions([]);
-    }
-  }, [conversations]);
-  
-  // Delete a conversation
-  const deleteConversation = useCallback((e: React.MouseEvent, conversationId: string) => {
-    e.stopPropagation();
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
-    
-    // If we deleted the current conversation, switch to another or create new
-    if (conversationId === currentConversationId) {
-      if (conversations.length > 1) {
-        const nextConversation = conversations.find(c => c.id !== conversationId);
-        if (nextConversation) {
-          setCurrentConversationId(nextConversation.id);
-          setMessages(nextConversation.messages);
-        }
-      } else {
-        setMessages(defaultMessages);
-      }
-    }
-  }, [conversations, currentConversationId, defaultMessages]);
-  
-  // Update current conversation in history
-  const updateCurrentConversation = useCallback((updatedMessages: Message[]) => {
-    setConversations(prev => {
-      const newConversations = [...prev];
-      const index = newConversations.findIndex(c => c.id === currentConversationId);
-      
-      // Generate a title from the first user message
-      let title = 'New Conversation';
-      const firstUserMessage = updatedMessages.find(m => m.role === 'user');
-      if (firstUserMessage) {
-        title = firstUserMessage.content.slice(0, 30) + (firstUserMessage.content.length > 30 ? '...' : '');
-      }
-      
-      if (index !== -1) {
-        // Update existing conversation
-        newConversations[index] = {
-          ...newConversations[index],
-          messages: updatedMessages,
-          title,
-          updatedAt: new Date(),
-        };
-        // Move to front
-        const [updated] = newConversations.splice(index, 1);
-        newConversations.unshift(updated);
-      } else {
-        // Create new conversation
-        newConversations.unshift({
-          id: currentConversationId,
-          title,
-          messages: updatedMessages,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-      
-      return newConversations.slice(0, MAX_HISTORY_CONVERSATIONS);
-    });
-  }, [currentConversationId]);
 
-  // Detect context for quick actions based on last message
-  const currentContext = useMemo(() => {
-    const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant');
-    if (lastAssistantMessage) {
-      return detectContext(lastAssistantMessage.content);
+  // Check if lead capture should be shown
+  useEffect(() => {
+    const leadCaptured = localStorage.getItem(LEAD_CAPTURE_KEY);
+    if (!leadCaptured && messageCount >= LEAD_CAPTURE_AFTER_MESSAGES && !showLeadCapture) {
+      setShowLeadCapture(true);
     }
-    return 'general';
-  }, [messages]);
+  }, [messageCount, showLeadCapture]);
 
-  // Get contextual quick actions
-  const quickActions = useMemo(() => {
-    if (messages.length <= 2) {
-      return DEFAULT_QUICK_ACTIONS;
-    }
-    return getQuickActions(currentContext);
-  }, [messages.length, currentContext]);
-
-  // Scroll to bottom when messages change
+  // Auto scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // Focus input when chat opens
+  // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
 
-  // Fetch card data for a message
-  const fetchCardData = useCallback(async (
-    messageId: string, 
-    universityIds: string[], 
-    programIds: string[]
-  ) => {
-    if (universityIds.length === 0 && programIds.length === 0) return;
+  const currentContext = useMemo(() => {
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+    return detectContext(lastUserMessage?.content || '');
+  }, [messages]);
+  const quickActions = useMemo(() => getQuickActions(currentContext), [currentContext]);
 
+  const createNewConversation = useCallback(() => {
+    setMessages([]);
+    setCurrentConversationId(null);
+    setFollowUpQuestions([]);
+    setMessageCount(0);
+    setSessionId(null);
+    setShowHistory(false);
+  }, []);
+
+  const updateCurrentConversation = useCallback((msgs: Message[]) => {
+    if (msgs.length === 0) return;
+    
+    const title = msgs[0].content.slice(0, 50) + (msgs[0].content.length > 50 ? '...' : '');
+    const now = new Date();
+    
+    setConversations(prev => {
+      const existing = prev.find(c => c.id === currentConversationId);
+      if (existing) {
+        return prev.map(c => c.id === currentConversationId ? {
+          ...c,
+          title,
+          messages: msgs,
+          updatedAt: now,
+        } : c).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      }
+      
+      const newConv: Conversation = {
+        id: Date.now().toString(),
+        title,
+        messages: msgs,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setCurrentConversationId(newConv.id);
+      return [newConv, ...prev].slice(0, MAX_HISTORY_CONVERSATIONS);
+    });
+  }, [currentConversationId]);
+
+  const switchConversation = useCallback((id: string) => {
+    const conv = conversations.find(c => c.id === id);
+    if (conv) {
+      setCurrentConversationId(id);
+      setMessages(conv.messages);
+      setFollowUpQuestions([]);
+      setMessageCount(conv.messages.filter(m => m.role === 'user').length);
+      setShowHistory(false);
+    }
+  }, [conversations]);
+
+  const deleteConversation = useCallback((e: React.MouseEvent | React.KeyboardEvent, id: string) => {
+    e.stopPropagation();
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (currentConversationId === id) {
+      createNewConversation();
+    }
+  }, [currentConversationId, createNewConversation]);
+
+  // Fetch card data
+  const fetchCardData = useCallback(async (messageId: string, universityIds: string[], programIds: string[]) => {
     try {
       const response = await fetch('/api/chat/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ universities: universityIds, programs: programIds }),
+        body: JSON.stringify({ universityIds, programIds }),
       });
 
       if (response.ok) {
         const data = await response.json();
         
-        // Create maps for quick lookup by ID
         const universityData = new Map<number, UniversityCardData>();
         const programData = new Map<number, ProgramCardData>();
 
@@ -319,7 +336,6 @@ export function ChatWidget() {
           });
         }
 
-        // Update message with fetched data
         setMessages(prev => prev.map(m => 
           m.id === messageId 
             ? { ...m, universityData, programData, loading: false }
@@ -353,8 +369,8 @@ export function ChatWidget() {
     setIsLoading(true);
     setIsTyping(true);
     setFollowUpQuestions([]);
+    setMessageCount(prev => prev + 1);
 
-    // Create placeholder for assistant response
     const assistantId = (Date.now() + 1).toString();
     const placeholderMessage: Message = {
       id: assistantId,
@@ -369,7 +385,6 @@ export function ChatWidget() {
     updateCurrentConversation(messagesWithPlaceholder);
 
     try {
-      // Call chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -383,7 +398,6 @@ export function ChatWidget() {
         throw new Error('Failed to get response');
       }
 
-      // Read SSE stream
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
@@ -424,10 +438,8 @@ export function ChatWidget() {
         }
       }
 
-      // Parse content for markers and fetch card data
       const { text, universityIds, programIds } = parseChatContent(fullContent);
       
-      // Update message with parsed content and IDs
       const updatedMsgs = messagesWithPlaceholder.map(m => 
         m.id === assistantId 
           ? { ...m, content: text, universityIds, programIds }
@@ -436,12 +448,10 @@ export function ChatWidget() {
       setMessages(updatedMsgs);
       updateCurrentConversation(updatedMsgs);
       
-      // Generate follow-up questions
       if (text) {
         setFollowUpQuestions(getFollowUpQuestions(text, currentContext));
       }
 
-      // Fetch card data if there are markers
       if (universityIds.length > 0 || programIds.length > 0) {
         await fetchCardData(assistantId, universityIds, programIds);
       } else {
@@ -454,7 +464,6 @@ export function ChatWidget() {
         updateCurrentConversation(finalMsgs);
       }
 
-      // If no content was received, show error
       if (!fullContent) {
         const errorMsgs = updatedMsgs.map(m => 
           m.id === assistantId 
@@ -497,7 +506,98 @@ export function ChatWidget() {
       console.error('Failed to copy:', error);
     }
   };
-  
+
+  const handleRating = (messageId: string, rating: 'positive' | 'negative') => {
+    setMessages(prev => prev.map(m => 
+      m.id === messageId ? { ...m, rating } : m
+    ));
+    // Could send to analytics here
+    toast.success(rating === 'positive' ? 'Thanks for the feedback!' : 'Thanks, we\'ll improve!');
+  };
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const handleLeadSubmit = async () => {
+    if (!leadEmail || !leadEmail.includes('@')) {
+      toast.error('Please enter a valid email');
+      return;
+    }
+    
+    setLeadSubmitting(true);
+    try {
+      const response = await fetch('/api/chat/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: leadEmail, name: leadName }),
+      });
+      
+      if (response.ok) {
+        localStorage.setItem(LEAD_CAPTURE_KEY, 'true');
+        setShowLeadCapture(false);
+        toast.success('Thanks! We\'ll be in touch soon.');
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLeadSubmitting(false);
+    }
+  };
+
+  const exportConversation = () => {
+    const text = messages.map(m => 
+      `[${m.timestamp.toLocaleString()}] ${m.role === 'user' ? 'You' : 'SICA AI'}:\n${m.content}`
+    ).join('\n\n---\n\n');
+    
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sica-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Conversation exported!');
+  };
+
+  const shareConversation = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'SICA Chat Conversation',
+          text: messages.map(m => `${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`).join('\n\n'),
+        });
+      } catch {
+        // User cancelled
+      }
+    } else {
+      setShowShareDialog(true);
+    }
+  };
+
+  const regenerateLastResponse = () => {
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+    if (lastUserMessage) {
+      setMessages(prev => prev.slice(0, -1)); // Remove last assistant message
+      sendMessage(lastUserMessage.content);
+    }
+  };
+
+  // Format timestamp
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Format date for history list
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -527,7 +627,6 @@ export function ChatWidget() {
               <ChatMarkdown key={index} content={part.content} />
             );
           } else if (part.type === 'uni-card' && part.index !== undefined) {
-            // Check if we have data for this card
             const uniData = message.universityData?.get(part.index);
             if (uniData) {
               return (
@@ -548,7 +647,6 @@ export function ChatWidget() {
                 />
               );
             }
-            // Show skeleton if loading, or nothing if not found
             if (message.loading) {
               return <ChatUniversityCardSkeleton key={index} />;
             }
@@ -591,18 +689,20 @@ export function ChatWidget() {
       {/* Chat Window */}
       <div
         className={cn(
-          'fixed bottom-24 right-4 z-50 flex flex-col bg-background border rounded-2xl shadow-2xl transition-all duration-300 ease-in-out',
-          'w-[calc(100vw-2rem)] sm:w-96',
-          isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          'fixed z-50 flex flex-col bg-background border rounded-2xl shadow-2xl transition-all duration-300 ease-in-out',
+          isFullscreen 
+            ? 'inset-4 sm:inset-8 rounded-2xl' 
+            : 'bottom-24 right-4 w-[calc(100vw-2rem)] sm:w-96',
+          isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
         )}
-        style={{ height: 'min(70vh, 600px)' }}
+        style={!isFullscreen ? { height: 'min(70vh, 600px)' } : undefined}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-primary/5 to-primary/10 rounded-t-2xl">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 bg-primary">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 bg-primary">
               <AvatarFallback className="bg-primary text-primary-foreground">
-                <Bot className="h-5 w-5" />
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
               </AvatarFallback>
             </Avatar>
             <div>
@@ -613,7 +713,7 @@ export function ChatWidget() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -628,9 +728,36 @@ export function ChatWidget() {
               size="icon"
               className="h-8 w-8"
               onClick={() => setShowHistory(!showHistory)}
-              title="Conversation History"
+              title="History"
             >
               <History className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hidden sm:flex"
+              onClick={shareConversation}
+              title="Share"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hidden sm:flex"
+              onClick={exportConversation}
+              title="Export"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Minimize' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
             </Button>
             <Button
               variant="ghost"
@@ -647,14 +774,14 @@ export function ChatWidget() {
           {/* History Sidebar */}
           <div className={cn(
             'border-r bg-muted/30 overflow-y-auto transition-all duration-300',
-            showHistory ? 'w-48' : 'w-0 hidden'
+            showHistory ? 'w-40 sm:w-48' : 'w-0 hidden'
           )}>
             <div className="p-2">
               <div className="flex items-center justify-between mb-2 px-2">
-                <h4 className="text-xs font-semibold text-muted-foreground">Recent Chats</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground">Recent</h4>
               </div>
               {conversations.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-2 py-4">No saved conversations</p>
+                <p className="text-xs text-muted-foreground px-2 py-4">No saved chats</p>
               ) : (
                 conversations.map((conv) => (
                   <button
@@ -688,7 +815,18 @@ export function ChatWidget() {
 
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+              {/* Welcome message when empty */}
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <Sparkles className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold mb-1">Hi! I&apos;m SICA AI</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Ask me anything about studying in China</p>
+                </div>
+              )}
+              
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -704,40 +842,81 @@ export function ChatWidget() {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div
-                    className={cn(
-                      'max-w-[85%] rounded-2xl px-3 py-2.5 text-sm',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted rounded-bl-md'
-                    )}
-                  >
-                    {message.content === '' ? (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Thinking...
-                      </span>
-                    ) : message.role === 'user' ? (
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    ) : (
-                      <>
-                        {renderMessageContent(message)}
-                        {/* Message Actions */}
-                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                          <button
-                            onClick={() => handleCopy(message.content, message.id)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {copiedId === message.id ? (
-                              <Check className="h-3 w-3" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                            {copiedId === message.id ? 'Copied' : 'Copy'}
-                          </button>
-                        </div>
-                      </>
-                    )}
+                  <div className={cn('max-w-[85%]')}>
+                    <div
+                      className={cn(
+                        'rounded-2xl px-3 py-2.5 text-sm',
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground rounded-br-md'
+                          : 'bg-muted rounded-bl-md'
+                      )}
+                    >
+                      {message.content === '' ? (
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Thinking...
+                        </span>
+                      ) : message.role === 'user' ? (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        <>
+                          {renderMessageContent(message)}
+                          {/* Message Actions */}
+                          <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/50">
+                            <button
+                              onClick={() => handleCopy(message.content, message.id)}
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {copiedId === message.id ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                              {copiedId === message.id ? 'Copied' : 'Copy'}
+                            </button>
+                            
+                            {/* Rating buttons */}
+                            <button
+                              onClick={() => handleRating(message.id, 'positive')}
+                              className={cn(
+                                'text-xs transition-colors',
+                                message.rating === 'positive' 
+                                  ? 'text-green-500' 
+                                  : 'text-muted-foreground hover:text-green-500'
+                              )}
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleRating(message.id, 'negative')}
+                              className={cn(
+                                'text-xs transition-colors',
+                                message.rating === 'negative' 
+                                  ? 'text-red-500' 
+                                  : 'text-muted-foreground hover:text-red-500'
+                              )}
+                            >
+                              <ThumbsDown className="h-3 w-3" />
+                            </button>
+                            
+                            {/* Regenerate */}
+                            <button
+                              onClick={regenerateLastResponse}
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {/* Timestamp */}
+                    <div className={cn(
+                      'text-[10px] text-muted-foreground mt-1',
+                      message.role === 'user' ? 'text-right' : 'text-left'
+                    )}>
+                      {formatTime(message.timestamp)}
+                    </div>
                   </div>
                   {message.role === 'user' && (
                     <Avatar className="h-7 w-7 flex-shrink-0 mt-1">
@@ -770,7 +949,7 @@ export function ChatWidget() {
 
             {/* Follow-up Questions */}
             {followUpQuestions.length > 0 && !isLoading && (
-              <div className="px-4 pb-2 border-t">
+              <div className="px-3 sm:px-4 pb-2 border-t">
                 <p className="text-xs text-muted-foreground mb-2 pt-2">Ask follow-up:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {followUpQuestions.slice(0, 3).map((question, index) => (
@@ -790,7 +969,7 @@ export function ChatWidget() {
 
             {/* Quick Actions */}
             {messages.length <= 3 && !isLoading && !isTyping && (
-              <div className="px-4 pb-2">
+              <div className="px-3 sm:px-4 pb-2">
                 <div className="flex flex-wrap gap-1.5">
                   {quickActions.slice(0, 4).map((action) => (
                     <Button
@@ -808,26 +987,47 @@ export function ChatWidget() {
             )}
 
             {/* WhatsApp Contact */}
-            <div className="px-4 py-2 border-t bg-muted/30">
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                <span>Need human help? WhatsApp: +86 173 2576 4171</span>
-              </a>
+            <div className="px-3 sm:px-4 py-2 border-t bg-muted/30">
+              <div className="flex items-center justify-between">
+                <a
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Human help?</span>
+                  <span className="sm:hidden">WhatsApp</span>
+                </a>
+                <Link 
+                  href="/apply" 
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Apply Now <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
 
             {/* Input */}
             <form onSubmit={handleSubmit} className="p-3 border-t">
               <div className="flex gap-2">
+                {speechSupported && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className={cn('rounded-full h-10 w-10 shrink-0', isListening && 'bg-red-500 text-white border-red-500')}
+                    onClick={toggleVoiceInput}
+                    disabled={isLoading}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                )}
                 <Input
                   ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask about universities, programs..."
+                  placeholder={isListening ? 'Listening...' : 'Ask about universities...'}
                   className="flex-1 rounded-full text-sm"
                   disabled={isLoading}
                 />
@@ -864,6 +1064,94 @@ export function ChatWidget() {
           <MessageSquare className="h-6 w-6" />
         )}
       </Button>
+
+      {/* Lead Capture Dialog */}
+      <Dialog open={showLeadCapture} onOpenChange={setShowLeadCapture}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Get Personalized Help
+            </DialogTitle>
+            <DialogDescription>
+              Enter your email to receive personalized recommendations and application guidance from our experts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="lead-name">Name (optional)</Label>
+              <Input
+                id="lead-name"
+                placeholder="Your name"
+                value={leadName}
+                onChange={(e) => setLeadName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lead-email">Email *</Label>
+              <Input
+                id="lead-email"
+                type="email"
+                placeholder="your@email.com"
+                value={leadEmail}
+                onChange={(e) => setLeadEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowLeadCapture(false)}
+              >
+                Maybe Later
+              </Button>
+              <Button 
+                className="flex-1"
+                onClick={handleLeadSubmit}
+                disabled={leadSubmitting}
+              >
+                {leadSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Get Help
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Conversation</DialogTitle>
+            <DialogDescription>
+              Copy the conversation text below to share it.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            readOnly
+            value={messages.map(m => `${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`).join('\n\n')}
+            className="min-h-[200px] text-sm"
+          />
+          <Button onClick={() => {
+            navigator.clipboard.writeText(messages.map(m => `${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`).join('\n\n'));
+            toast.success('Copied to clipboard!');
+          }}>
+            <Copy className="h-4 w-4 mr-2" />
+            Copy to Clipboard
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+// Link component for the Apply Now button
+function Link({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
   );
 }

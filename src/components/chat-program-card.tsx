@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Building, Globe, Clock, DollarSign, Award } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BookOpen, Building, Globe, Clock, DollarSign, Award, ArrowRight, ExternalLink } from 'lucide-react';
 
 export interface ChatProgramCardProps {
   id: string;
@@ -49,7 +50,7 @@ export function ChatProgramCard({
   const displayDuration = duration || (durationMonths ? `${durationMonths} months` : null);
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow border-border/50">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow border-border/50 group">
       <CardContent className="p-0">
         {/* Header */}
         <div className="p-3 bg-muted/30">
@@ -124,13 +125,23 @@ export function ChatProgramCard({
           </div>
         </div>
 
-        {/* Action Link */}
-        <Link
-          href={`/programs/${id}`}
-          className="block px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors border-t border-border/50"
-        >
-          View Program →
-        </Link>
+        {/* Action Buttons */}
+        <div className="flex border-t border-border/50">
+          <Link
+            href={`/programs/${id}`}
+            className="flex-1 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-1 border-r border-border/50"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Details
+          </Link>
+          <Link
+            href={`/apply/${id}`}
+            className="flex-1 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+          >
+            Apply Now
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

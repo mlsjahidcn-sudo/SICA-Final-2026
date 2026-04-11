@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building, MapPin, Trophy, DollarSign, Users } from 'lucide-react';
+import { Building, MapPin, Trophy, DollarSign, Users, ExternalLink, BookOpen, ArrowRight } from 'lucide-react';
 
 export interface ChatUniversityCardProps {
   id: string;
@@ -35,7 +35,7 @@ export function ChatUniversityCard({
   logoUrl,
 }: ChatUniversityCardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow border-border/50">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow border-border/50 group">
       <CardContent className="p-0">
         {/* Header with Logo */}
         <div className="flex items-start gap-3 p-3 bg-muted/30">
@@ -109,13 +109,30 @@ export function ChatUniversityCard({
           </div>
         </div>
 
-        {/* Action Link */}
-        <Link
-          href={`/universities/${id}`}
-          className="block px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors border-t border-border/50"
-        >
-          View University →
-        </Link>
+        {/* Action Buttons */}
+        <div className="flex border-t border-border/50">
+          <Link
+            href={`/universities/${id}`}
+            className="flex-1 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-1 border-r border-border/50"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Details
+          </Link>
+          <Link
+            href={`/programs?university=${id}`}
+            className="flex-1 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+          >
+            <BookOpen className="w-3 h-3" />
+            Programs
+          </Link>
+          <Link
+            href={`/apply?university=${id}`}
+            className="flex-1 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+          >
+            Apply
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
