@@ -15,21 +15,19 @@ interface UniversityCardData {
   tuitionMin: number | null;
   tuitionMax: number | null;
   currency: string;
-  studentCount: number | null;
   logoUrl: string | null;
 }
 
 interface ProgramCardData {
   id: string;
   name: string;
-  nameCn: string | null;
   degree: string | null;
-  major: string | null;
+  category: string | null;
   universityName: string | null;
   universityId: string | null;
   language: string | null;
   duration: string | null;
-  durationMonths: number | null;
+  durationYears: number | null;
   tuition: number | null;
   currency: string;
   scholarshipAvailable: boolean;
@@ -38,7 +36,8 @@ interface ProgramCardData {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { universities: universityIds, programs: programIds } = body;
+    const universityIds = body.universities || body.universityIds;
+    const programIds = body.programs || body.programIds;
 
     const results: {
       universities: UniversityCardData[];
@@ -65,7 +64,6 @@ export async function POST(request: NextRequest) {
           tuition_min,
           tuition_max,
           tuition_currency,
-          student_count,
           logo_url
         `)
         .in('id', universityIds)
@@ -83,7 +81,6 @@ export async function POST(request: NextRequest) {
           tuitionMin: u.tuition_min ? Number(u.tuition_min) : null,
           tuitionMax: u.tuition_max ? Number(u.tuition_max) : null,
           currency: String(u.tuition_currency || 'CNY'),
-          studentCount: u.student_count ? Number(u.student_count) : null,
           logoUrl: u.logo_url ? String(u.logo_url) : null,
         }));
       }
@@ -95,14 +92,13 @@ export async function POST(request: NextRequest) {
         .from('programs')
         .select(`
           id,
-          name_en,
-          name_cn,
-          degree_type,
-          major,
-          teaching_language,
-          duration_months,
-          tuition,
-          tuition_currency,
+          name,
+          degree_level,
+          category,
+          language,
+          duration_years,
+          tuition_fee_per_year,
+          currency,
           scholarship_available,
           university_id,
           universities!programs_university_id_fkey (
@@ -118,17 +114,16 @@ export async function POST(request: NextRequest) {
           const uniData = (p as any).universities as { name_en?: string } | null;
           return {
             id: String(p.id || ''),
-            name: String(p.name_en || 'Unknown Program'),
-            nameCn: p.name_cn ? String(p.name_cn) : null,
-            degree: p.degree_type ? String(p.degree_type) : null,
-            major: p.major ? String(p.major) : null,
+            name: String(p.name || 'Unknown Program'),
+            degree: p.degree_level ? String(p.degree_level) : null,
+            category: p.category ? String(p.category) : null,
             universityName: uniData?.name_en ? String(uniData.name_en) : null,
             universityId: p.university_id ? String(p.university_id) : null,
-            language: p.teaching_language ? String(p.teaching_language) : null,
-            duration: p.duration_months ? `${p.duration_months} months` : null,
-            durationMonths: p.duration_months ? Number(p.duration_months) : null,
-            tuition: p.tuition ? Number(p.tuition) : null,
-            currency: String(p.tuition_currency || 'CNY'),
+            language: p.language ? String(p.language) : null,
+            duration: p.duration_years ? `${p.duration_years} years` : null,
+            durationYears: p.duration_years ? Number(p.duration_years) : null,
+            tuition: p.tuition_fee_per_year ? Number(p.tuition_fee_per_year) : null,
+            currency: String(p.currency || 'CNY'),
             scholarshipAvailable: Boolean(p.scholarship_available),
           };
         });

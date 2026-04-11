@@ -9,14 +9,13 @@ import { BookOpen, Building, Globe, Clock, DollarSign, Award, ArrowRight, Extern
 export interface ChatProgramCardProps {
   id: string;
   name: string;
-  nameCn?: string | null;
   degree?: string | null;
-  major?: string | null;
+  category?: string | null;
   universityName?: string | null;
   universityId?: string | null;
   language?: string | null;
   duration?: string | null;
-  durationMonths?: number | null;
+  durationYears?: number | null;
   tuition?: number | null;
   currency?: string;
   scholarshipAvailable?: boolean;
@@ -32,14 +31,13 @@ const DEGREE_COLORS: Record<string, string> = {
 export function ChatProgramCard({
   id,
   name,
-  nameCn,
   degree,
-  major,
+  category,
   universityName,
   universityId,
   language,
   duration,
-  durationMonths,
+  durationYears,
   tuition,
   currency = 'CNY',
   scholarshipAvailable,
@@ -47,7 +45,7 @@ export function ChatProgramCard({
   const degreeLower = degree?.toLowerCase() || '';
   const degreeColor = DEGREE_COLORS[degreeLower] || 'bg-muted text-muted-foreground';
   
-  const displayDuration = duration || (durationMonths ? `${durationMonths} months` : null);
+  const displayDuration = duration || (durationYears ? `${durationYears} years` : null);
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow border-border/50 group">
@@ -64,17 +62,14 @@ export function ChatProgramCard({
                   </Badge>
                 )}
               </div>
-              {nameCn && (
-                <p className="text-xs text-muted-foreground truncate">{nameCn}</p>
-              )}
             </div>
           </div>
           
-          {/* Major */}
-          {major && (
+          {/* Category */}
+          {category && (
             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>{major}</span>
+              <span>{category}</span>
             </div>
           )}
         </div>

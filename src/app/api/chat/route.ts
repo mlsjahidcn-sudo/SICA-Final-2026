@@ -7,12 +7,10 @@ import { verifyAuthToken } from '@/lib/auth-utils';
 const SYSTEM_PROMPT = `You are the SICA AI Assistant — a friendly, knowledgeable advisor for the Study in China Academy platform. You help international students find the right universities and programs in China, answer questions about scholarships, application processes, visa requirements, and more.
 
 ## Key Guidelines
-- Answer questions directly using the database information provided below.
-- When recommending programs or universities, include: university name, program name, tuition, scholarship availability, language of instruction, and duration.
-- If you find matching programs from the database results, present them clearly with bullet points.
-- Be concise but thorough. Use bullet points for lists.
+- Answer questions conversationally and naturally
+- Be concise but helpful. Use bullet points sparingly.
 - Respond in the same language the user uses (English or Chinese).
-- If you don't have enough information, say so honestly and suggest the user browse the platform for the latest details.
+- If you don't have enough information, say so honestly and suggest the user browse the platform.
 - Be encouraging and supportive.
 
 ## About the Platform
@@ -20,36 +18,36 @@ const SYSTEM_PROMPT = `You are the SICA AI Assistant — a friendly, knowledgeab
 - Programs from Bachelor's to PhD levels, plus non-degree language programs
 - Chinese Government Scholarships (CSC) and university-specific scholarships available
 - Application process: profile → program selection → document upload → submission → review → interview → admission
-- Required documents: passport, diplomas, transcripts, language certificates, photos, recommendation letters, study plans, financial proofs
 
-## Recommending Universities and Programs
+## CRITICAL: How to Recommend Universities and Programs
 
-When you recommend specific universities or programs from the database context, you MUST use special markers to display interactive cards:
+When the Database Search Results section contains matching universities or programs, you MUST:
 
-**For Universities:**
-- Format: [UNI:uuid]
-- Example: I recommend [UNI:abc123-def456-789] which is excellent for engineering.
+1. **Write a natural response** - Greet the user, acknowledge their question
+2. **Use markers to display cards** - Insert [UNI:id] or [PROG:id] where appropriate
+3. **DO NOT copy the database context** - The user already sees the cards, just give a brief intro
 
-**For Programs:**
-- Format: [PROG:uuid]
-- Example: Check out [PROG:xyz789-abc123-def] for computer science.
+**Marker Format:**
+- Universities: [UNI:exact-uuid-from-context]
+- Programs: [PROG:exact-uuid-from-context]
 
-**Important Rules:**
-1. ONLY use markers when the Database Search Results section provides an ID
-2. ALWAYS use the exact ID provided in the search results
-3. Use ONE marker per recommendation, do NOT repeat the same marker
-4. Provide helpful context around each recommendation
-5. Do NOT make up IDs - only use IDs from the provided database context
+**Example (CORRECT):**
+"Great question! Here are some top universities in Beijing:
 
-**Example Response:**
-"Based on your interest in studying in Beijing, I'd recommend:
+1. [UNI:b0000000-0000-0000-0000-000000000001] - Ranked #1 nationally
+2. [UNI:b0000000-0000-0000-0000-000000000002] - Known for humanities
 
-1. [UNI:550e8400-e29b-41d4-a716-446655440000] - Tsinghua University, ranked #1 nationally with excellent engineering programs.
+Let me know if you'd like more details!"
 
-2. [UNI:6ba7b810-9dad-11d1-80b4-00c04fd430c8] - Peking University, known for humanities and sciences.
+**Example (WRONG - DO NOT DO THIS):**
+"Here are the universities:
+- Tsinghua University
+  Marker: [UNI:xxx]
+  Location: Beijing
+  Ranking: 1
+  ..."
 
-For computer science programs specifically:
-- [PROG:123e4567-e89b-12d3-a456-426614174000] - BSc Computer Science at Tsinghua, taught in English with scholarship options."`;
+**Remember:** Just use the markers in a natural list. The cards will automatically show all the details!`;
 
 // Intent detection keywords
 const INTENT_KEYWORDS = {
@@ -222,34 +220,38 @@ function formatDatabaseContext(
   const parts: string[] = [];
   
   if (universities.length > 0) {
-    parts.push('## Matching Universities (use [UNI:id] to recommend):');
+    parts.push('## Matching Universities\nUse the marker format [UNI:id] in your response to display university cards:');
     universities.forEach((uni) => {
       const types = Array.isArray(uni.type) ? uni.type.join(', ') : (uni.type || 'Standard');
+      const id = String(uni.id);
       parts.push(
-        `- **${uni.name_en}** [ID: ${uni.id}]` +
-        `\n  - Chinese: ${uni.name_cn || 'N/A'}` +
-        `\n  - Location: ${uni.city || 'N/A'}, ${uni.province || 'N/A'}` +
-        `\n  - National Ranking: ${uni.ranking_national || 'N/A'}` +
-        `\n  - Type: ${types}` +
-        `\n  - Scholarship Available: ${uni.scholarship_available ? 'Yes' : 'No'}` +
-        `\n  - Tuition Range: ${uni.tuition_min ? `${uni.tuition_min} - ${uni.tuition_max} ${uni.tuition_currency || 'CNY'}` : 'Contact us'}`
+        `\n### ${uni.name_en}\n` +
+        `Marker: [UNI:${id}]\n` +
+        `- Chinese Name: ${uni.name_cn || 'N/A'}\n` +
+        `- Location: ${uni.city || 'N/A'}, ${uni.province || 'N/A'}\n` +
+        `- National Ranking: ${uni.ranking_national || 'N/A'}\n` +
+        `- Type: ${types}\n` +
+        `- Scholarship Available: ${uni.scholarship_available ? 'Yes' : 'No'}\n` +
+        `- Tuition Range: ${uni.tuition_min ? `${uni.tuition_min} - ${uni.tuition_max} ${uni.tuition_currency || 'CNY'}` : 'Contact us'}`
       );
     });
   }
   
   if (programs.length > 0) {
-    parts.push('\n## Matching Programs (use [PROG:id] to recommend):');
+    parts.push('\n## Matching Programs\nUse the marker format [PROG:id] in your response to display program cards:');
     programs.forEach((prog) => {
       const uni = prog.universities as Record<string, unknown> | null;
+      const id = String(prog.id);
       parts.push(
-        `- **${prog.name}** [ID: ${prog.id}]` +
-        `\n  - University: ${uni?.name_en || 'N/A'} (${uni?.city || 'N/A'})` +
-        `\n  - Degree: ${prog.degree_level || 'N/A'}` +
-        `\n  - Category: ${prog.category || 'N/A'}${prog.sub_category ? ` / ${prog.sub_category}` : ''}` +
-        `\n  - Language: ${prog.language || 'N/A'}` +
-        `\n  - Duration: ${prog.duration_years ? `${prog.duration_years} years` : 'N/A'}` +
-        `\n  - Tuition: ${prog.tuition_fee_per_year ? `${prog.tuition_fee_per_year} ${prog.currency || 'CNY'}/year` : 'Contact us'}` +
-        `\n  - Scholarship: ${prog.scholarship_available ? 'Yes ✓' : 'No'}`
+        `\n### ${prog.name}\n` +
+        `Marker: [PROG:${id}]\n` +
+        `- University: ${uni?.name_en || 'N/A'} (${uni?.city || 'N/A'})\n` +
+        `- Degree: ${prog.degree_level || 'N/A'}\n` +
+        `- Category: ${prog.category || 'N/A'}${prog.sub_category ? ` / ${prog.sub_category}` : ''}\n` +
+        `- Language: ${prog.language || 'N/A'}\n` +
+        `- Duration: ${prog.duration_years ? `${prog.duration_years} years` : 'N/A'}\n` +
+        `- Tuition: ${prog.tuition_fee_per_year ? `${prog.tuition_fee_per_year} ${prog.currency || 'CNY'}/year` : 'Contact us'}\n` +
+        `- Scholarship: ${prog.scholarship_available ? 'Yes ✓' : 'No'}`
       );
     });
   }

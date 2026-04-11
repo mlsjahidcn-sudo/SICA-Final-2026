@@ -85,21 +85,19 @@ interface UniversityCardData {
   tuitionMin: number | null;
   tuitionMax: number | null;
   currency: string;
-  studentCount: number | null;
   logoUrl: string | null;
 }
 
 interface ProgramCardData {
   id: string;
   name: string;
-  nameCn: string | null;
   degree: string | null;
-  major: string | null;
+  category: string | null;
   universityName: string | null;
   universityId: string | null;
   language: string | null;
   duration: string | null;
-  durationMonths: number | null;
+  durationYears: number | null;
   tuition: number | null;
   currency: string;
   scholarshipAvailable: boolean;
@@ -671,7 +669,6 @@ export function ChatWidget() {
                   tuitionMin={uniData.tuitionMin}
                   tuitionMax={uniData.tuitionMax}
                   currency={uniData.currency}
-                  studentCount={uniData.studentCount}
                   logoUrl={uniData.logoUrl}
                 />
               );
@@ -688,14 +685,13 @@ export function ChatWidget() {
                   key={uniqueKey}
                   id={progData.id}
                   name={progData.name}
-                  nameCn={progData.nameCn}
                   degree={progData.degree}
-                  major={progData.major}
+                  category={progData.category}
                   universityName={progData.universityName}
                   universityId={progData.universityId}
                   language={progData.language}
                   duration={progData.duration}
-                  durationMonths={progData.durationMonths}
+                  durationYears={progData.durationYears}
                   tuition={progData.tuition}
                   currency={progData.currency}
                   scholarshipAvailable={progData.scholarshipAvailable}
