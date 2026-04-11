@@ -34,10 +34,19 @@ fi
 echo "Installing dependencies..."
 run_pnpm install --prefer-frozen-lockfile --prefer-offline
 
-echo "Building the Next.js project..."
+echo "Building the Next.js project (standalone mode)..."
 run_pnpm next build
 
-echo "Bundling server with tsup..."
-run_pnpm tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify
+# Check if standalone output exists
+if [ -d ".next/standalone" ]; then
+    echo "Standalone build created successfully at .next/standalone"
+    
+    # Copy static files and public folder to standalone
+    echo "Copying static assets to standalone directory..."
+    cp -r public .next/standalone/public 2>/dev/null || true
+    cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+else
+    echo "Warning: Standalone directory not found. Build may have issues."
+fi
 
 echo "Build completed successfully!"
