@@ -609,43 +609,54 @@ export function HomePageContent() {
         <PartnersSection />
 
         {/* CTA Section */}
-        <section className="relative overflow-hidden">
-          <Card className="relative w-full rounded-none border-x-0 bg-gradient-to-r from-primary via-primary to-primary/90 overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary-foreground/10 rounded-full blur-2xl" />
-              <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-primary-foreground/5 rounded-full blur-2xl" />
-            </div>
-            
-            <CardContent className="relative px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
-                {/* Content */}
-                <div className="flex-1 text-center lg:text-left">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-foreground mb-1">
-                    Ready to Study in China?
-                  </h2>
-                  <p className="text-sm text-primary-foreground/80 max-w-lg lg:max-w-none">
-                    Join thousands of international students who have successfully started their academic journey.
-                  </p>
-                </div>
-                
-                {/* Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center lg:justify-end shrink-0">
-                  <Button asChild size="default" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                    <Link href="/register">
-                      Create Free Account
-                      <ArrowRight className="ml-2 h-4 w-4" data-icon="inline-end" />
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="default" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                    <Link href="/contact">
-                      Contact Us
-                    </Link>
-                  </Button>
-                </div>
+        <section className="relative overflow-hidden py-8 sm:py-12">
+          <div className="max-w-7xl mx-auto px-4">
+            <Card className="relative w-full bg-gradient-to-r from-primary via-primary to-primary/90 overflow-hidden shadow-xl">
+              {/* Decorative Elements */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary-foreground/10 rounded-full blur-2xl" />
+                <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-primary-foreground/5 rounded-full blur-2xl" />
               </div>
-            </CardContent>
-          </Card>
+              
+              <CardContent className="relative px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8">
+                  {/* Content */}
+                  <div className="flex-1 text-center lg:text-left">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-foreground mb-2">
+                      Ready to Study in China?
+                    </h2>
+                    <p className="text-sm sm:text-base text-primary-foreground/80 max-w-lg mx-auto lg:mx-0">
+                      Join thousands of international students who have successfully started their academic journey.
+                    </p>
+                  </div>
+                  
+                  {/* Buttons - vertically centered with content */}
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-end shrink-0">
+                    <Button 
+                      asChild 
+                      size="lg"
+                      className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg"
+                    >
+                      <Link href="/register">
+                        Create Free Account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      size="lg"
+                      className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                    >
+                      <Link href="/contact">
+                        Contact Us
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </section>
       </div>
     </>
