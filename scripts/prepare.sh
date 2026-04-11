@@ -5,19 +5,21 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
-echo "Checking for pnpm..."
-if ! command -v pnpm &> /dev/null; then
-    echo "pnpm not found, installing via corepack..."
-    if command -v corepack &> /dev/null; then
-        corepack enable
-        corepack prepare pnpm@latest --activate
+# Function to run pnpm (handles both installed and npx fallback)
+run_pnpm() {
+    if command -v pnpm &> /dev/null; then
+        pnpm "$@"
     else
-        echo "corepack not found, installing pnpm via npm..."
-        npm install -g pnpm@latest
+        npx pnpm "$@"
     fi
+}
+
+echo "Checking for pnpm..."
+if command -v pnpm &> /dev/null; then
+    echo "pnpm version: $(pnpm --version)"
+else
+    echo "pnpm not found globally, will use npx pnpm..."
 fi
 
-echo "pnpm version: $(pnpm --version)"
-
 echo "Installing dependencies..."
-pnpm install --prefer-frozen-lockfile --prefer-offline --loglevel debug --reporter=append-only
+run_pnpm install --prefer-frozen-lockfile --prefer-offline
