@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import {
   Breadcrumb as BreadcrumbUI,
@@ -10,13 +11,13 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 
-export interface BreadcrumbItem {
+export interface BreadcrumbItemType {
   label: string;
   href?: string;
 }
 
 interface BreadcrumbsProps {
-  items: BreadcrumbItem[];
+  items: BreadcrumbItemType[];
   className?: string;
 }
 
@@ -28,16 +29,20 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
           const isLast = index === items.length - 1;
           
           return (
-            <BreadcrumbItem key={index}>
+            // Use React.Fragment to avoid nesting <li> inside <li>
+            // Each BreadcrumbItem and BreadcrumbSeparator are siblings (both render <li>)
+            <React.Fragment key={index}>
               {index > 0 && <BreadcrumbSeparator />}
-              {isLast || !item.href ? (
-                <BreadcrumbPage>{item.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={item.href}>{item.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+              <BreadcrumbItem>
+                {isLast || !item.href ? (
+                  <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={item.href}>{item.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </React.Fragment>
           );
         })}
       </BreadcrumbList>
