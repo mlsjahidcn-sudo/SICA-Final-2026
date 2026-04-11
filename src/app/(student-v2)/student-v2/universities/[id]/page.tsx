@@ -34,6 +34,7 @@ interface University {
   logo_url: string | null
   province: string
   city: string
+  type: string | null
   tags: string[]
   ranking_national: number | null
   scholarship_available: boolean
@@ -110,23 +111,28 @@ function UniversityDetailsContent() {
     }
   }, [id])
 
-  const getTypeBadges = (uniTags: string[]) => {
+  const getTypeBadge = (uniType: string | null) => {
     const colors: Record<string, string> = {
-      "985": "bg-red-100 text-red-700",
-      "211": "bg-blue-100 text-blue-700",
-      "double_first_class": "bg-purple-100 text-purple-700",
-      "Double First-Class": "bg-purple-100 text-purple-700",
-      "provincial": "bg-green-100 text-green-700",
-      "private": "bg-yellow-100 text-yellow-700",
+      "985": "bg-red-100 text-red-700 border-red-200",
+      "211": "bg-blue-100 text-blue-700 border-blue-200",
+      "Double First-Class": "bg-purple-100 text-purple-700 border-purple-200",
+      "Provincial": "bg-green-100 text-green-700 border-green-200",
     }
     
-    if (!uniTags || uniTags.length === 0) return null
+    const labels: Record<string, string> = {
+      "985": "985 Project",
+      "211": "211 Project",
+      "Double First-Class": "Double First-Class",
+      "Provincial": "Provincial Key",
+    }
     
-    return uniTags.map((tag) => (
-      <Badge key={tag} className={colors[tag] || "bg-gray-100 text-gray-700"}>
-        {tag === 'double_first_class' ? 'Double First-Class' : tag}
+    if (!uniType) return null
+    
+    return (
+      <Badge variant="outline" className={colors[uniType] || "bg-gray-100 text-gray-700 border-gray-200"}>
+        {labels[uniType] || uniType}
       </Badge>
-    ))
+    )
   }
 
   const formatTuition = (min: number | null, max: number | null, currency: string | null) => {
@@ -184,7 +190,7 @@ function UniversityDetailsContent() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{university.name_en}</h1>
-                {getTypeBadges(university.tags)}
+                {getTypeBadge(university.type)}
                 {university.scholarship_available && (
                   <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200 dark:border-green-800 dark:text-green-400">
                     <IconStar className="mr-1 h-3 w-3" />

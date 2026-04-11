@@ -41,7 +41,7 @@ interface UniversityDetail {
   city: string
   country: string | null
   location: string | null
-  type: string | string[]
+  type: string | null
   category: string | null
   tier: string | null
   ranking_national: number | null
@@ -76,6 +76,37 @@ interface UniversityDetail {
   }>
   _count?: {
     programs: number
+  }
+}
+
+// Type badge styling
+const getTypeBadgeStyle = (type: string | null): string => {
+  switch (type) {
+    case '985':
+      return 'bg-red-500/10 text-red-600 border-red-200'
+    case '211':
+      return 'bg-blue-500/10 text-blue-600 border-blue-200'
+    case 'Double First-Class':
+      return 'bg-purple-500/10 text-purple-600 border-purple-200'
+    case 'Provincial':
+      return 'bg-green-500/10 text-green-600 border-green-200'
+    default:
+      return 'bg-muted text-muted-foreground'
+  }
+}
+
+const getTypeLabel = (type: string | null): string => {
+  switch (type) {
+    case '985':
+      return '985 Project'
+    case '211':
+      return '211 Project'
+    case 'Double First-Class':
+      return 'Double First-Class'
+    case 'Provincial':
+      return 'Provincial Key'
+    default:
+      return type || '—'
   }
 }
 
@@ -229,7 +260,11 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
                 <div>
                   <div className="text-sm text-muted-foreground">Type</div>
                   <div className="font-medium">
-                    {Array.isArray(university.type) ? university.type.join(', ') || '—' : university.type || '—'}
+                    {university.type ? (
+                      <Badge variant="outline" className={getTypeBadgeStyle(university.type)}>
+                        {getTypeLabel(university.type)}
+                      </Badge>
+                    ) : '—'}
                   </div>
                 </div>
                 <div>

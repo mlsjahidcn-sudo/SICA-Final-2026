@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('province', province);
     }
     if (type && type !== 'all') {
-      countQuery = countQuery.contains('tags', [type]);
+      countQuery = countQuery.eq('type', type);
     }
     if (category && category !== 'all') {
       countQuery = countQuery.eq('category', category);
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       dataQuery = dataQuery.eq('province', province);
     }
     if (type && type !== 'all') {
-      dataQuery = dataQuery.contains('tags', [type]);
+      dataQuery = dataQuery.eq('type', type);
     }
     if (category && category !== 'all') {
       dataQuery = dataQuery.eq('category', category);

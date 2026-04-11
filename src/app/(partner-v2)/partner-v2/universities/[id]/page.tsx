@@ -54,6 +54,7 @@ interface University {
   city: string
   address: string | null
   website: string | null
+  type: string | null
   tags: string[]
   category: string | null
   ranking_national: number | null
@@ -174,23 +175,28 @@ export default function UniversityDetailPage() {
     )
   }
 
-  const getTypeBadges = (uniTags: string[]) => {
+  const getTypeBadge = (uniType: string | null) => {
     const colors: Record<string, string> = {
-      "985": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-      "211": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      "double_first_class": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-      "Double First-Class": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-      "provincial": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      "private": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+      "985": "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400",
+      "211": "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400",
+      "Double First-Class": "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400",
+      "Provincial": "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400",
     }
     
-    if (!uniTags || uniTags.length === 0) return null
+    const labels: Record<string, string> = {
+      "985": "985 Project",
+      "211": "211 Project",
+      "Double First-Class": "Double First-Class",
+      "Provincial": "Provincial Key",
+    }
     
-    return uniTags.map((tag) => (
-      <Badge key={tag} className={colors[tag] || "bg-gray-100 text-gray-700"}>
-        {tag === 'double_first_class' ? 'Double First-Class' : tag}
+    if (!uniType) return null
+    
+    return (
+      <Badge variant="outline" className={colors[uniType] || "bg-gray-100 text-gray-700 border-gray-200"}>
+        {labels[uniType] || uniType}
       </Badge>
-    ))
+    )
   }
 
   const formatTuition = (min: number | null, max: number | null, currency: string | null) => {
@@ -259,7 +265,7 @@ export default function UniversityDetailPage() {
             )}
             <div className="flex-1 pb-2">
               <div className="flex items-center gap-2 mb-1">
-                {getTypeBadges(university.tags)}
+                {getTypeBadge(university.type)}
                 {university.scholarship_available && (
                   <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     <IconStar className="h-3 w-3 mr-1" />

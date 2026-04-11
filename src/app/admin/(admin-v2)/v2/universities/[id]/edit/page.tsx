@@ -117,7 +117,7 @@ interface UniversityFormData {
   location: string
   
   // Classification
-  type: string[]
+  type: string
   category: string
   tier: string
   ranking_national: string
@@ -175,7 +175,7 @@ const initialFormData: UniversityFormData = {
   city: '',
   country: 'China',
   location: '',
-  type: [],
+  type: '',
   category: '',
   tier: '',
   ranking_national: '',
@@ -281,7 +281,7 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
             city: u.city || '',
             country: u.country || 'China',
             location: u.location || '',
-            type: Array.isArray(u.type) ? u.type : (u.type ? [u.type] : []),
+            type: u.type || '',
             category: u.category || '',
             tier: u.tier || '',
             ranking_national: u.ranking_national?.toString() || '',
@@ -331,15 +331,6 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
 
   const handleInputChange = (field: keyof UniversityFormData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const toggleType = (typeValue: string) => {
-    setFormData(prev => ({
-      ...prev,
-      type: prev.type.includes(typeValue)
-        ? prev.type.filter(t => t !== typeValue)
-        : [...prev.type, typeValue]
-    }))
   }
 
   const toggleIntakeMonth = (month: string) => {
@@ -656,25 +647,23 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
                 <CardDescription>University type, category, and rankings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Type Classification</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {classificationTypes.map(type => (
-                      <Badge
-                        key={type.value}
-                        variant={formData.type.includes(type.value) ? 'default' : 'outline'}
-                        className={cn(
-                          'cursor-pointer transition-colors',
-                          formData.type.includes(type.value) ? type.color : 'hover:bg-muted'
-                        )}
-                        onClick={() => toggleType(type.value)}
-                      >
-                        {type.label}
-                      </Badge>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">University Type</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value) => handleInputChange('type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classificationTypes.map(type => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
                     <Select

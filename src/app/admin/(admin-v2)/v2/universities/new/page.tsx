@@ -109,7 +109,7 @@ export default function NewUniversityPage() {
     slug: '',
     province: '',
     city: '',
-    type: [] as string[],
+    type: '',
     category: '',
     tier: '',
     ranking_national: '',
@@ -132,15 +132,6 @@ export default function NewUniversityPage() {
       router.push('/admin/login')
     }
   }, [user, authLoading, router])
-
-  const handleTypeToggle = (typeValue: string) => {
-    setFormData(prev => ({
-      ...prev,
-      type: prev.type.includes(typeValue)
-        ? prev.type.filter(t => t !== typeValue)
-        : [...prev.type, typeValue]
-    }))
-  }
 
   // AI Generate function
   const handleAIGenerate = async () => {
@@ -206,8 +197,8 @@ export default function NewUniversityPage() {
           'private': 'Provincial',
         }
         const mappedType = typeMap[generated.type.toLowerCase().replace(/[-\s]/g, '_')]
-        if (mappedType && !updatedFormData.type.includes(mappedType)) {
-          updatedFormData.type = [...updatedFormData.type, mappedType]
+        if (mappedType) {
+          updatedFormData.type = mappedType
         }
       }
 
@@ -543,28 +534,23 @@ export default function NewUniversityPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Classification Type</Label>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Select all that apply
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {classificationTypes.map((ct) => (
-                        <Badge
-                          key={ct.value}
-                          variant={formData.type.includes(ct.value) ? "default" : "outline"}
-                          className={`cursor-pointer ${formData.type.includes(ct.value) ? '' : ct.color}`}
-                          onClick={() => handleTypeToggle(ct.value)}
-                        >
-                          {ct.label}
-                        </Badge>
-                      ))}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="type">University Type</Label>
+                      <Select
+                        value={formData.type}
+                        onValueChange={(value) => setFormData({ ...formData, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {classificationTypes.map((ct) => (
+                            <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="category">University Category</Label>
                       <Select

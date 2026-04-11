@@ -65,6 +65,7 @@ interface University {
   address_cn: string | null;
   website: string | null;
   slug: string | null;
+  type: string | null;
   tags: string[];
   category: string | null;
   ranking_national: number | null;
@@ -115,6 +116,37 @@ interface University {
 
 function cleanUrl(url: string): string {
   return url.replace(/^["']+|["']+$/g, '').trim();
+}
+
+// Type badge styling helper
+function getTypeBadgeStyle(type: string | null): string {
+  switch (type) {
+    case '985':
+      return 'bg-red-500/10 text-red-600 border-red-200';
+    case '211':
+      return 'bg-blue-500/10 text-blue-600 border-blue-200';
+    case 'Double First-Class':
+      return 'bg-purple-500/10 text-purple-600 border-purple-200';
+    case 'Provincial':
+      return 'bg-green-500/10 text-green-600 border-green-200';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+function getTypeLabel(type: string | null): string {
+  switch (type) {
+    case '985':
+      return '985 Project';
+    case '211':
+      return '211 Project';
+    case 'Double First-Class':
+      return 'Double First-Class';
+    case 'Provincial':
+      return 'Provincial Key';
+    default:
+      return type || '';
+  }
 }
 
 interface Program {
@@ -490,19 +522,15 @@ function InfoSidebarCard({ university }: { university: University }) {
       )}
 
       {/* University Type */}
-      {university.tags && university.tags.length > 0 && (
+      {university.type && (
         <Card size="sm">
           <CardHeader>
             <CardTitle>Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-1.5">
-              {university.tags.map((tag) => (
-                <Badge key={tag} variant="outline">
-                  {tag === 'double_first_class' ? 'Double First-Class' : tag.toUpperCase()}
-                </Badge>
-              ))}
-            </div>
+            <Badge variant="outline" className={getTypeBadgeStyle(university.type)}>
+              {getTypeLabel(university.type)}
+            </Badge>
           </CardContent>
         </Card>
       )}
