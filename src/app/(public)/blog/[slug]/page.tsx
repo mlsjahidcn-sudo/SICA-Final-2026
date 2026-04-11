@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import BlogPostContent from './BlogPostContent';
-import { ArticleSchema, BreadcrumbSchema } from '@/components/seo/json-ld';
+import { ArticleSchema, BreadcrumbSchema, FAQSchema } from '@/components/seo/json-ld';
 
 const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
 
@@ -110,11 +110,15 @@ export default async function BlogPostPage({
     { name: post.title, url: `/blog/${slug}` },
   ];
 
+  // Prepare FAQ schema if FAQs exist
+  const hasFAQs = post.faqs && post.faqs.length > 0;
+
   return (
     <>
       {/* Structured Data for SEO */}
       <ArticleSchema article={articleSchema} />
       <BreadcrumbSchema items={breadcrumbItems} />
+      {hasFAQs && <FAQSchema faqs={post.faqs} />}
       <BlogPostContent post={post} />
     </>
   );

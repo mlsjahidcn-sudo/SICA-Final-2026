@@ -97,6 +97,8 @@ export async function PUT(
       seo_title,
       seo_description,
       seo_keywords,
+      faqs,
+      internal_links,
       tags,
     } = body;
 
@@ -147,6 +149,8 @@ export async function PUT(
     if (seo_title !== undefined) updateData.seo_title = seo_title;
     if (seo_description !== undefined) updateData.seo_description = seo_description;
     if (seo_keywords !== undefined) updateData.seo_keywords = seo_keywords;
+    if (faqs !== undefined) updateData.faqs = faqs;
+    if (internal_links !== undefined) updateData.internal_links = internal_links;
     if (readingTime !== undefined) updateData.reading_time_minutes = readingTime;
 
     // Update the post

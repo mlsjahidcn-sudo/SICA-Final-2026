@@ -138,6 +138,8 @@ export async function POST(request: NextRequest) {
       seo_title,
       seo_description,
       seo_keywords,
+      faqs = [],
+      internal_links = [],
       tags = [],
     } = body;
 
@@ -175,6 +177,8 @@ export async function POST(request: NextRequest) {
         seo_title,
         seo_description,
         seo_keywords,
+        faqs,
+        internal_links,
         reading_time_minutes: readingTime,
         published_at: status === 'published' ? new Date().toISOString() : null,
       })

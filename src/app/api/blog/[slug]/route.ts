@@ -45,6 +45,7 @@ interface BlogPost {
   seo_title: string | null;
   seo_description: string | null;
   seo_keywords: string[] | null;
+  faqs: Array<{ question: string; answer: string }> | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -86,6 +87,7 @@ export async function GET(
         seo_title,
         seo_description,
         seo_keywords,
+        faqs,
         published_at,
         created_at,
         updated_at,
@@ -185,6 +187,7 @@ export async function GET(
         slug: pt.blog_tags.slug,
         color: pt.blog_tags.color,
       })) || [],
+      faqs: typedPost.faqs || [],
       relatedPosts: relatedPosts?.map(rp => ({
         id: rp.id,
         slug: rp.slug,
