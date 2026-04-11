@@ -55,6 +55,13 @@ import {
   getFollowUpQuestions
 } from '@/lib/chat-utils';
 
+// Generate unique IDs
+let idCounter = 0;
+const generateId = () => {
+  idCounter += 1;
+  return `${Date.now()}_${idCounter}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
 // Card data types matching API response
 interface UniversityCardData {
   id: string;
@@ -273,7 +280,7 @@ export function ChatWidget() {
       }
       
       const newConv: Conversation = {
-        id: Date.now().toString(),
+        id: generateId(),
         title,
         messages: msgs,
         createdAt: now,
@@ -356,7 +363,7 @@ export function ChatWidget() {
     if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: generateId(),
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
@@ -371,7 +378,7 @@ export function ChatWidget() {
     setFollowUpQuestions([]);
     setMessageCount(prev => prev + 1);
 
-    const assistantId = (Date.now() + 1).toString();
+    const assistantId = generateId();
     const placeholderMessage: Message = {
       id: assistantId,
       role: 'assistant',
