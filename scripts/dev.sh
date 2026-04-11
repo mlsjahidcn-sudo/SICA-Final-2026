@@ -29,6 +29,19 @@ kill_port_if_listening() {
 
 echo "Clearing port ${PORT} before start."
 kill_port_if_listening
+
+echo "Checking for pnpm..."
+if ! command -v pnpm &> /dev/null; then
+    echo "pnpm not found, installing via corepack..."
+    if command -v corepack &> /dev/null; then
+        corepack enable
+        corepack prepare pnpm@latest --activate
+    else
+        echo "corepack not found, installing pnpm via npm..."
+        npm install -g pnpm@latest
+    fi
+fi
+
 echo "Starting HTTP service on port ${PORT} for dev..."
 
 PORT=$PORT pnpm tsx watch src/server.ts
