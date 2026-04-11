@@ -19,35 +19,41 @@ const SYSTEM_PROMPT = `You are the SICA AI Assistant — a friendly, knowledgeab
 - Chinese Government Scholarships (CSC) and university-specific scholarships available
 - Application process: profile → program selection → document upload → submission → review → interview → admission
 
-## CRITICAL: How to Recommend Universities and Programs
+## ⚠️ CRITICAL: MARKER FORMAT FOR UNIVERSITY AND PROGRAM CARDS
 
-When the Database Search Results section contains matching universities or programs, you MUST:
+When the Database Search Results section shows matching universities or programs, you MUST use special markers to display interactive cards.
 
-1. **Write a natural response** - Greet the user, acknowledge their question
-2. **Use markers to display cards** - Insert [UNI:id] or [PROG:id] where appropriate
-3. **DO NOT copy the database context** - The user already sees the cards, just give a brief intro
+### Marker Format (MUST USE EXACTLY):
+- For universities: [UNI:uuid]  (example: [UNI:d52e2c2a-4f07-48dd-9a12-0445e572bfbd])
+- For programs: [PROG:uuid]     (example: [PROG:a1b2c3d4-e5f6-7890-abcd-ef1234567890])
 
-**Marker Format:**
-- Universities: [UNI:exact-uuid-from-context]
-- Programs: [PROG:exact-uuid-from-context]
+### ⛔ DO NOT USE:
+- Markdown links like [University Name](uuid) - WRONG!
+- Copying the database details into your response - WRONG!
+- Writing "Marker: [UNI:xxx]" - WRONG!
 
-**Example (CORRECT):**
-"Great question! Here are some top universities in Beijing:
+### ✅ CORRECT Usage Example:
 
-1. [UNI:b0000000-0000-0000-0000-000000000001] - Ranked #1 nationally
-2. [UNI:b0000000-0000-0000-0000-000000000002] - Known for humanities
+User: "Show me universities in Beijing"
 
-Let me know if you'd like more details!"
+Database Search Results shows:
+- Peking University, Marker: [UNI:d52e2c2a-4f07-48dd-9a12-0445e572bfbd], Ranking: 1
+- Tsinghua University, Marker: [UNI:7f1ed02b-77bf-4a80-ad11-2a615fadcb0b], Ranking: 2
 
-**Example (WRONG - DO NOT DO THIS):**
-"Here are the universities:
-- Tsinghua University
-  Marker: [UNI:xxx]
-  Location: Beijing
-  Ranking: 1
-  ..."
+Your response should be:
+"Here are the top universities in Beijing:
 
-**Remember:** Just use the markers in a natural list. The cards will automatically show all the details!`;
+1. [UNI:d52e2c2a-4f07-48dd-9a12-0445e572bfbd] - China's #1 ranked university
+2. [UNI:7f1ed02b-77bf-4a80-ad11-2a615fadcb0b] - Famous for engineering
+
+Would you like to know about specific programs at these universities?"
+
+### IMPORTANT Rules:
+1. ALWAYS use [UNI:exact-uuid] format - NOT markdown links
+2. Use the EXACT uuid from the Database Search Results
+3. Include a brief comment after each marker
+4. NEVER copy the full database details - just use the marker
+5. The marker will automatically display a card with all the details`;
 
 // Intent detection keywords
 const INTENT_KEYWORDS = {
@@ -139,7 +145,7 @@ async function searchUniversities(supabase: ReturnType<typeof getSupabaseClient>
       .limit(limit);
     
     if (error) {
-      console.error('University search error:', error);
+      console.error('[Chat] University search error:', error);
       return [];
     }
     
@@ -220,38 +226,25 @@ function formatDatabaseContext(
   const parts: string[] = [];
   
   if (universities.length > 0) {
-    parts.push('## Matching Universities\nUse the marker format [UNI:id] in your response to display university cards:');
+    parts.push('## Database Search Results - Universities\n\nINSERT THESE MARKERS IN YOUR RESPONSE to display university cards:\n');
     universities.forEach((uni) => {
       const types = Array.isArray(uni.type) ? uni.type.join(', ') : (uni.type || 'Standard');
       const id = String(uni.id);
       parts.push(
-        `\n### ${uni.name_en}\n` +
-        `Marker: [UNI:${id}]\n` +
-        `- Chinese Name: ${uni.name_cn || 'N/A'}\n` +
-        `- Location: ${uni.city || 'N/A'}, ${uni.province || 'N/A'}\n` +
-        `- National Ranking: ${uni.ranking_national || 'N/A'}\n` +
-        `- Type: ${types}\n` +
-        `- Scholarship Available: ${uni.scholarship_available ? 'Yes' : 'No'}\n` +
-        `- Tuition Range: ${uni.tuition_min ? `${uni.tuition_min} - ${uni.tuition_max} ${uni.tuition_currency || 'CNY'}` : 'Contact us'}`
+        `- ${uni.name_en}: Use [UNI:${id}] in your response\n` +
+        `  Details: ${uni.city || 'N/A'}, Ranking #${uni.ranking_national || 'N/A'}, ${types}, Scholarship: ${uni.scholarship_available ? 'Yes' : 'No'}`
       );
     });
   }
   
   if (programs.length > 0) {
-    parts.push('\n## Matching Programs\nUse the marker format [PROG:id] in your response to display program cards:');
+    parts.push('\n## Database Search Results - Programs\n\nINSERT THESE MARKERS IN YOUR RESPONSE to display program cards:\n');
     programs.forEach((prog) => {
       const uni = prog.universities as Record<string, unknown> | null;
       const id = String(prog.id);
       parts.push(
-        `\n### ${prog.name}\n` +
-        `Marker: [PROG:${id}]\n` +
-        `- University: ${uni?.name_en || 'N/A'} (${uni?.city || 'N/A'})\n` +
-        `- Degree: ${prog.degree_level || 'N/A'}\n` +
-        `- Category: ${prog.category || 'N/A'}${prog.sub_category ? ` / ${prog.sub_category}` : ''}\n` +
-        `- Language: ${prog.language || 'N/A'}\n` +
-        `- Duration: ${prog.duration_years ? `${prog.duration_years} years` : 'N/A'}\n` +
-        `- Tuition: ${prog.tuition_fee_per_year ? `${prog.tuition_fee_per_year} ${prog.currency || 'CNY'}/year` : 'Contact us'}\n` +
-        `- Scholarship: ${prog.scholarship_available ? 'Yes ✓' : 'No'}`
+        `- ${prog.name}: Use [PROG:${id}] in your response\n` +
+        `  Details: ${uni?.name_en || 'N/A'}, ${prog.degree_level || 'N/A'}, ${prog.language || 'N/A'}, Scholarship: ${prog.scholarship_available ? 'Yes' : 'No'}`
       );
     });
   }
