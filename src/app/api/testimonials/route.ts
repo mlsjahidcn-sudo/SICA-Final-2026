@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
 // Types
 interface Testimonial {
@@ -27,14 +28,24 @@ interface Testimonial {
   created_at: string;
 }
 
-// GET /api/testimonials - Get approved testimonials
+// GET /api/testimonials - Get approved testimonials (with caching)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const locale = searchParams.get('locale') || 'en';
     const featured = searchParams.get('featured');
     const limit = parseInt(searchParams.get('limit') || '10');
+
+    // Generate cache key
+    const cacheKey = `testimonials:${locale}:${featured || 'all'}:${limit}`;
+    
+    // Check cache first
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    const supabase = getSupabaseClient();
 
     let query = supabase
       .from('testimonials')
@@ -51,7 +62,12 @@ export async function GET(request: NextRequest) {
       query = query.limit(limit);
     }
 
-    const { data: testimonials, error } = await query;
+    // Add timeout to database query
+    const { data: testimonials, error } = await withTimeout(
+      query,
+      5000,
+      'Testimonials query timed out'
+    );
 
     if (error) {
       console.error('Error fetching testimonials:', error);
@@ -77,10 +93,15 @@ export async function GET(request: NextRequest) {
       createdAt: t.created_at,
     })) || [];
 
-    return NextResponse.json({
+    const response = {
       testimonials: transformedTestimonials,
       total: transformedTestimonials.length,
-    });
+    };
+
+    // Cache the response for 5 minutes
+    apiCache.set(cacheKey, response, CACHE_TTL.LONG);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in testimonials API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

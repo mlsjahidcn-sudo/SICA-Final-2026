@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
 // Types
 interface Partner {
@@ -24,15 +25,25 @@ interface Partner {
   display_order: number;
 }
 
-// GET /api/partners - Get active partners
+// GET /api/partners - Get active partners (with caching)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const locale = searchParams.get('locale') || 'en';
     const type = searchParams.get('type');
     const featured = searchParams.get('featured');
     const limit = parseInt(searchParams.get('limit') || '20');
+
+    // Generate cache key
+    const cacheKey = `partners:${locale}:${type || 'all'}:${featured || 'all'}:${limit}`;
+    
+    // Check cache first
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    const supabase = getSupabaseClient();
 
     let query = supabase
       .from('partner_showcases')
@@ -53,7 +64,12 @@ export async function GET(request: NextRequest) {
       query = query.limit(limit);
     }
 
-    const { data: partners, error } = await query;
+    // Add timeout to database query
+    const { data: partners, error } = await withTimeout(
+      query,
+      5000,
+      'Partners query timed out'
+    );
 
     if (error) {
       console.error('Error fetching partners:', error);
@@ -90,11 +106,16 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, typeof transformedPartners>);
 
-    return NextResponse.json({
+    const response = {
       partners: transformedPartners,
       partnersByType,
       total: transformedPartners.length,
-    });
+    };
+
+    // Cache the response for 5 minutes
+    apiCache.set(cacheKey, response, CACHE_TTL.LONG);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in partners API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

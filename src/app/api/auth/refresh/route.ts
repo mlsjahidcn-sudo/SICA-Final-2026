@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseCredentials, getSupabaseClient } from '@/storage/database/supabase-client';
+import { withTimeout } from '@/lib/api-cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,10 +24,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Exchange refresh token for new access token
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token,
-    });
+    // Exchange refresh token for new access token with timeout
+    const refreshResult = await withTimeout(
+      supabase.auth.refreshSession({ refresh_token }),
+      5000,
+      'Token refresh timed out'
+    );
+
+    const { data, error } = refreshResult;
 
     if (error || !data.session || !data.user) {
       console.error('Token refresh failed:', error?.message);
@@ -36,13 +41,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch user profile with service role client
+    // Fetch user profile with service role client (with timeout)
     const adminClient = getSupabaseClient();
-    const { data: profile } = await adminClient
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .maybeSingle();
+    const profileResult = await withTimeout(
+      adminClient
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle(),
+      5000,
+      'Profile fetch timed out'
+    );
+    const { data: profile } = profileResult;
 
     const user = {
       id: data.user.id,

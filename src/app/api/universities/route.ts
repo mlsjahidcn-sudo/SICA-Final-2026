@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
+// GET /api/universities - Get universities list (with caching)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,6 +14,15 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const scholarship = searchParams.get('scholarship');
     const english = searchParams.get('english');
+
+    // Generate cache key for this query
+    const cacheKey = `universities:${limit}:${page}:${search || 'none'}:${province || 'all'}:${type || 'all'}:${category || 'all'}:${scholarship || 'all'}:${english || 'all'}`;
+    
+    // Check cache first
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
 
     const supabase = getSupabaseClient();
 
@@ -40,8 +51,13 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.contains('teaching_languages', ['English']);
     }
 
-    // Get total count
-    const { count, error: countError } = await countQuery;
+    // Get total count with timeout
+    const countResult = await withTimeout(
+      countQuery,
+      5000,
+      'Count query timed out'
+    );
+    const { count, error: countError } = countResult;
     if (countError) {
       console.error('Error counting universities:', countError);
       return NextResponse.json({ error: 'Failed to count universities' }, { status: 500 });
@@ -98,20 +114,30 @@ export async function GET(request: NextRequest) {
       dataQuery = dataQuery.contains('teaching_languages', ['English']);
     }
 
-    const { data: universities, error } = await dataQuery;
+    // Add timeout to data query
+    const { data: universities, error } = await withTimeout(
+      dataQuery,
+      5000,
+      'Data query timed out'
+    );
 
     if (error) {
       console.error('Error fetching universities:', error);
       return NextResponse.json({ error: 'Failed to fetch universities' }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const response = {
       universities: universities || [],
       total: count || 0,
       page,
       limit,
       totalPages: Math.ceil((count || 0) / limit)
-    });
+    };
+
+    // Cache the response for 2 minutes
+    apiCache.set(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in universities GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

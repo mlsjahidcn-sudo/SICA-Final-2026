@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
 const PROGRAM_SELECT = `
   id,
@@ -69,6 +70,15 @@ export async function GET(request: NextRequest) {
     const sub_category = searchParams.get('sub_category');
     const scholarship = searchParams.get('scholarship');
 
+    // Generate cache key
+    const cacheKey = `programs:${page}:${limit}:${university_id || 'all'}:${search || 'none'}:${degree_level || 'all'}:${language || 'all'}:${category || 'all'}:${sub_category || 'all'}:${scholarship || 'all'}`;
+    
+    // Check cache first
+    const cached = apiCache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const offset = (page - 1) * limit;
 
     const supabase = getSupabaseClient();
@@ -111,21 +121,31 @@ export async function GET(request: NextRequest) {
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
 
-    const { data: programs, error, count } = await query;
+    // Add timeout to database query
+    const { data: programs, error, count } = await withTimeout(
+      query,
+      5000,
+      'Programs query timed out'
+    );
 
     if (error) {
       console.error('Error fetching programs:', error);
       return NextResponse.json({ error: 'Failed to fetch programs' }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const response = {
       programs: programs || [],
       total: count || 0,
       page,
       limit,
       totalPages: Math.ceil((count || 0) / limit),
       hasMore: (count || 0) > page * limit
-    });
+    };
+
+    // Cache the response for 2 minutes
+    apiCache.set(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in programs GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
