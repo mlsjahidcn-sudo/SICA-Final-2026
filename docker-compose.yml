@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Add your environment variables here or use Coolify's environment UI
+      # - COZE_SUPABASE_URL=${COZE_SUPABASE_URL}
+      # - COZE_SUPABASE_ANON_KEY=${COZE_SUPABASE_ANON_KEY}
+      # - COZE_SUPABASE_SERVICE_ROLE_KEY=${COZE_SUPABASE_SERVICE_ROLE_KEY}
+      # - RESEND_API_KEY=${RESEND_API_KEY}
+      # - EMAIL_FROM=${EMAIL_FROM}
+      # - ADMIN_EMAIL=${ADMIN_EMAIL}
+      # - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# For Coolify deployment, you typically don't need the volumes section
+# as Coolify handles persistent storage separately

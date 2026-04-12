@@ -1,0 +1,280 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "other": "Other",
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "nav": {
+    "home": "Home",
+    "universities": "Universities",
+    "programs": "Programs",
+    "about": "About",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "settings": "Settings",
+    "applications": "Applications",
+    "documents": "Documents",
+    "meetings": "Meetings",
+    "notifications": "Notifications"
+  },
+  "home": {
+    "hero": {
+      "title": "Study in China Academy",
+      "subtitle": "Your Gateway to World-Class Education in China",
+      "description": "Discover top universities, programs, and scholarship opportunities in China. We help international students navigate their educational journey.",
+      "cta": {
+        "explore": "Explore Universities",
+        "apply": "Start Application"
+      }
+    },
+    "features": {
+      "title": "Why Choose Us",
+      "subtitle": "We provide comprehensive support for your study abroad journey",
+      "university": {
+        "title": "Top Universities",
+        "description": "Access to 500+ top Chinese universities with world-class programs"
+      },
+      "scholarship": {
+        "title": "Scholarship Support",
+        "description": "Guidance on scholarships and financial aid opportunities"
+      },
+      "application": {
+        "title": "Easy Application",
+        "description": "Streamlined application process with expert guidance"
+      },
+      "support": {
+        "title": "24/7 Support",
+        "description": "Dedicated support team to assist you throughout your journey"
+      }
+    },
+    "stats": {
+      "universities": "Partner Universities",
+      "students": "Students Enrolled",
+      "programs": "Study Programs",
+      "countries": "Countries"
+    }
+  },
+  "universities": {
+    "title": "Universities",
+    "subtitle": "Explore top universities in China",
+    "search": "Search universities...",
+    "filter": {
+      "province": "Province",
+      "type": "University Type",
+      "category": "Category",
+      "scholarship": "Scholarship Available"
+    },
+    "card": {
+      "ranking": "National Ranking",
+      "students": "Students",
+      "international": "International Students",
+      "programs": "Programs"
+    },
+    "detail": {
+      "overview": "Overview",
+      "programs": "Programs",
+      "facilities": "Facilities",
+      "gallery": "Gallery",
+      "contact": "Contact",
+      "location": "Location",
+      "website": "Official Website"
+    }
+  },
+  "programs": {
+    "title": "Study Programs",
+    "subtitle": "Find your perfect program",
+    "search": "Search programs...",
+    "filter": {
+      "degree": "Degree Type",
+      "language": "Teaching Language",
+      "field": "Field of Study",
+      "duration": "Duration"
+    },
+    "card": {
+      "degree": "Degree",
+      "duration": "Duration",
+      "tuition": "Tuition",
+      "language": "Language",
+      "scholarship": "Scholarship Available"
+    },
+    "detail": {
+      "overview": "Program Overview",
+      "requirements": "Requirements",
+      "curriculum": "Curriculum",
+      "career": "Career Prospects",
+      "apply": "Apply Now"
+    }
+  },
+  "application": {
+    "title": "Application",
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "under_review": "Under Review",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "form": {
+      "personal": "Personal Information",
+      "education": "Education Background",
+      "documents": "Required Documents",
+      "review": "Review & Submit"
+    },
+    "document": {
+      "passport": "Passport",
+      "diploma": "Diploma/Certificate",
+      "transcript": "Academic Transcript",
+      "language": "Language Certificate",
+      "photo": "Passport Photo",
+      "recommendation": "Recommendation Letter",
+      "cv": "CV/Resume",
+      "study_plan": "Study Plan",
+      "financial": "Financial Proof"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to your account",
+      "email": "Email",
+      "password": "Password",
+      "remember": "Remember me",
+      "forgot": "Forgot password?",
+      "submit": "Sign In",
+      "noAccount": "Don't have an account?",
+      "register": "Create an account"
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join thousands of international students",
+      "fullName": "Full Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "agree": "I agree to the",
+      "terms": "Terms of Service",
+      "and": "and",
+      "privacy": "Privacy Policy",
+      "submit": "Create Account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "overview": "Overview",
+    "recentActivity": "Recent Activity",
+    "upcomingMeetings": "Upcoming Meetings",
+    "pendingDocuments": "Pending Documents",
+    "quickActions": "Quick Actions",
+    "stats": {
+      "applications": "Total Applications",
+      "accepted": "Accepted",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "personal": "Personal Information",
+    "education": "Education Background",
+    "language": "Language Proficiency",
+    "work": "Work Experience",
+    "edit": "Edit Profile",
+    "completeness": "Profile Completeness"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "security": "Security",
+    "language": "Language",
+    "theme": "Theme",
+    "timezone": "Timezone",
+    "emailNotifications": "Email Notifications",
+    "pushNotifications": "Push Notifications",
+    "meetingReminders": "Meeting Reminders",
+    "applicationUpdates": "Application Updates"
+  },
+  "footer": {
+    "about": "About Us",
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "faq": "FAQ",
+    "support": "Support",
+    "copyright": "© 2024 Study in China Academy. All rights reserved."
+  },
+  "chat": {
+    "title": "SICA AI Assistant",
+    "placeholder": "Ask about studying in China...",
+    "welcome": "How can I help you?",
+    "welcomeDesc": "Ask me about universities, programs, scholarships, or the application process.",
+    "history": "Chat History",
+    "newChat": "New Chat",
+    "noHistory": "No conversations yet",
+    "thinking": "Thinking...",
+    "disclaimer": "AI may make mistakes. Verify important information.",
+    "guestMode": "Guest mode - sign in for saved history",
+    "guided": {
+      "degreeQuestion": "What degree are you pursuing?",
+      "majorQuestion": "What field interests you?",
+      "bachelor": "Bachelor's",
+      "master": "Master's",
+      "phd": "PhD",
+      "language": "Language / Non-degree",
+      "getGuidance": "Get Personalized Guidance",
+      "orAsk": "Or ask anything:"
+    },
+    "lead": {
+      "title": "Get Personalized Guidance",
+      "desc": "We'll contact you via WhatsApp with the best program matches.",
+      "name": "Name",
+      "email": "Email",
+      "whatsapp": "WhatsApp Number",
+      "nationality": "Nationality",
+      "degreeLevel": "Degree Level",
+      "majorInterest": "Major / Field of Interest",
+      "preferredLanguage": "Preferred Language of Instruction",
+      "submit": "Submit",
+      "success": "Thank you! Our team will reach out via WhatsApp with personalized recommendations.",
+      "required": "Required",
+      "invalidEmail": "Invalid email format",
+      "invalidPhone": "Invalid number format"
+    },
+    "suggestions": {
+      "engineering": "What are the best universities for engineering in China?",
+      "scholarship": "How do I apply for a Chinese Government Scholarship?",
+      "documents": "What documents do I need for my application?",
+      "english": "Which programs are taught in English?"
+    }
+  }
+}
