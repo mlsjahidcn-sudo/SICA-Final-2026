@@ -72,6 +72,11 @@ export async function GET(request: NextRequest) {
     );
 
     if (error) {
+      // If table doesn't exist, return empty array gracefully
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find')) {
+        console.warn('partner_showcases table not found, returning empty array');
+        return NextResponse.json({ partners: [], partnersByType: {}, total: 0 });
+      }
       console.error('Error fetching partners:', error);
       return NextResponse.json({ error: 'Failed to fetch partners' }, { status: 500 });
     }

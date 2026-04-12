@@ -17,7 +17,7 @@ import {
   IconNotes,
   IconEdit,
 } from "@tabler/icons-react";
-import type { ApplicationFormData, Student, Program } from "../types";
+import type { ApplicationFormData, Student, Program } from "./types";
 
 interface ReviewStepProps {
   students: Student[];

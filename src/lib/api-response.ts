@@ -67,7 +67,7 @@ export function error(
     },
   };
 
-  if (details !== undefined) {
+  if (details !== undefined && response.error) {
     response.error.details = details;
   }
 

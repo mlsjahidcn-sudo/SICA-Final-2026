@@ -68,7 +68,7 @@ export function validateEnv(): z.infer<typeof envSchema> {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const messages = error.errors.map((err) => {
+      const messages = error.issues.map((err) => {
         return `  - ${err.path.join('.')}: ${err.message}`;
       });
       throw new Error(
@@ -96,7 +96,7 @@ export function validateCriticalEnv(): {
     return criticalSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const messages = error.errors.map((err) => {
+      const messages = error.issues.map((err) => {
         return `  - ${err.path.join('.')}: ${err.message}`;
       });
       throw new Error(

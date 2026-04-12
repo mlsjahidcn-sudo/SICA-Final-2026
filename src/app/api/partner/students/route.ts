@@ -425,10 +425,10 @@ export async function POST(request: NextRequest) {
       graduation_date: graduation_date || null,
       gpa: gpa || null,
       // Language test scores
-      hsk_level: hsk_level != null && hsk_level !== '' ? Number(hsk_level) : null,
-      hsk_score: hsk_score != null && hsk_score !== '' ? Number(hsk_score) : null,
+      hsk_level: hsk_level ?? null,
+      hsk_score: hsk_score ?? null,
       ielts_score: ielts_score || null,
-      toefl_score: toefl_score != null && toefl_score !== '' ? Number(toefl_score) : null,
+      toefl_score: toefl_score ?? null,
       // Family information
       family_members: Array.isArray(family_members) ? family_members : null,
       // Additional information

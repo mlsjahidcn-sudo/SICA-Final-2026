@@ -63,6 +63,13 @@ export const createStudentSchema = z.object({
     responsibilities: z.string().optional(),
   })),
   
+  // Legacy single-education fields (for backward compatibility)
+  highest_education: optionalString,
+  institution_name: optionalString,
+  field_of_study: optionalString,
+  graduation_date: dateString,
+  gpa: optionalString,
+  
   // Language scores
   hsk_level: z.number().int().min(1).max(6).optional(),
   hsk_score: z.number().int().positive().optional(),
@@ -107,8 +114,8 @@ export const createStudentSchema = z.object({
   // Preferences
   study_mode: z.enum(['full-time', 'part-time', 'online']).optional(),
   funding_source: z.enum(['self-funded', 'scholarship', 'loan', 'other']).optional(),
-  scholarship_application: z.record(z.unknown()).optional(),
-  financial_guarantee: z.record(z.unknown()).optional(),
+  scholarship_application: z.record(z.string(), z.unknown()).optional(),
+  financial_guarantee: z.record(z.string(), z.unknown()).optional(),
   
   // Communication
   phone: optionalString,

@@ -4,10 +4,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies using npm
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+# Install dependencies using pnpm (corepack is built into Node.js 20+)
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -15,7 +16,7 @@ COPY . .
 # Build the application
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-RUN npm run build:next
+RUN pnpm run build:next
 
 # Production stage
 FROM node:20-alpine AS runner

@@ -6,9 +6,9 @@
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { withTimeout } from './api-cache';
 
-// Timeout constants
-const QUERY_TIMEOUT = 5000; // 5 seconds
-const LONG_QUERY_TIMEOUT = 10000; // 10 seconds for complex queries
+// Timeout constants - increased for slow network connections
+const QUERY_TIMEOUT = 30000; // 30 seconds (was 5s)
+const LONG_QUERY_TIMEOUT = 60000; // 60 seconds for complex queries (was 10s)
 
 // ============================================
 // Universities Queries
@@ -238,6 +238,13 @@ export const programsQueries = {
       QUERY_TIMEOUT,
       'Programs list query timed out'
     );
+
+    // Handle missing table gracefully
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find')) {
+        return { data: [], count: 0, error: null };
+      }
+    }
 
     return { data: data || [], count: count || 0, error };
   },

@@ -16,7 +16,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
-export default function ClaimStudentPage() {
+function ClaimStudentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -191,5 +191,23 @@ export default function ClaimStudentPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+import { Suspense } from 'react';
+
+export default function ClaimStudentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    }>
+      <ClaimStudentContent />
+    </Suspense>
   );
 }

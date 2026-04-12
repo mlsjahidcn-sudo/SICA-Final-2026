@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/popover";
 import { IconSearch, IconUser, IconCheck } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import type { Student, ApplicationFormData } from "../types";
+import type { Student, ApplicationFormData } from "./types";
 
 interface StudentSelectionStepProps {
   students: Student[];

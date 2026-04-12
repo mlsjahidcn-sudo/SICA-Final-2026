@@ -78,10 +78,10 @@ export function EditStudentDialog({ student, onStudentUpdated, trigger }: EditSt
     field_of_study: student.students?.field_of_study || "",
     graduation_date: student.students?.graduation_date || "",
     gpa: student.students?.gpa || "",
-    hsk_level: student.students?.hsk_level?.toString() || "",
-    hsk_score: student.students?.hsk_score?.toString() || "",
+    hsk_level: student.students?.hsk_level != null ? String(student.students.hsk_level) : "",
+    hsk_score: student.students?.hsk_score != null ? String(student.students.hsk_score) : "",
     ielts_score: student.students?.ielts_score || "",
-    toefl_score: student.students?.toefl_score?.toString() || "",
+    toefl_score: student.students?.toefl_score != null ? String(student.students.toefl_score) : "",
   })
 
   useEffect(() => {
@@ -105,10 +105,10 @@ export function EditStudentDialog({ student, onStudentUpdated, trigger }: EditSt
         field_of_study: student.students?.field_of_study || "",
         graduation_date: student.students?.graduation_date || "",
         gpa: student.students?.gpa || "",
-        hsk_level: student.students?.hsk_level?.toString() || "",
-        hsk_score: student.students?.hsk_score?.toString() || "",
+        hsk_level: student.students?.hsk_level != null ? String(student.students.hsk_level) : "",
+        hsk_score: student.students?.hsk_score != null ? String(student.students.hsk_score) : "",
         ielts_score: student.students?.ielts_score || "",
-        toefl_score: student.students?.toefl_score?.toString() || "",
+        toefl_score: student.students?.toefl_score != null ? String(student.students.toefl_score) : "",
       })
     }
   }, [open, student])
@@ -215,7 +215,7 @@ export function EditStudentDialog({ student, onStudentUpdated, trigger }: EditSt
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label>Email (read-only)</Label>
-                  <Input value={student.email} disabled className="bg-muted" />
+                  <Input value={student.email || ""} disabled className="bg-muted" />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="full_name">Full Name *</Label>

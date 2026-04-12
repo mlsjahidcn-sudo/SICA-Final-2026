@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { IconCalendar, IconFileText, IconNotes } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import type { ApplicationFormData } from "../types";
+import type { ApplicationFormData } from "./types";
 
 const PRIORITY_OPTIONS = [
   { value: 0, label: "Normal", color: "bg-gray-100 text-gray-800 hover:bg-gray-200" },

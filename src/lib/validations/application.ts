@@ -6,9 +6,11 @@ import { z } from 'zod';
 
 export const createApplicationSchema = z.object({
   program_id: z.string().uuid('Invalid program ID'),
-  personal_statement: z.string().min(100, 'Personal statement must be at least 100 characters').max(5000, 'Personal statement is too long'),
-  study_plan: z.string().min(50, 'Study plan must be at least 50 characters').max(3000, 'Study plan is too long'),
-  intake: z.string().min(1, 'Intake is required'),
+  university_id: z.string().uuid('Invalid university ID').optional(),
+  partner_id: z.string().uuid('Invalid partner ID').optional(),
+  personal_statement: z.string().min(100, 'Personal statement must be at least 100 characters').max(5000, 'Personal statement is too long').optional(),
+  study_plan: z.string().min(50, 'Study plan must be at least 50 characters').max(3000, 'Study plan is too long').optional(),
+  intake: z.string().min(1, 'Intake is required').optional(),
   notes: z.string().max(1000, 'Notes are too long').optional(),
 });
 

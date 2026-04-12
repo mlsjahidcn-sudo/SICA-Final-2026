@@ -21,7 +21,7 @@ export async function POST(
       .update({
         approval_status: 'approved',
         approved_at: new Date().toISOString(),
-        approved_by: authUser.id,
+        approved_by: user.id,
         partner_role: 'partner_admin', // Self-signed-up partners are org admins
         partner_id: partnerUserId, // They are their own org owner
         updated_at: new Date().toISOString(),

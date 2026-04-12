@@ -346,7 +346,7 @@ export async function DELETE(
     // First, check if this is an orphan student (student record without user_id)
     const { data: studentRecord, error: studentCheckError } = await supabaseAdmin
       .from('students')
-      .select('id, user_id')
+      .select('id, user_id, admin_notes')
       .eq('id', studentId)
       .maybeSingle();
 

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/popover";
 import { IconSearch, IconSchool, IconCheck, IconMapPin } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import type { Program, ApplicationFormData } from "../types";
+import type { Program, ApplicationFormData } from "./types";
 
 interface ProgramSelectionStepProps {
   programs: Program[];

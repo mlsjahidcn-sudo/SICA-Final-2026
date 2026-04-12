@@ -86,7 +86,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ success: boole
  * Save email log to database
  */
 export async function logEmail(params: {
-  userId: string;
+  userId: string | null;
   emailType: string;
   recipient: string;
   subject: string;

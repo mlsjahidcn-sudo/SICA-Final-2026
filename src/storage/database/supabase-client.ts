@@ -1,6 +1,31 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ============================================
+// Custom Fetch with Extended Timeout
+// ============================================
+
+/**
+ * Custom fetch wrapper with extended timeout for slow network connections
+ * (VPN, proxy, etc.)
+ */
+function createTimeoutFetch(timeoutMs: number = 60000): typeof fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+}
+
+// ============================================
 // Environment Variable Validation
 // ============================================
 
@@ -110,9 +135,7 @@ function getSupabaseClient(token?: string): SupabaseClient {
     return createClient(url, anonKey, {
       global: {
         headers: { Authorization: `Bearer ${token}` },
-      },
-      db: {
-        timeout: 60000,
+        fetch: createTimeoutFetch(60000),
       },
       auth: {
         autoRefreshToken: false,
@@ -130,8 +153,8 @@ function getSupabaseClient(token?: string): SupabaseClient {
   const key = serviceRoleKey ?? anonKey;
 
   serverClient = createClient(url, key, {
-    db: {
-      timeout: 60000,
+    global: {
+      fetch: createTimeoutFetch(60000),
     },
     auth: {
       autoRefreshToken: false,
