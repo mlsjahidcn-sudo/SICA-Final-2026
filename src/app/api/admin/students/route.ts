@@ -73,11 +73,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Query 2: Students without user accounts (orphan students)
-    // These are students where user_id is null
+    // These are students where user_id is null AND not soft-deleted
     let orphanQuery = supabaseAdmin
       .from('students')
       .select('id, user_id, email, first_name, last_name, nationality, gender, current_address, wechat_id, created_at', { count: 'exact' })
       .is('user_id', null)
+      .or('is_active.is.null,is_active.eq.true') // Not soft-deleted
+      .is('deleted_at', null) // Not soft-deleted
       .order('created_at', { ascending: false });
 
     if (search) {

@@ -57,7 +57,6 @@ import {
   IconEdit,
   IconTrash
 } from "@tabler/icons-react"
-import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
 import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
 import { ExportStudentsButton } from "@/components/admin/export-students-button"
 import { ClaimInvitationDialog } from "@/components/admin/claim-invitation-dialog"
@@ -474,16 +473,10 @@ function StudentsListContent() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <EditStudentDialog 
-                              student={student} 
-                              onStudentUpdated={fetchStudents}
-                              trigger={
-                                <button className="flex w-full items-center px-2 py-1.5 text-sm">
-                                  <IconEdit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </button>
-                              }
-                            />
+                            <Link href={`/admin/v2/students/${student.id}/edit`}>
+                              <IconEdit className="mr-2 h-4 w-4" />
+                              Edit
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {student.source === 'orphan' ? (

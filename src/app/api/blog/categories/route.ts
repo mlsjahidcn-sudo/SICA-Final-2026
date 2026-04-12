@@ -19,6 +19,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch categories', details: error.message }, { status: 500 });
     }
 
+    // Get published post counts for each category
+    const categoryIds = (categories || []).map(c => c.id);
+    const { data: counts } = categoryIds.length > 0
+      ? await supabase
+          .from('blog_posts')
+          .select('category_id')
+          .eq('status', 'published')
+          .in('category_id', categoryIds)
+      : { data: [] };
+
+    const countMap: Record<string, number> = {};
+    (counts || []).forEach((p: { category_id: string }) => {
+      countMap[p.category_id] = (countMap[p.category_id] || 0) + 1;
+    });
+
     // Transform the data
     const transformedCategories = (categories || []).map((cat) => ({
       id: cat.id,
@@ -27,7 +42,7 @@ export async function GET(request: NextRequest) {
       description: locale === 'cn' ? (cat.description_cn || cat.description_en) : cat.description_en,
       icon: cat.icon,
       color: cat.color,
-      postCount: 0,
+      postCount: countMap[cat.id] || 0,
     }));
 
     return NextResponse.json({ categories: transformedCategories });

@@ -42,6 +42,9 @@ export async function GET(request: NextRequest) {
           name_en,
           name_cn,
           slug
+        ),
+        blog_post_tags (
+          blog_tags (id, name_en, slug)
         )
       `, { count: 'exact' })
       .order('created_at', { ascending: false });
@@ -61,16 +64,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch posts', details: error.message }, { status: 500 });
     }
 
-    // Get stats
+    // Get stats via aggregate
     const { data: statsData } = await supabase
       .from('blog_posts')
       .select('status');
 
+    const allStatuses = (statsData || []).map(p => p.status);
     const stats = {
-      total: statsData?.length || 0,
-      published: statsData?.filter(p => p.status === 'published').length || 0,
-      draft: statsData?.filter(p => p.status === 'draft').length || 0,
-      archived: statsData?.filter(p => p.status === 'archived').length || 0,
+      total: allStatuses.length,
+      published: allStatuses.filter(s => s === 'published').length,
+      draft: allStatuses.filter(s => s === 'draft').length,
+      archived: allStatuses.filter(s => s === 'archived').length,
     };
 
     return NextResponse.json({
@@ -246,11 +250,9 @@ export async function POST(request: NextRequest) {
     const { data: post, error } = await supabase
       .from('blog_posts')
       .insert({
-        title: title_en,
         title_en,
         title_cn,
         slug,
-        content: content_en,
         content_en,
         content_cn,
         excerpt_en,

@@ -26,8 +26,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   IconPlus,
   IconSearch,
@@ -36,6 +47,11 @@ import {
   IconEye,
   IconNews,
   IconLoader2,
+  IconTrash,
+  IconStar,
+  IconStarOff,
+  IconArchive,
+  IconCheck,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -78,6 +94,10 @@ export default function BlogList() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; post: BlogPost | null }>({
+    open: false,
+    post: null,
+  });
 
   const fetchPosts = useCallback(async () => {
     setIsLoading(true);
@@ -121,6 +141,95 @@ export default function BlogList() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const handleDeleteClick = (post: BlogPost) => {
+    setDeleteDialog({ open: true, post });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.post) return;
+
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+
+      const response = await fetch(`/api/admin/blog/${deleteDialog.post.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Blog post deleted successfully');
+        fetchPosts(); // Refresh the list
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to delete blog post');
+      }
+    } catch (error) {
+      console.error('Error deleting blog post:', error);
+      toast.error('Failed to delete blog post');
+    } finally {
+      setDeleteDialog({ open: false, post: null });
+    }
+  };
+
+  const handleToggleFeatured = async (post: BlogPost) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+
+      const response = await fetch(`/api/admin/blog/${post.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          is_featured: !post.is_featured,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(post.is_featured ? 'Post unfeatured' : 'Post featured');
+        fetchPosts();
+      } else {
+        toast.error('Failed to update post');
+      }
+    } catch (error) {
+      console.error('Error updating post:', error);
+      toast.error('Failed to update post');
+    }
+  };
+
+  const handleToggleStatus = async (post: BlogPost, newStatus: 'draft' | 'published' | 'archived') => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+
+      const response = await fetch(`/api/admin/blog/${post.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Post status changed to ${newStatus}`);
+        fetchPosts();
+      } else {
+        toast.error('Failed to update post status');
+      }
+    } catch (error) {
+      console.error('Error updating post status:', error);
+      toast.error('Failed to update post status');
+    }
   };
 
   return (
@@ -294,6 +403,46 @@ export default function BlogList() {
                                 Preview
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleToggleFeatured(post)}>
+                              {post.is_featured ? (
+                                <>
+                                  <IconStarOff className="mr-2 h-4 w-4" />
+                                  Remove Featured
+                                </>
+                              ) : (
+                                <>
+                                  <IconStar className="mr-2 h-4 w-4" />
+                                  Mark as Featured
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {post.status !== 'published' && (
+                              <DropdownMenuItem onClick={() => handleToggleStatus(post, 'published')}>
+                                <IconCheck className="mr-2 h-4 w-4" />
+                                Publish
+                              </DropdownMenuItem>
+                            )}
+                            {post.status === 'published' && (
+                              <DropdownMenuItem onClick={() => handleToggleStatus(post, 'draft')}>
+                                <IconArchive className="mr-2 h-4 w-4" />
+                                Unpublish
+                              </DropdownMenuItem>
+                            )}
+                            {post.status !== 'archived' && (
+                              <DropdownMenuItem onClick={() => handleToggleStatus(post, 'archived')}>
+                                <IconArchive className="mr-2 h-4 w-4" />
+                                Archive
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => handleDeleteClick(post)}
+                            >
+                              <IconTrash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -305,6 +454,28 @@ export default function BlogList() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, post: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Blog Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteDialog.post?.title_en}&quot;? This action cannot be undone.
+              The post will be permanently removed from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

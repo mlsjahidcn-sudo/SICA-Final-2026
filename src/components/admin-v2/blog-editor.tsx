@@ -32,21 +32,23 @@ import {
   IconLink,
   IconMessageCircleQuestion,
   IconCode,
+  IconX,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 interface Category {
   id: string;
-  name_en: string;
-  name_cn: string | null;
+  name: string;
   slug: string;
+  icon?: string;
+  color?: string;
 }
 
 interface Tag {
   id: string;
-  name_en: string;
-  name_cn: string | null;
+  name: string;
   slug: string;
+  color?: string;
 }
 
 interface InternalLinkSuggestion {
@@ -190,7 +192,7 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
               seo_title: data.post.seo_title || '',
               seo_description: data.post.seo_description || '',
               seo_keywords: data.post.seo_keywords?.join(', ') || '',
-              tags: data.post.tags?.map((t: Tag) => t.id) || [],
+              tags: data.post.tags || [],
               faqs: data.post.faqs || [],
               internal_links: data.post.internal_links || [],
             });
@@ -920,11 +922,56 @@ export default function BlogEditor({ isEdit = false, postId }: BlogEditorProps) 
                   <SelectContent>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {category.name_en}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-background min-h-[46px]">
+                  {formData.tags.length === 0 && (
+                    <span className="text-sm text-muted-foreground">No tags selected</span>
+                  )}
+                  {formData.tags.map((tagId) => {
+                    const tag = availableTags.find(t => t.id === tagId);
+                    return (
+                      <Badge
+                        key={tagId}
+                        variant="secondary"
+                        className="gap-1 cursor-pointer hover:bg-destructive/20"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          tags: prev.tags.filter(id => id !== tagId),
+                        }))}
+                      >
+                        {tag?.name || tagId}
+                        <IconX className="h-3 w-3" />
+                      </Badge>
+                    );
+                  })}
+                </div>
+                {availableTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {availableTags
+                      .filter(t => !formData.tags.includes(t.id))
+                      .map(tag => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          className="inline-flex items-center px-2 py-0.5 text-xs rounded-full border border-dashed border-muted-foreground/30 hover:border-primary hover:text-primary transition-colors"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            tags: [...prev.tags, tag.id],
+                          }))}
+                        >
+                          + {tag.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

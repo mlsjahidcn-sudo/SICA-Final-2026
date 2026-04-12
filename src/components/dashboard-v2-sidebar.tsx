@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { IconDashboard, IconListDetails, IconChartBar, IconFolder, IconUsers, IconCamera, IconFileDescription, IconFileAi, IconSettings, IconHelp, IconSearch, IconDatabase, IconReport, IconFileWord, IconInnerShadowTop, IconArticle } from "@tabler/icons-react"
+import { IconDashboard, IconListDetails, IconChartBar, IconFolder, IconUsers, IconCamera, IconFileDescription, IconFileAi, IconSettings, IconHelp, IconSearch, IconDatabase, IconReport, IconFileWord, IconInnerShadowTop, IconArticle, IconUser, IconFileText, IconFolderOpen } from "@tabler/icons-react"
 
 import { IconCalendar, IconBuilding, IconClipboardList, IconUserStar } from "@tabler/icons-react"
 import { useAuth } from "@/contexts/auth-context"
@@ -55,7 +55,39 @@ const navData = {
       ),
     },
     {
-      title: "Students",
+      title: "Individual Students",
+      url: "/admin/v2/individual-students",
+      icon: (
+        <IconUser
+        />
+      ),
+    },
+    {
+      title: "Partner Students",
+      url: "/admin/v2/partner-students",
+      icon: (
+        <IconUsers
+        />
+      ),
+    },
+    {
+      title: "Individual Applications",
+      url: "/admin/v2/individual-applications",
+      icon: (
+        <IconFileText
+        />
+      ),
+    },
+    {
+      title: "Partner Applications",
+      url: "/admin/v2/partner-applications",
+      icon: (
+        <IconFolderOpen
+        />
+      ),
+    },
+    {
+      title: "All Students",
       url: "/admin/v2/students",
       icon: (
         <IconUsers
@@ -63,7 +95,7 @@ const navData = {
       ),
     },
     {
-      title: "Applications",
+      title: "All Applications",
       url: "/admin/v2/applications",
       icon: (
         <IconFileDescription

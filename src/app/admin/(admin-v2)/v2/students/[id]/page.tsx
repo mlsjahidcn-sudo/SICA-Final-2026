@@ -27,9 +27,9 @@ import {
   IconFileText,
   IconClock,
   IconExternalLink,
-  IconUserPlus
+  IconUserPlus,
+  IconEdit
 } from "@tabler/icons-react"
-import { EditStudentDialog } from "@/components/admin/edit-student-dialog"
 import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
 
 interface ReferredByPartner {
@@ -195,28 +195,12 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
           </Link>
         </Button>
         <div className="flex gap-2">
-          <EditStudentDialog 
-            student={student} 
-            onStudentUpdated={() => {
-              // Refetch student data
-              const fetchStudent = async () => {
-                try {
-                  const { getValidToken } = await import('@/lib/auth-token')
-                  const token = await getValidToken()
-                  const response = await fetch(`/api/admin/students/${studentId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                  })
-                  if (response.ok) {
-                    const data = await response.json()
-                    setStudent(data.student || data)
-                  }
-                } catch (error) {
-                  console.error('Error refetching student:', error)
-                }
-              }
-              fetchStudent()
-            }}
-          />
+          <Button asChild>
+            <Link href={`/admin/v2/students/${student.id}/edit`}>
+              <IconEdit className="mr-2 h-4 w-4" />
+              Edit Student
+            </Link>
+          </Button>
           <DeleteStudentDialog 
             studentId={student.id}
             studentName={student.full_name}

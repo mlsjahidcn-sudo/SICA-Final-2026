@@ -40,13 +40,39 @@ export async function GET(
     // Extract tag IDs from the junction table
     const tags = post.blog_post_tags?.map((pt: { tag_id: string }) => pt.tag_id) || [];
     
-    return NextResponse.json({ 
-      post: {
-        ...post,
-        tags,
-        blog_post_tags: undefined // Remove the junction table data
-      }
-    });
+    // Transform to camelCase for frontend
+    const transformedPost = {
+      id: post.id,
+      slug: post.slug,
+      title_en: post.title_en,
+      title_cn: post.title_cn,
+      excerpt_en: post.excerpt_en,
+      excerpt_cn: post.excerpt_cn,
+      content_en: post.content_en,
+      content_cn: post.content_cn,
+      featured_image_url: post.featured_image_url,
+      featured_image_alt: post.featured_image_alt,
+      category_id: post.category_id,
+      author_name: post.author_name,
+      author_avatar_url: post.author_avatar_url,
+      status: post.status,
+      is_featured: post.is_featured,
+      allow_comments: post.allow_comments,
+      seo_title: post.seo_title,
+      seo_description: post.seo_description,
+      seo_keywords: post.seo_keywords,
+      faqs: post.faqs,
+      internal_links: post.internal_links,
+      view_count: post.view_count,
+      reading_time_minutes: post.reading_time_minutes,
+      published_at: post.published_at,
+      created_at: post.created_at,
+      updated_at: post.updated_at,
+      tags,
+      category: post.blog_categories,
+    };
+    
+    return NextResponse.json({ post: transformedPost });
   } catch (error) {
     console.error('Error fetching blog post:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -224,17 +250,12 @@ export async function PUT(
       }
     }
 
-    // Sync title and content with _en versions
-    if (body.title_en !== undefined) {
-      updateData.title = body.title_en;
-    }
-    if (body.content_en !== undefined) {
-      updateData.content = body.content_en;
-    }
+    // Note: Database does not have 'title' and 'content' columns
+    // Only title_en, title_cn, content_en, content_cn exist
 
     // Calculate reading time if content changed
-    if (body.content_en) {
-      const wordCount = body.content_en.split(/\s+/).length;
+    if (bodyWithoutTags.content_en) {
+      const wordCount = bodyWithoutTags.content_en.split(/\s+/).length;
       updateData.reading_time_minutes = Math.max(1, Math.ceil(wordCount / 200));
     }
 

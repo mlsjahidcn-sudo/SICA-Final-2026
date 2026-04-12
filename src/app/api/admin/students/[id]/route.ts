@@ -346,7 +346,7 @@ export async function DELETE(
     // First, check if this is an orphan student (student record without user_id)
     const { data: studentRecord, error: studentCheckError } = await supabaseAdmin
       .from('students')
-      .select('id, user_id, admin_notes')
+      .select('id, user_id')
       .eq('id', studentId)
       .maybeSingle();
 
@@ -360,11 +360,12 @@ export async function DELETE(
         .limit(1);
 
       if (orphanApplications && orphanApplications.length > 0) {
-        // Soft delete - just mark as inactive in admin_notes
+        // Soft delete - mark as deleted and inactive
         const { error } = await supabaseAdmin
           .from('students')
           .update({ 
-            admin_notes: `${studentRecord.admin_notes || ''} [DEACTIVATED: ${new Date().toISOString()}]`
+            is_active: false,
+            deleted_at: new Date().toISOString()
           })
           .eq('id', studentId);
 
