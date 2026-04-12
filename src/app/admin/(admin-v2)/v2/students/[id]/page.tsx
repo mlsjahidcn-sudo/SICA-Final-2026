@@ -490,7 +490,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Student Details" />
           <StudentDetailContent studentId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

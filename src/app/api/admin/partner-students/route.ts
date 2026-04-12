@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         referred_by_partner_id,
-        students (
+        students!left (
           id,
           first_name,
           last_name,
@@ -49,8 +49,7 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
       .eq('role', 'student')
       .not('referred_by_partner_id', 'is', null) // Only partner-referred students
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
 
     // Filter by specific partner if provided
     if (partner_id) {
@@ -62,15 +61,25 @@ export async function GET(request: NextRequest) {
       query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    const { data: students, error, count } = await query;
+    const { data: allStudents, error: fetchError } = await query;
 
-    if (error) {
-      console.error('Error fetching partner students:', error);
+    if (fetchError) {
+      console.error('Error fetching partner students:', fetchError);
       return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
     }
 
+    // Manual pagination
+    const paginatedStudents = (allStudents || []).slice(offset, offset + limit);
+    
+    // Get total count separately
+    const { count: totalCount } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'student')
+      .not('referred_by_partner_id', 'is', null);
+
     // Get partner info
-    const partnerIds = [...new Set(students?.map(s => s.referred_by_partner_id).filter(Boolean) || [])];
+    const partnerIds = [...new Set(allStudents?.map(s => s.referred_by_partner_id).filter(Boolean) || [])];
     const { data: partnerUsers } = await supabaseAdmin
       .from('users')
       .select('id, full_name, email')
@@ -97,25 +106,43 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get application counts
-    const studentIds = students?.map(s => s.id) || [];
-    const { data: applicationCounts } = await supabaseAdmin
-      .from('applications')
-      .select('user_id, status')
-      .in('user_id', studentIds);
+    // Get application counts using student_id (applications uses student_id, not user_id)
+    const userToStudentMap = new Map<string, string>();
+    for (const s of (allStudents || [])) {
+      const studentRecord = Array.isArray(s.students) ? s.students[0] : s.students;
+      if (s.id && studentRecord?.id) {
+        userToStudentMap.set(s.id, studentRecord.id);
+      }
+    }
+    const studentRecordIds = [...new Set(userToStudentMap.values())];
+    
+    const { data: applicationCounts } = studentRecordIds.length > 0
+      ? await supabaseAdmin
+          .from('applications')
+          .select('student_id, status')
+          .in('student_id', studentRecordIds)
+      : { data: [] };
 
     const applicationMap = new Map<string, { total: number; pending: number }>();
+    // Reverse map: student_record.id -> user.id
+    const studentIdToUserId = new Map<string, string>();
+    for (const [userId, studentRecordId] of userToStudentMap.entries()) {
+      studentIdToUserId.set(studentRecordId, userId);
+    }
+    
     for (const app of (applicationCounts || [])) {
-      const existing = applicationMap.get(app.user_id) || { total: 0, pending: 0 };
+      const userId = studentIdToUserId.get(app.student_id);
+      if (!userId) continue;
+      const existing = applicationMap.get(userId) || { total: 0, pending: 0 };
       existing.total++;
       if (['submitted', 'under_review'].includes(app.status)) {
         existing.pending++;
       }
-      applicationMap.set(app.user_id, existing);
+      applicationMap.set(userId, existing);
     }
 
     // Transform to PartnerStudent type
-    const enrichedStudents: PartnerStudent[] = (students || []).map(student => {
+    const enrichedStudents: PartnerStudent[] = paginatedStudents.map(student => {
       const studentRecord = Array.isArray(student.students) ? student.students[0] : student.students;
       return {
         id: student.id,
@@ -147,12 +174,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Get stats
-    const { count: totalCount } = await supabaseAdmin
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'student')
-      .not('referred_by_partner_id', 'is', null);
-
     const { count: activeCount } = await supabaseAdmin
       .from('users')
       .select('id', { count: 'exact', head: true })
@@ -175,8 +196,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: totalCount || 0,
+        totalPages: Math.ceil((totalCount || 0) / limit),
       },
       stats: {
         total: totalCount || 0,

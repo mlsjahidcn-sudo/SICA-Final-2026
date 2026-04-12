@@ -366,7 +366,7 @@ export default function BulkAddProgramsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Bulk Import Programs" />
           <div className="flex flex-col gap-4 p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center justify-between">

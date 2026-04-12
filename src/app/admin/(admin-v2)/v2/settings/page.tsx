@@ -165,7 +165,7 @@ export default function SettingsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Settings" />
           <div className="flex flex-col gap-6 p-6">
             {/* General Settings */}
             <Card>

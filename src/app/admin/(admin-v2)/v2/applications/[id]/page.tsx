@@ -935,7 +935,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Application Details" />
           <ApplicationDetailContent applicationId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

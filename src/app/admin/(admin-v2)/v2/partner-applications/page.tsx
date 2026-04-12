@@ -346,7 +346,7 @@ export default function PartnerApplicationsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Partner Applications" />
           <Suspense fallback={
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

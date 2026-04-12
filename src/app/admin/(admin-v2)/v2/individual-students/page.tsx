@@ -266,7 +266,7 @@ export default function IndividualStudentsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Individual Students" />
           <Suspense fallback={
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

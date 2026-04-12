@@ -568,7 +568,7 @@ export default function UniversityDetailPage({ params }: { params: Promise<{ id:
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="University Details" />
           <UniversityDetailContent universityId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

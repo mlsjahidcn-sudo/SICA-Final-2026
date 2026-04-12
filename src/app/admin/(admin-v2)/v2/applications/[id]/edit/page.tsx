@@ -686,7 +686,7 @@ export default function EditApplicationPage({ params }: { params: Promise<{ id: 
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Edit Application" />
           <EditApplicationContent applicationId={resolvedParams.id} />
         </SidebarInset>
       </SidebarProvider>

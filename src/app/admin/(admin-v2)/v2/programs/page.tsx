@@ -396,7 +396,7 @@ export default function ProgramsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Programs" />
           <div className="flex flex-col gap-4 p-4 md:p-6">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

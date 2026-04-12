@@ -245,7 +245,7 @@ export default function EditUniversityPage({ params }: { params: Promise<{ id: s
       <TooltipProvider>
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Edit University" />
           <EditUniversityContent universityId={resolvedParams.id} />
         </SidebarInset>
       </TooltipProvider>

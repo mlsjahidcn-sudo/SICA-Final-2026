@@ -65,7 +65,7 @@ export default function AdminAddApplicationPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Add Application" />
           <AddApplicationFormContent />
         </SidebarInset>
       </SidebarProvider>

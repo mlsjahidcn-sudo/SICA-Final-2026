@@ -735,7 +735,7 @@ export default function UniversitiesPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Universities" />
           <div className="flex flex-col gap-6 p-6">
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

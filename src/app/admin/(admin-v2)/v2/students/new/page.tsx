@@ -213,7 +213,7 @@ export default function AdminAddStudentPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader />
+          <SiteHeader title="Add Student" />
           <AddStudentFormContent />
         </SidebarInset>
       </SidebarProvider>
