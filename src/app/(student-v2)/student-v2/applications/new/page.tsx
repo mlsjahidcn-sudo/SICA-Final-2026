@@ -752,7 +752,7 @@ export default function NewApplicationPage() {
 
   if (profile && profile.profileCompletion < 80) {
     return (
-      <div className="flex flex-1 flex-col gap-6 p-6 max-w-4xl mx-auto">
+      <div className="flex flex-1 flex-col gap-6 p-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <IconArrowLeft className="h-4 w-4 mr-2" />
@@ -1907,7 +1907,7 @@ export default function NewApplicationPage() {
   // ─── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 max-w-4xl mx-auto">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>

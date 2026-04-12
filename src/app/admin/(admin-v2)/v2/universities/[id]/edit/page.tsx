@@ -3,10 +3,7 @@
 import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { PageContainer } from "@/components/admin"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -234,22 +231,9 @@ export default function EditUniversityPage({ params }: { params: Promise<{ id: s
   }
   
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <TooltipProvider>
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Edit University" />
-          <EditUniversityContent universityId={resolvedParams.id} />
-        </SidebarInset>
-      </TooltipProvider>
-    </SidebarProvider>
+    <PageContainer title="Edit University">
+      <EditUniversityContent universityId={resolvedParams.id} />
+    </PageContainer>
   )
 }
 

@@ -48,7 +48,10 @@ export async function GET(
           students (
             first_name,
             last_name,
-            email
+            user_id,
+            users (
+              email
+            )
           )
         )
       `)
@@ -66,8 +69,19 @@ export async function GET(
 
     // Verify partner has access to this meeting
     if (user.role === 'partner') {
+      // Get partner record (applications.partner_id references partners.id, not users.id)
+      const { data: partnerRecord, error: partnerError } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (partnerError || !partnerRecord) {
+        return NextResponse.json({ error: 'Partner record not found' }, { status: 403 });
+      }
+      
       const app = meeting.applications as unknown as Record<string, unknown> | null;
-      if (app?.partner_id !== user.id) {
+      if (app?.partner_id !== partnerRecord.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -75,6 +89,7 @@ export async function GET(
     // Normalize meeting data
     const appData = (meeting.applications as unknown as Record<string, unknown> | null) || {};
     const student = (appData.students as unknown as Record<string, unknown> | null) || {};
+    const studentUser = student?.users ? (Array.isArray(student.users) ? student.users[0] : student.users) : null;
     const program = (appData.programs as unknown as Record<string, unknown> | null) || {};
     const university = (program.universities as unknown as Record<string, unknown> | null) || {};
 
@@ -94,7 +109,7 @@ export async function GET(
       created_at: meeting.created_at,
       updated_at: meeting.updated_at,
       student_name: [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Unknown',
-      student_email: student.email || '',
+      student_email: studentUser?.email || '',
       program_name: program.name || '',
       degree_type: program.degree_level || '',
       university_name: university.name_en || university.name || '',

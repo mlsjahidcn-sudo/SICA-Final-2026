@@ -46,10 +46,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const partnerId = getPartnerUserId(user);
-    console.log('Using partnerId:', partnerId);
-    
     const supabase = getSupabaseClient();
+    
+    // Get partner record (applications.partner_id references partners.id, not users.id)
+    const { data: partnerRecord, error: partnerError } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (partnerError || !partnerRecord) {
+      console.error('Error fetching partner record:', partnerError);
+      return NextResponse.json({ error: 'Partner record not found' }, { status: 404 });
+    }
+    
+    const partnerId = partnerRecord.id;
+    console.log('Using partnerId:', partnerId);
     
     // Get time range from query params (default 30 days)
     const days = parseInt(request.nextUrl.searchParams.get('days') || '30');

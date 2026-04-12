@@ -4,10 +4,7 @@ import * as React from "react"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { PageContainer } from "@/components/admin"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -498,88 +495,77 @@ export default function NewProgramPage() {
   const progress = (currentStep / STEPS.length) * 100
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="New Program" />
-          <div className="flex flex-col gap-6 p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/admin/v2/programs">
-                  <Button variant="ghost" size="sm">
-                    <IconArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Programs
-                  </Button>
-                </Link>
-                <AutoSaveIndicator 
-                  status={autoSaveStatus} 
-                  lastSaved={lastSaved}
-                />
-              </div>
-              <Button
-                type="button"
-                variant={showPreview ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowPreview(!showPreview)}
-                className="gap-2"
-              >
-                {showPreview ? (
-                  <>
-                    <IconEyeOff className="h-4 w-4" />
-                    Hide Preview
-                  </>
-                ) : (
-                  <>
-                    <IconEye className="h-4 w-4" />
-                    Show Preview
-                  </>
-                )}
+    <PageContainer title="New Program">
+      <div className="flex flex-col gap-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/v2/programs">
+              <Button variant="ghost" size="sm">
+                <IconArrowLeft className="h-4 w-4 mr-2" />
+                Back to Programs
               </Button>
-            </div>
+            </Link>
+            <AutoSaveIndicator 
+              status={autoSaveStatus} 
+              lastSaved={lastSaved}
+            />
+          </div>
+          <Button
+            type="button"
+            variant={showPreview ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowPreview(!showPreview)}
+            className="gap-2"
+          >
+            {showPreview ? (
+              <>
+                <IconEyeOff className="h-4 w-4" />
+                Hide Preview
+              </>
+            ) : (
+              <>
+                <IconEye className="h-4 w-4" />
+                Show Preview
+              </>
+            )}
+          </Button>
+        </div>
 
-            {/* Main Content - Form + Preview */}
-            <div className={cn(
-              "flex gap-6 transition-all duration-300",
-              showPreview ? "flex-row" : "flex-row"
-            )}>
-              {/* Form Section */}
-              <div className={cn(
-                "flex-1 min-w-0 transition-all duration-300",
-                showPreview && "max-w-2xl"
-              )}>
+        {/* Main Content - Form + Preview */}
+        <div className={cn(
+          "flex gap-6 transition-all duration-300",
+          showPreview ? "flex-row" : "flex-row"
+        )}>
+          {/* Form Section */}
+          <div className={cn(
+            "flex-1 min-w-0 transition-all duration-300",
+            showPreview && "max-w-2xl"
+          )}>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
-                <IconBook className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Create New Program</h1>
-                <p className="text-muted-foreground">Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
+            <IconBook className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Create New Program</h1>
+            <p className="text-muted-foreground">Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}</p>
+          </div>
+        </div>
 
-            {/* Step Progress Indicator */}
-            <Card className="overflow-hidden">
-              <div className="p-1">
-                <div className="flex items-center justify-between mb-4">
-                  {STEPS.map((step, index) => {
-                    const StepIcon = step.icon
-                    const isActive = currentStep === step.id
-                    const isCompleted = completedSteps.includes(step.id)
-                    const isClickable = completedSteps.includes(step.id) || step.id <= currentStep + 1
-                    
-                    return (
-                      <React.Fragment key={step.id}>
-                        <button
+        {/* Step Progress Indicator */}
+        <Card className="overflow-hidden">
+          <div className="p-1">
+            <div className="flex items-center justify-between mb-4">
+              {STEPS.map((step, index) => {
+                const StepIcon = step.icon
+                const isActive = currentStep === step.id
+                const isCompleted = completedSteps.includes(step.id)
+                const isClickable = completedSteps.includes(step.id) || step.id <= currentStep + 1
+                
+                return (
+                  <React.Fragment key={step.id}>
+                    <button
                           type="button"
                           onClick={() => handleStepClick(step.id)}
                           disabled={!isClickable}
@@ -1245,8 +1231,8 @@ export default function NewProgramPage() {
               )}
             </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </div>
 
       {/* University Selector Dialog */}
       <Dialog open={showUniversityDialog} onOpenChange={setShowUniversityDialog}>
@@ -1313,6 +1299,6 @@ export default function NewProgramPage() {
         onDiscard={handleDiscardDraft}
         draftTimestamp={draftTimestamp}
       />
-    </TooltipProvider>
+    </PageContainer>
   )
 }

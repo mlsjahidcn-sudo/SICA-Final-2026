@@ -3,11 +3,6 @@
 import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +38,8 @@ import {
   IconUser,
   IconLoader2
 } from "@tabler/icons-react"
+import { PageContainer, PageHeader, FormSection, FormGrid, FormField } from "@/components/admin"
+import { useAuth } from "@/contexts/auth-context"
 
 interface Program {
   id: string
@@ -275,32 +272,17 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
   return (
     <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild className="w-fit">
-            <Link href={`/admin/v2/applications/${applicationId}`}>
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Application
-            </Link>
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="Edit Application"
+        description="Update application details. Status changes require separate approval workflow."
+        backHref={`/admin/v2/applications/${applicationId}`}
+        backLabel="Back to Application"
+        actions={
           <Badge variant={application.status === 'draft' ? 'outline' : 'default'} className="text-sm">
             {application.status}
           </Badge>
-        </div>
-      </div>
-
-      {/* Title */}
-      <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <IconEdit className="h-6 w-6" />
-          Edit Application
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Update application details. Status changes require separate approval workflow.
-        </p>
-      </div>
+        }
+      />
 
       <Separator />
 
@@ -308,26 +290,20 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
       <div className="space-y-6">
         {/* Student Information Section */}
         {application.student && (
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <IconUser className="h-4 w-4" />
-                Student Information
-              </CardTitle>
-              <CardDescription>Applicant details (read-only)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border-2 border-primary/20">
-                  <IconUser className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold">{application.student.full_name}</div>
-                  <div className="text-sm text-muted-foreground">{application.student.email}</div>
-                </div>
+          <FormSection
+            title="Student Information"
+            description="Applicant details (read-only)"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border-2 border-primary/20">
+                <IconUser className="h-6 w-6 text-primary" />
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex-1">
+                <div className="font-semibold">{application.student.full_name}</div>
+                <div className="text-sm text-muted-foreground">{application.student.email}</div>
+              </div>
+            </div>
+          </FormSection>
         )}
 
         {/* Program Selection Section */}
@@ -515,25 +491,22 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
         </Card>
 
         {/* Application Details Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Application Details</CardTitle>
-            <CardDescription>Intake period, priority level, and applicant statements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <FormSection
+          title="Application Details"
+          description="Intake period, priority level, and applicant statements"
+        >
+          <div className="space-y-4">
             {/* Intake and Priority */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="intake">Intake Period</Label>
+            <FormGrid columns={2}>
+              <FormField label="Intake Period">
                 <Input
                   id="intake"
                   placeholder="e.g., Fall 2025"
                   value={intake}
                   onChange={(e) => setIntake(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
+              </FormField>
+              <FormField label="Priority">
                 <div className="flex gap-2 flex-wrap">
                   {[0, 1, 2, 3].map((p) => {
                     const { label, color } = getPriorityLabel(p)
@@ -554,12 +527,11 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
                     )
                   })}
                 </div>
-              </div>
-            </div>
+              </FormField>
+            </FormGrid>
             
             {/* Personal Statement */}
-            <div className="space-y-2">
-              <Label htmlFor="personalStatement">Personal Statement</Label>
+            <FormField label="Personal Statement">
               <Textarea
                 id="personalStatement"
                 placeholder="Student's personal statement..."
@@ -567,11 +539,10 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
                 onChange={(e) => setPersonalStatement(e.target.value)}
                 rows={5}
               />
-            </div>
+            </FormField>
 
             {/* Study Plan */}
-            <div className="space-y-2">
-              <Label htmlFor="studyPlan">Study Plan</Label>
+            <FormField label="Study Plan">
               <Textarea
                 id="studyPlan"
                 placeholder="Student's study plan..."
@@ -579,26 +550,23 @@ function EditApplicationContent({ applicationId }: { applicationId: string }) {
                 onChange={(e) => setStudyPlan(e.target.value)}
                 rows={5}
               />
-            </div>
-          </CardContent>
-        </Card>
+            </FormField>
+          </div>
+        </FormSection>
 
         {/* Admin Notes Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Admin Notes</CardTitle>
-            <CardDescription>Internal notes (not visible to student)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              id="notes"
-              placeholder="Internal notes..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </CardContent>
-        </Card>
+        <FormSection
+          title="Admin Notes"
+          description="Internal notes (not visible to student)"
+        >
+          <Textarea
+            id="notes"
+            placeholder="Internal notes..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+          />
+        </FormSection>
 
         {/* Current Status (read-only) */}
         <Card className="bg-muted/30 border-muted">
@@ -675,21 +643,8 @@ export default function EditApplicationPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Edit Application" />
-          <EditApplicationContent applicationId={resolvedParams.id} />
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <PageContainer title="Edit Application">
+      <EditApplicationContent applicationId={resolvedParams.id} />
+    </PageContainer>
   )
 }

@@ -264,7 +264,7 @@ export default function ApplicationDocumentsPage() {
   const documentMap = new Map(documents.map(d => [d.document_type, d]))
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 max-w-4xl mx-auto">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       <Button variant="ghost" size="sm" onClick={() => router.back()}>
         <IconArrowLeft className="h-4 w-4 mr-2" /> Back to Application
       </Button>

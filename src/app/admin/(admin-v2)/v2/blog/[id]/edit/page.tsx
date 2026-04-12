@@ -2,10 +2,7 @@
 
 import { Suspense, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { PageContainer } from "@/components/admin"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import BlogEditor from "@/components/admin-v2/blog-editor"
@@ -42,27 +39,14 @@ export default function EditBlogPage() {
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Edit Blog Post" />
-          <Suspense fallback={
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          }>
-            <EditBlogContent />
-          </Suspense>
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <PageContainer title="Edit Blog Post">
+      <Suspense fallback={
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <EditBlogContent />
+      </Suspense>
+    </PageContainer>
   )
 }

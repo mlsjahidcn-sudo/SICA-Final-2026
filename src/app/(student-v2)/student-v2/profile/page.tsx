@@ -515,7 +515,7 @@ export default function ProfilePage() {
   const completion = profile?.profileCompletion || 0
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 max-w-4xl mx-auto">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

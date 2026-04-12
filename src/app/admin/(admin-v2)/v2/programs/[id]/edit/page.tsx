@@ -4,10 +4,7 @@ import * as React from "react"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { PageContainer } from "@/components/admin"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -546,90 +543,79 @@ export default function EditProgramPage() {
   const progress = (currentStep / STEPS.length) * 100
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Edit Program" />
-          <div className="flex flex-col gap-6 p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/admin/v2/programs">
-                  <Button variant="ghost" size="sm">
-                    <IconArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Programs
-                  </Button>
-                </Link>
-                <AutoSaveIndicator 
-                  status={autoSaveStatus} 
-                  lastSaved={lastSaved}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={showPreview ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="gap-2"
-                >
-                  {showPreview ? (
-                    <>
-                      <IconEyeOff className="h-4 w-4" />
-                      Hide Preview
-                    </>
-                  ) : (
-                    <>
-                      <IconEye className="h-4 w-4" />
-                      Show Preview
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleDuplicate}>
-                  <IconCopy className="h-4 w-4 mr-2" />
-                  Duplicate
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/programs/${programId}`} target="_blank">
-                    <IconEye className="h-4 w-4 mr-2" />
-                    Full Page
-                  </Link>
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
-                  <IconTrash className="h-4 w-4 mr-2" />
-                  Archive
-                </Button>
-              </div>
-            </div>
+    <PageContainer title="Edit Program">
+      <div className="flex flex-col gap-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/v2/programs">
+              <Button variant="ghost" size="sm">
+                <IconArrowLeft className="h-4 w-4 mr-2" />
+                Back to Programs
+              </Button>
+            </Link>
+            <AutoSaveIndicator 
+              status={autoSaveStatus} 
+              lastSaved={lastSaved}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={showPreview ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowPreview(!showPreview)}
+              className="gap-2"
+            >
+              {showPreview ? (
+                <>
+                  <IconEyeOff className="h-4 w-4" />
+                  Hide Preview
+                </>
+              ) : (
+                <>
+                  <IconEye className="h-4 w-4" />
+                  Show Preview
+                </>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDuplicate}>
+              <IconCopy className="h-4 w-4 mr-2" />
+              Duplicate
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/programs/${programId}`} target="_blank">
+                <IconEye className="h-4 w-4 mr-2" />
+                Full Page
+              </Link>
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
+              <IconTrash className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
-                <IconBook className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Edit Program</h1>
-                <p className="text-muted-foreground">
-                  {formData.name_en || 'Loading...'}
-                  {programViewCount > 0 && (
-                    <span className="ml-2">• {programViewCount.toLocaleString()} views</span>
-                  )}
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
+            <IconBook className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Edit Program</h1>
+            <p className="text-muted-foreground">
+              {formData.name_en || 'Loading...'}
+              {programViewCount > 0 && (
+                <span className="ml-2">• {programViewCount.toLocaleString()} views</span>
+              )}
+            </p>
+          </div>
+        </div>
 
-            {/* Step Progress Indicator */}
-            <Card className="overflow-hidden">
-              <div className="p-1">
-                <div className="flex items-center justify-between mb-4">
-                  {STEPS.map((step, index) => {
+        {/* Step Progress Indicator */}
+        <Card className="overflow-hidden">
+          <div className="p-1">
+            <div className="flex items-center justify-between mb-4">
+              {STEPS.map((step, index) => {
                     const StepIcon = step.icon
                     const isActive = currentStep === step.id
                     const isCompleted = completedSteps.includes(step.id)
@@ -1320,8 +1306,8 @@ export default function EditProgramPage() {
               )}
             </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </div>
 
       {/* University Selector Dialog */}
       <Dialog open={showUniversityDialog} onOpenChange={setShowUniversityDialog}>
@@ -1397,6 +1383,6 @@ export default function EditProgramPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </TooltipProvider>
+    </PageContainer>
   )
 }

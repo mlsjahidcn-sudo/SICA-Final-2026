@@ -7,9 +7,21 @@ export async function GET(request: NextRequest) {
     const user = await requirePartner(request);
     if (user instanceof NextResponse) return user;
 
-    const partnerId = user.id;
-
     const supabase = getSupabaseClient();
+    
+    // Get partner record (applications.partner_id references partners.id, not users.id)
+    const { data: partnerRecord, error: partnerError } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (partnerError || !partnerRecord) {
+      console.error('Error fetching partner record:', partnerError);
+      return NextResponse.json({ error: 'Partner record not found' }, { status: 404 });
+    }
+    
+    const partnerId = partnerRecord.id;
     
     // Get time range from query params (default 30 days)
     const days = parseInt(request.nextUrl.searchParams.get('days') || '30');
@@ -60,7 +72,10 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           nationality,
-          email
+          user_id,
+          users (
+            email
+          )
         ),
         programs (
           name,
@@ -86,6 +101,7 @@ export async function GET(request: NextRequest) {
     // Normalize recent applications (handle arrays from Supabase relations)
     const normalizedRecent = recentApplications?.map(app => {
       const student = Array.isArray(app.students) ? app.students[0] : app.students;
+      const studentUser = student?.users ? (Array.isArray(student.users) ? student.users[0] : student.users) : null;
       const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
       const university = program?.universities 
         ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
@@ -101,7 +117,7 @@ export async function GET(request: NextRequest) {
         passport_first_name: student?.first_name, // backward compatibility
         passport_last_name: student?.last_name, // backward compatibility
         nationality: student?.nationality,
-        email: student?.email,
+        email: studentUser?.email,
         programs: program ? {
           name_en: program.name,
           name: program.name,

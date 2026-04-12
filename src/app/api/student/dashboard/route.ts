@@ -10,11 +10,23 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseClient();
     
-    // Get application statistics
+    // Get student record first (applications.student_id references students.id, not users.id)
+    const { data: studentRecord, error: studentError } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', authUser.id)
+      .single();
+    
+    if (studentError || !studentRecord) {
+      console.error('Error fetching student record:', studentError);
+      return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
+    }
+    
+    // Get application statistics using student.id (not authUser.id)
     const { data: applications, error: appsError } = await supabase
       .from('applications')
       .select('status, id')
-      .eq('student_id', authUser.id);
+      .eq('student_id', studentRecord.id);
     
     if (appsError) {
       console.error('Error fetching applications:', appsError);
@@ -49,7 +61,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('student_id', authUser.id)
+      .eq('student_id', studentRecord.id)
       .eq('status', 'scheduled')
       .gte('meeting_date', new Date().toISOString())
       .order('meeting_date', { ascending: true })
@@ -73,7 +85,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('applications.student_id', authUser.id)
+      .eq('applications.student_id', studentRecord.id)
       .in('status', ['pending', 'rejected']);
     
     if (docsError) {
@@ -97,7 +109,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('student_id', authUser.id)
+      .eq('student_id', studentRecord.id)
       .order('updated_at', { ascending: false })
       .limit(5);
     

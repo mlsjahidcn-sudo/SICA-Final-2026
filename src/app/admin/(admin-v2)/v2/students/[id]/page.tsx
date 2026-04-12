@@ -3,11 +3,6 @@
 import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +26,8 @@ import {
   IconEdit
 } from "@tabler/icons-react"
 import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
+import { PageContainer, PageHeader } from "@/components/admin"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ReferredByPartner {
   id: string
@@ -187,28 +184,28 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Back Button and Actions */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild className="w-fit">
-          <Link href="/admin/v2/students">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to Students
-          </Link>
-        </Button>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href={`/admin/v2/students/${student.id}/edit`}>
-              <IconEdit className="mr-2 h-4 w-4" />
-              Edit Student
-            </Link>
-          </Button>
-          <DeleteStudentDialog 
-            studentId={student.id}
-            studentName={student.full_name}
-            hasApplications={student.applications.length > 0}
-            onStudentDeleted={() => router.push('/admin/v2/students')}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title={student.full_name}
+        description={student.email || 'No email'}
+        backHref="/admin/v2/students"
+        backLabel="Back to Students"
+        actions={
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link href={`/admin/v2/students/${student.id}/edit`}>
+                <IconEdit className="mr-2 h-4 w-4" />
+                Edit Student
+              </Link>
+            </Button>
+            <DeleteStudentDialog 
+              studentId={student.id}
+              studentName={student.full_name}
+              hasApplications={student.applications.length > 0}
+              onStudentDeleted={() => router.push('/admin/v2/students')}
+            />
+          </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Profile Card */}
@@ -479,21 +476,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Student Details" />
-          <StudentDetailContent studentId={resolvedParams.id} />
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <PageContainer title="Student Details">
+      <StudentDetailContent studentId={resolvedParams.id} />
+    </PageContainer>
   )
 }

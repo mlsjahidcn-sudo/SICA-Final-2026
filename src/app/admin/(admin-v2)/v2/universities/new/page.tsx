@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { PageContainer } from "@/components/admin"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -314,30 +311,19 @@ export default function NewUniversityPage() {
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="New University" />
-          <div className="flex flex-col gap-6 p-6">
-            {/* Header */}
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin/v2/universities">
-                  <IconArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Universities
-                </Link>
-              </Button>
-            </div>
+    <PageContainer title="New University">
+      <div className="flex flex-col gap-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/admin/v2/universities">
+              <IconArrowLeft className="mr-2 h-4 w-4" />
+              Back to Universities
+            </Link>
+          </Button>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
               {/* AI Generation Card */}
               <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
                 <CardHeader>
@@ -827,10 +813,8 @@ export default function NewUniversityPage() {
                   </div>
                 </div>
               </div>
-            </form>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+        </form>
+      </div>
+    </PageContainer>
   )
 }

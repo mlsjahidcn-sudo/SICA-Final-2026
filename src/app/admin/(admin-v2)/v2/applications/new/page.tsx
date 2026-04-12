@@ -4,11 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { AppSidebar } from '@/components/dashboard-v2-sidebar';
-import { SiteHeader } from '@/components/dashboard-v2-header';
-import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
 import { IconArrowLeft, IconCheck, IconUser, IconSchool, IconFileText, IconCircleCheck } from '@tabler/icons-react';
 import { toast } from 'sonner';
@@ -20,6 +15,8 @@ import { StudentSelectionStep } from '@/components/admin/add-application/student
 import { ProgramSelectionStep } from '@/components/admin/add-application/program-selection-step';
 import { DetailsStep } from '@/components/admin/add-application/details-step';
 import { ReviewStep } from '@/components/admin/add-application/review-step';
+import { PageContainer, PageHeader } from '@/components/admin';
+import { useAuth } from '@/contexts/auth-context';
 
 const steps = [
   { id: 1, title: 'Select Student', description: 'Choose student applicant', icon: IconUser },
@@ -54,22 +51,9 @@ export default function AdminAddApplicationPage() {
   }
 
   return (
-    <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Add Application" />
-          <AddApplicationFormContent />
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <PageContainer title="Add Application">
+      <AddApplicationFormContent />
+    </PageContainer>
   );
 }
 
@@ -314,15 +298,12 @@ function AddApplicationFormContent() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 md:gap-6 md:p-6 md:pt-0">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <IconArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">Add New Application</h1>
-          <p className="text-muted-foreground text-sm">Create a new student application with program and details</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Add New Application"
+        description="Create a new student application with program and details"
+        backHref="/admin/v2/applications"
+        backLabel="Back to Applications"
+      />
 
       <Card>
         <CardHeader className="border-b">

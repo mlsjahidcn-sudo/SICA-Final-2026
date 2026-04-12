@@ -196,9 +196,11 @@ function UniversitiesContent() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Universities</h1>
-        <p className="text-muted-foreground">Explore universities in China</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Universities</h1>
+          <p className="text-muted-foreground">Explore universities in China</p>
+        </div>
       </div>
 
       {/* Filters */}

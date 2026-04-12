@@ -297,13 +297,15 @@ function ProgramsContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Programs</h1>
-        <p className="text-muted-foreground">
-          Browse {total} programs across universities in China
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
+          <p className="text-muted-foreground">
+            Browse {total} programs across universities in China
+          </p>
+        </div>
       </div>
 
       {/* Filters */}

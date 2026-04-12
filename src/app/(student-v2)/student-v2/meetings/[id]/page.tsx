@@ -159,7 +159,7 @@ export default function MeetingDetailPage() {
   const isUpcoming = meeting.status === "scheduled" && meetingDate > new Date()
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 max-w-4xl mx-auto">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>

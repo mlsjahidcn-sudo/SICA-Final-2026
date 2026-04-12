@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/auth-context';
 import { ApplicationStatusBadge } from '@/components/partner-v2/application-status-badge';
+import { PageHeader, FormSection, FormGrid, FormField } from '@/components/admin';
 import {
   IconArrowLeft,
   IconDownload,
@@ -241,65 +242,49 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon-sm" asChild>
-            <Link href={`/partner-v2/applications/${application.id}`}>
-              <IconArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold">Documents</h1>
-              <ApplicationStatusBadge status={application.status} />
-            </div>
-            <p className="text-muted-foreground text-sm mt-1">
-              {application.students.first_name} {application.students.last_name} • {application.programs.universities.name_en}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Documents"
+        description={`${application.students.first_name} ${application.students.last_name} • ${application.programs.universities.name_en}`}
+        backHref={`/partner-v2/applications/${application.id}`}
+        backLabel="Back"
+        actions={<ApplicationStatusBadge status={application.status} />}
+      />
 
       <div className="px-4 lg:px-6 pb-6 space-y-6">
         {/* Upload Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload New Document</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+        <FormSection title="Upload New Document">
+          <FormGrid columns={2}>
+            <FormField label="Document Type">
+              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                <SelectTrigger id="document-type">
+                  <SelectValue placeholder="Select document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ALLOWED_DOCUMENT_TYPES).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="File">
               <div className="space-y-2">
-                <Label htmlFor="document-type">Document Type</Label>
-                <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                  <SelectTrigger id="document-type">
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ALLOWED_DOCUMENT_TYPES).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="file">File</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="file"
-                    type="file"
-                    className="flex-1"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  />
-                </div>
+                <input
+                  id="file"
+                  type="file"
+                  className="flex-1"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                />
                 {selectedFile && (
                   <p className="text-sm text-muted-foreground">
                     Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                   </p>
                 )}
               </div>
-            </div>
+            </FormField>
+          </FormGrid>
+          <div className="mt-4">
             <Button 
               onClick={handleFileUpload} 
               disabled={!selectedDocType || !selectedFile || isUploading}
@@ -316,8 +301,8 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </FormSection>
 
         {/* Documents Grid */}
         {documents.length === 0 ? (
