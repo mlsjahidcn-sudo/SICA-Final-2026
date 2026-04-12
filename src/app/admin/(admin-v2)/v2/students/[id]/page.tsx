@@ -231,7 +231,7 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
         <Card className="lg:col-span-1">
           <CardHeader className="text-center">
             <Avatar className="h-24 w-24 mx-auto mb-4">
-              <AvatarImage src={student.avatar_url} />
+              <AvatarImage src={student.avatar_url ?? undefined} />
               <AvatarFallback className="text-2xl">{getInitials(student.full_name)}</AvatarFallback>
             </Avatar>
             <CardTitle>{student.full_name}</CardTitle>

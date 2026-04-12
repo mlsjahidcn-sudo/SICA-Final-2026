@@ -272,7 +272,7 @@ export default function PartnerV2StudentsPage() {
                     {/* Student */}
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 shrink-0">
-                        <AvatarImage src={student.avatar_url} alt={student.full_name} />
+                        <AvatarImage src={student.avatar_url ?? undefined} alt={student.full_name} />
                         <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
                           {getInitials(student.full_name)}
                         </AvatarFallback>

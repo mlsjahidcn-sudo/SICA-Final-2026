@@ -292,7 +292,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </Link>
           </Button>
           <Avatar className="h-16 w-16">
-            <AvatarImage src={student.avatar_url} alt={student.full_name} />
+            <AvatarImage src={student.avatar_url ?? undefined} alt={student.full_name} />
             <AvatarFallback className="bg-primary/10 text-primary text-xl font-medium">
               {getInitials(student.full_name)}
             </AvatarFallback>

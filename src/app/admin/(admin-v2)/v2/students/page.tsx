@@ -361,7 +361,7 @@ function StudentsListContent() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={student.avatar_url} />
+                          <AvatarImage src={student.avatar_url ?? undefined} />
                           <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                         </Avatar>
                         <div>
