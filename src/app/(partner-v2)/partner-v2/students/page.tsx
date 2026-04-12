@@ -33,11 +33,11 @@ import { toast } from 'sonner';
 
 interface Student {
   id: string;
-  email: string;
+  email: string | null;
   full_name: string;
-  phone?: string;
-  avatar_url?: string;
-  nationality?: string;
+  phone?: string | null;
+  avatar_url?: string | null;
+  nationality?: string | null;
   created_at: string;
   application_count: number;
   stats: {

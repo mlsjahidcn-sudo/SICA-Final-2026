@@ -22,9 +22,9 @@ import { toast } from "sonner"
 
 interface Student {
   id: string
-  email: string
+  email: string | null
   full_name: string
-  phone?: string
+  phone?: string | null
   is_active?: boolean
   students?: {
     id: string

@@ -41,11 +41,11 @@ interface ReferredByPartner {
 
 interface StudentDetail {
   id: string
-  email: string
+  email: string | null
   full_name: string
-  phone?: string
-  nationality?: string
-  avatar_url?: string
+  phone?: string | null
+  nationality?: string | null
+  avatar_url?: string | null
   is_active?: boolean
   created_at: string
   updated_at?: string
@@ -235,13 +235,15 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
               <AvatarFallback className="text-2xl">{getInitials(student.full_name)}</AvatarFallback>
             </Avatar>
             <CardTitle>{student.full_name}</CardTitle>
-            <CardDescription>{student.email}</CardDescription>
+            <CardDescription>{student.email || 'No email'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {student.email && (
             <div className="flex items-center gap-3 text-sm">
               <IconMail className="h-4 w-4 text-muted-foreground" />
               <span>{student.email}</span>
             </div>
+            )}
             {student.phone && (
               <div className="flex items-center gap-3 text-sm">
                 <IconPhone className="h-4 w-4 text-muted-foreground" />
