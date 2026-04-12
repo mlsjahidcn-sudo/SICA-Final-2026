@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "build": "bash ./scripts/build.sh",
+    "build:hostinger": "bash ./scripts/build-hostinger.sh",
+    "build:next": "next build",
     "dev": "bash ./scripts/dev.sh",
-    "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
     "start": "bash ./scripts/start.sh",
+    "start:hostinger": "node .next/standalone/server.js",
     "ts-check": "tsc -p tsconfig.json",
     "test": "vitest",
     "test:run": "vitest run",

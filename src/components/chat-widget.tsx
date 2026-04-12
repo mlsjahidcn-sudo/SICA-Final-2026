@@ -232,6 +232,10 @@ export function ChatWidget() {
     const messagesWithPlaceholder = [...newMessages, placeholderMessage];
     setMessages(messagesWithPlaceholder);
 
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -240,7 +244,10 @@ export function ChatWidget() {
           message: userMessage.content,
           session_id: sessionId,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to get response');
@@ -321,15 +328,22 @@ export function ChatWidget() {
         setMessages(errorMsgs);
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Chat error:', error);
       setIsTyping(false);
+      
+      const errorMessage = error instanceof Error && error.name === 'AbortError'
+        ? 'Request timed out. Please try again or contact us via WhatsApp for immediate help.'
+        : 'Sorry, I encountered an error. Please try again or contact us via WhatsApp.';
+      
       const errorMsgs = messagesWithPlaceholder.map(m => 
         m.id === assistantId 
-          ? { ...m, content: 'Sorry, I encountered an error. Please try again or contact us via WhatsApp.', loading: false }
+          ? { ...m, content: errorMessage, loading: false }
           : m
       );
       setMessages(errorMsgs);
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }, [messages, isLoading, fetchCardData, currentContext, sessionId]);

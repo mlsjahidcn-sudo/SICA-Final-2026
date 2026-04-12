@@ -3,6 +3,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { retrieveRelevantContext, formatRAGContext } from '@/lib/chat/rag-pipeline';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { streamLLM, ChatMessage } from '@/lib/llm';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
 const SYSTEM_PROMPT = `You are the SICA AI Assistant — a friendly, knowledgeable advisor for the Study in China Academy platform. You help international students find the right universities and programs in China, answer questions about scholarships, application processes, visa requirements, and more.
 
@@ -77,6 +78,14 @@ const INTENT_KEYWORDS = {
   ]
 };
 
+// Simple queries that don't need RAG
+const SIMPLE_QUERY_PATTERNS = [
+  /^(hi|hello|hey|你好|您好)/i,
+  /^(thanks|thank you|谢谢)/i,
+  /^(bye|goodbye|再见)/i,
+  /^(how are you|你好吗)/i,
+];
+
 // Extract search keywords from user message
 function extractKeywords(message: string): string[] {
   // Remove common stop words and extract meaningful keywords
@@ -113,18 +122,28 @@ function detectIntent(message: string): { type: 'university' | 'program' | 'scho
   return { type: 'general', keywords };
 }
 
-// Search universities based on keywords
+// Check if query is simple and doesn't need RAG
+function isSimpleQuery(message: string): boolean {
+  return SIMPLE_QUERY_PATTERNS.some(pattern => pattern.test(message.trim()));
+}
+
+// Search universities based on keywords (with caching)
 async function searchUniversities(supabase: ReturnType<typeof getSupabaseClient>, keywords: string[], limit: number = 5) {
   if (keywords.length === 0) return [];
+  
+  // Check cache
+  const cacheKey = `uni:${keywords.sort().join(',')}:${limit}`;
+  const cached = apiCache.get(cacheKey) as Array<Record<string, unknown>> | null;
+  if (cached) return cached;
   
   try {
     // Build search query - search in name_en, name_cn, city, province
     const searchConditions = keywords
-      .slice(0, 5)
-      .map(kw => `name_en.ilike.%${kw}%,name_cn.ilike.%${kw}%,city.ilike.%${kw}%,province.ilike.%${kw}%`)
+      .slice(0, 3) // Reduced from 5 to 3 for faster queries
+      .map(kw => `name_en.ilike.%${kw}%,name_cn.ilike.%${kw}%,city.ilike.%${kw}%`)
       .join(',');
     
-    const { data, error } = await supabase
+    const queryPromise = supabase
       .from('universities')
       .select(`
         id,
@@ -144,19 +163,25 @@ async function searchUniversities(supabase: ReturnType<typeof getSupabaseClient>
       .order('ranking_national', { ascending: true, nullsFirst: false })
       .limit(limit);
     
+    // Add timeout to prevent slow queries
+    const { data, error } = await withTimeout(queryPromise, 2000, 'University search timeout');
+    
     if (error) {
       console.error('[Chat] University search error:', error);
       return [];
     }
     
-    return data || [];
+    const results = data || [];
+    // Cache for 2 minutes
+    apiCache.set(cacheKey, results, CACHE_TTL.MEDIUM);
+    return results;
   } catch (error) {
     console.error('University search failed:', error);
     return [];
   }
 }
 
-// Search programs based on keywords
+// Search programs based on keywords (with caching)
 async function searchPrograms(
   supabase: ReturnType<typeof getSupabaseClient>, 
   keywords: string[], 
@@ -165,11 +190,16 @@ async function searchPrograms(
 ) {
   if (keywords.length === 0) return [];
   
+  // Check cache
+  const cacheKey = `prog:${keywords.sort().join(',')}:${filters.degreeLevel || 'all'}:${filters.scholarshipOnly || false}:${limit}`;
+  const cached = apiCache.get(cacheKey) as Array<Record<string, unknown>> | null;
+  if (cached) return cached;
+  
   try {
     // Build search query
     const searchConditions = keywords
-      .slice(0, 5)
-      .map(kw => `name.ilike.%${kw}%,category.ilike.%${kw}%,sub_category.ilike.%${kw}%`)
+      .slice(0, 3) // Reduced from 5 to 3
+      .map(kw => `name.ilike.%${kw}%,category.ilike.%${kw}%`)
       .join(',');
     
     let query = supabase
@@ -202,16 +232,22 @@ async function searchPrograms(
       query = query.eq('scholarship_available', true);
     }
     
-    const { data, error } = await query
+    const queryPromise = query
       .order('scholarship_available', { ascending: false })
       .limit(limit);
+    
+    // Add timeout
+    const { data, error } = await withTimeout(queryPromise, 2000, 'Program search timeout');
     
     if (error) {
       console.error('Program search error:', error);
       return [];
     }
     
-    return data || [];
+    const results = data || [];
+    // Cache for 2 minutes
+    apiCache.set(cacheKey, results, CACHE_TTL.MEDIUM);
+    return results;
   } catch (error) {
     console.error('Program search failed:', error);
     return [];
@@ -332,41 +368,66 @@ export async function POST(request: NextRequest) {
 
     // Detect user intent and extract keywords
     const intent = detectIntent(message);
+    const isSimple = isSimpleQuery(message);
     
-    // Search database based on intent
+    // Initialize results
     let universities: Array<Record<string, unknown>> = [];
     let programs: Array<Record<string, unknown>> = [];
-    
-    // Check for scholarship filter
-    const scholarshipOnly = message.toLowerCase().includes('scholarship');
-    
-    // Check for degree level
-    const lowerMessage = message.toLowerCase();
-    let degreeLevel: string | undefined;
-    if (lowerMessage.includes('bachelor') || lowerMessage.includes('undergraduate') || lowerMessage.includes('本科')) {
-      degreeLevel = 'Bachelor';
-    } else if (lowerMessage.includes('master') || lowerMessage.includes('graduate') || lowerMessage.includes('硕士')) {
-      degreeLevel = 'Master';
-    } else if (lowerMessage.includes('phd') || lowerMessage.includes('doctorate') || lowerMessage.includes('博士')) {
-      degreeLevel = 'PhD';
-    }
-
-    // Run searches in parallel
-    const [uniResults, progResults] = await Promise.all([
-      searchUniversities(supabase, intent.keywords, 5),
-      searchPrograms(supabase, intent.keywords, { degreeLevel, scholarshipOnly }, 5)
-    ]);
-    
-    universities = uniResults;
-    programs = progResults;
-
-    // RAG: Retrieve relevant context from knowledge base
     let ragContext = '';
-    try {
-      const ragResults = await retrieveRelevantContext(message, {}, 5);
-      ragContext = formatRAGContext(ragResults);
-    } catch (error) {
-      console.error('RAG retrieval failed (non-blocking):', error);
+    
+    // Skip database search for simple queries (greetings, thanks, etc.)
+    if (!isSimple) {
+      // Check for scholarship filter
+      const scholarshipOnly = message.toLowerCase().includes('scholarship');
+      
+      // Check for degree level
+      const lowerMessage = message.toLowerCase();
+      let degreeLevel: string | undefined;
+      if (lowerMessage.includes('bachelor') || lowerMessage.includes('undergraduate') || lowerMessage.includes('本科')) {
+        degreeLevel = 'Bachelor';
+      } else if (lowerMessage.includes('master') || lowerMessage.includes('graduate') || lowerMessage.includes('硕士')) {
+        degreeLevel = 'Master';
+      } else if (lowerMessage.includes('phd') || lowerMessage.includes('doctorate') || lowerMessage.includes('博士')) {
+        degreeLevel = 'PhD';
+      }
+
+      // Run database searches in parallel with timeout
+      try {
+        const [uniResults, progResults] = await Promise.all([
+          searchUniversities(supabase, intent.keywords, 3),
+          searchPrograms(supabase, intent.keywords, { degreeLevel, scholarshipOnly }, 3)
+        ]);
+        
+        universities = uniResults;
+        programs = progResults;
+      } catch (error) {
+        console.error('Database search failed:', error);
+      }
+
+      // RAG: Only for complex queries, skip for simple ones (with timeout and cache)
+      if (intent.type !== 'general' && universities.length === 0 && programs.length === 0) {
+        try {
+          // Cache key for RAG results
+          const ragCacheKey = `rag:${message.slice(0, 100)}`;
+          const cachedRAG = apiCache.get(ragCacheKey) as string | null;
+          
+          if (cachedRAG) {
+            ragContext = cachedRAG;
+          } else {
+            // Run RAG with timeout (2 seconds max)
+            const ragResults = await withTimeout(
+              retrieveRelevantContext(message, {}, 3),
+              2000,
+              'RAG timeout'
+            );
+            ragContext = formatRAGContext(ragResults);
+            // Cache for 2 minutes
+            apiCache.set(ragCacheKey, ragContext, CACHE_TTL.MEDIUM);
+          }
+        } catch (error) {
+          console.error('RAG retrieval failed (non-blocking):', error);
+        }
+      }
     }
 
     // Format database results with IDs
