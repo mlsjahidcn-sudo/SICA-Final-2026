@@ -123,7 +123,7 @@ async function fetchProgramsByDegree(
 
     return (data || []).map(p => ({
       ...p,
-      university_name: (p.universities as { name_en: string }).name_en
+      university_name: Array.isArray(p.universities) ? (p.universities[0] as { name_en: string })?.name_en || '' : (p.universities as { name_en: string } | null)?.name_en || ''
     }));
   }
 
@@ -160,7 +160,7 @@ async function fetchProgramsByDegree(
 
   return (data || []).map(p => ({
     ...p,
-    university_name: (p.universities as { name_en: string }).name_en
+    university_name: Array.isArray(p.universities) ? (p.universities[0] as { name_en: string })?.name_en || '' : (p.universities as { name_en: string } | null)?.name_en || ''
   }));
 }
 
@@ -192,7 +192,7 @@ async function fetchNonCSCScholarships(supabase: ReturnType<typeof getSupabaseCl
 
   return (data || []).map(s => ({
     ...s,
-    university_name: s.universities ? (s.universities as { name_en: string }).name_en : null
+    university_name: s.universities ? (Array.isArray(s.universities) ? (s.universities[0] as { name_en: string })?.name_en : (s.universities as { name_en: string }).name_en) : null
   }));
 }
 

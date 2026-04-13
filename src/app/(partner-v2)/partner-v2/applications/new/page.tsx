@@ -779,10 +779,10 @@ export default function PartnerNewApplicationPage() {
                     />
                     <div>
                       <Label htmlFor="request-toggle" className="font-medium">
-                        Can't find your university or program?
+                        Can&apos;t find your university or program?
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Describe what you need and we'll add it to our database
+                        Describe what you need and we&apos;ll add it to our database
                       </p>
                     </div>
                   </div>

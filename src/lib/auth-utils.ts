@@ -7,6 +7,7 @@ interface User {
   role: string;
   full_name?: string;
   partner_id?: string;
+  partner_role?: string;
   referred_by_partner_id?: string;
 }
 

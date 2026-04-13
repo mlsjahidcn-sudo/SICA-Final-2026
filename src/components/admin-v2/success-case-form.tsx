@@ -228,7 +228,7 @@ export default function SuccessCaseForm({ mode }: SuccessCaseFormProps) {
     accept: string;
     existingUrl: string | null;
     newFile: File | null;
-    inputRef: React.RefObject<HTMLInputElement>;
+    inputRef: React.RefObject<HTMLInputElement | null>;
   }) => {
     const isNewFilePDF = newFile?.type === 'application/pdf';
     const isExistingPDF = existingUrl?.toLowerCase().endsWith('.pdf');

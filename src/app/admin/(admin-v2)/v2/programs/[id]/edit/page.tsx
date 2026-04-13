@@ -1283,10 +1283,10 @@ export default function EditProgramPage() {
                 </div>
               </div>
             </form>
-              </div>
+          </div>
 
-              {/* Preview Panel */}
-              {showPreview && (
+          {/* Preview Panel */}
+          {showPreview && (
                 <div className="w-[400px] shrink-0 sticky top-6 self-start">
                   <ProgramPreviewPanel
                     data={{
@@ -1305,7 +1305,6 @@ export default function EditProgramPage() {
                 </div>
               )}
             </div>
-          </div>
         </div>
 
       {/* University Selector Dialog */}
