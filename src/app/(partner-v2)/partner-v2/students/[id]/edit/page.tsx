@@ -410,7 +410,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
       <Card>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-6 mb-6">
+            <TabsList className="grid grid-cols-3 sm:grid-cols-6 mb-6">
               <TabsTrigger value="personal" className="flex items-center gap-1.5 text-xs">
                 <IconUser className="h-3.5 w-3.5" />
                 Personal

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   User,
   GraduationCap,
@@ -99,6 +100,13 @@ interface UploadedFile {
   preview?: string;
 }
 
+interface UploadStatus {
+  documentType: string;
+  fileName: string;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  error?: string;
+}
+
 interface FormData {
   full_name: string;
   email: string;
@@ -143,7 +151,8 @@ export default function AssessmentApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [error, setError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadStatuses, setUploadStatuses] = useState<UploadStatus[]>([]);
+  const [submissionStage, setSubmissionStage] = useState<'form' | 'documents' | 'complete'>('form');
 
   const progress = ((currentStep - 1) / (steps.length - 1)) * 100;
 
@@ -209,30 +218,95 @@ export default function AssessmentApplyPage() {
     });
   }, []);
 
-  const uploadDocuments = async (assessmentId: string): Promise<void> => {
-    for (const uploadedFile of uploadedFiles) {
+  const uploadDocuments = async (assessmentId: string): Promise<UploadStatus[]> => {
+    // Initialize upload statuses
+    const initialStatuses: UploadStatus[] = uploadedFiles.map((file) => ({
+      documentType: file.documentType,
+      fileName: file.file.name,
+      status: 'pending' as const,
+    }));
+    setUploadStatuses(initialStatuses);
+
+    // Upload all documents in parallel using Promise.allSettled
+    const uploadPromises = uploadedFiles.map(async (uploadedFile, index) => {
+      // Update status to uploading
+      setUploadStatuses((prev) =>
+        prev.map((status, i) =>
+          i === index ? { ...status, status: 'uploading' as const } : status
+        )
+      );
+
       const formDataObj = new FormData();
       formDataObj.append("assessment_id", assessmentId);
       formDataObj.append("document_type", uploadedFile.documentType);
       formDataObj.append("file", uploadedFile.file);
 
       try {
-        await fetch("/api/assessment/upload", {
+        const response = await fetch("/api/assessment/upload", {
           method: "POST",
           body: formDataObj,
         });
-      } catch (docError) {
-        console.error(`Failed to upload ${uploadedFile.documentType}:`, docError);
-        // Continue uploading other files even if one fails
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update status to success
+          setUploadStatuses((prev) =>
+            prev.map((status, i) =>
+              i === index ? { ...status, status: 'success' as const } : status
+            )
+          );
+          return { success: true, documentType: uploadedFile.documentType };
+        } else {
+          // Update status to error
+          const errorMsg = data.error || "Upload failed";
+          setUploadStatuses((prev) =>
+            prev.map((status, i) =>
+              i === index ? { ...status, status: 'error' as const, error: errorMsg } : status
+            )
+          );
+          return { success: false, documentType: uploadedFile.documentType, error: errorMsg };
+        }
+      } catch (err) {
+        // Update status to error
+        const errorMsg = err instanceof Error ? err.message : "Network error";
+        setUploadStatuses((prev) =>
+          prev.map((status, i) =>
+            i === index ? { ...status, status: 'error' as const, error: errorMsg } : status
+          )
+        );
+        return { success: false, documentType: uploadedFile.documentType, error: errorMsg };
       }
-    }
+    });
+
+    // Wait for all uploads to complete
+    const results = await Promise.allSettled(uploadPromises);
+    
+    // Return final statuses
+    return initialStatuses.map((status, index) => {
+      const result = results[index];
+      if (result.status === 'fulfilled') {
+        return {
+          ...status,
+          status: result.value.success ? 'success' as const : 'error' as const,
+          error: result.value.error,
+        };
+      }
+      return {
+        ...status,
+        status: 'error' as const,
+        error: 'Upload failed',
+      };
+    });
   };
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     setError("");
+    setSubmissionStage('form');
 
     try {
+      // Step 1: Submit form data
       const response = await fetch("/api/assessment/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -242,23 +316,53 @@ export default function AssessmentApplyPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Upload documents if any
+        // Step 2: Upload documents if any
         if (uploadedFiles.length > 0 && data.application_id) {
-          await uploadDocuments(data.application_id);
+          setSubmissionStage('documents');
+          toast("Submitting application...", {
+            description: `Uploading ${uploadedFiles.length} document${uploadedFiles.length > 1 ? 's' : ''}...`,
+          });
+
+          const finalStatuses = await uploadDocuments(data.application_id);
+          setUploadStatuses(finalStatuses);
+
+          // Check if any uploads failed
+          const failedUploads = finalStatuses.filter((s) => s.status === 'error');
+          if (failedUploads.length > 0) {
+            toast.error(`${failedUploads.length} document${failedUploads.length > 1 ? 's' : ''} failed to upload`, {
+              description: "You can upload them later from the tracking page.",
+            });
+          } else {
+            toast.success("All documents uploaded successfully", {
+              description: "Your application has been submitted with all documents.",
+            });
+          }
         }
+
         setTrackingCode(data.tracking_code);
         setSubmitted(true);
+        setSubmissionStage('complete');
       } else {
         setError(data.error || "Failed to submit application. Please try again.");
+        toast.error("Submission failed", {
+          description: data.error || "Failed to submit application. Please try again.",
+        });
       }
     } catch {
       setError("An error occurred. Please check your connection and try again.");
+      toast.error("Network error", {
+        description: "Please check your connection and try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, uploadedFiles]);
+  }, [formData, uploadedFiles, toast]);
 
   if (submitted) {
+    const successfulUploads = uploadStatuses.filter((s) => s.status === 'success');
+    const failedUploads = uploadStatuses.filter((s) => s.status === 'error');
+    const hasDocuments = uploadedFiles.length > 0;
+
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12">
@@ -276,6 +380,62 @@ export default function AssessmentApplyPage() {
                 <p className="text-sm text-muted-foreground">Your Tracking Code</p>
                 <p className="mt-1 text-2xl font-mono font-bold text-primary">{trackingCode}</p>
               </div>
+
+              {/* Document Upload Status Summary */}
+              {hasDocuments && (
+                <div className="mb-6 rounded-lg border p-4 text-left">
+                  <h3 className="mb-3 flex items-center gap-2 font-semibold">
+                    <FileIcon className="h-4 w-4" />
+                    Document Upload Status
+                  </h3>
+                  <div className="space-y-2">
+                    {uploadStatuses.map((status) => {
+                      const docType = documentTypes.find((d) => d.id === status.documentType);
+                      return (
+                        <div
+                          key={status.documentType}
+                          className="flex items-center justify-between rounded border bg-card p-2 text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            {status.status === 'success' ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : status.status === 'error' ? (
+                              <AlertCircle className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                            <div>
+                              <p className="font-medium">{docType?.label || status.documentType}</p>
+                              <p className="text-xs text-muted-foreground">{status.fileName}</p>
+                            </div>
+                          </div>
+                          {status.status === 'error' && status.error && (
+                            <span className="text-xs text-destructive">{status.error}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {failedUploads.length > 0 && (
+                    <div className="mt-3 rounded border border-orange-200 bg-orange-50 p-3 text-sm dark:border-orange-900 dark:bg-orange-950">
+                      <p className="font-medium text-orange-700 dark:text-orange-400">
+                        {failedUploads.length} document{failedUploads.length > 1 ? 's' : ''} failed to upload
+                      </p>
+                      <p className="mt-1 text-orange-600 dark:text-orange-300">
+                        You can upload these documents later from the tracking page.
+                      </p>
+                    </div>
+                  )}
+
+                  {successfulUploads.length > 0 && failedUploads.length === 0 && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      ✓ All {successfulUploads.length} document{successfulUploads.length > 1 ? 's' : ''} uploaded successfully
+                    </p>
+                  )}
+                </div>
+              )}
+
               <p className="mb-6 text-sm text-muted-foreground">
                 Please save this tracking code. You can use it along with your email to check your application status.
               </p>
@@ -676,7 +836,6 @@ export default function AssessmentApplyPage() {
                               )}
                             </div>
                             <input
-                              ref={fileInputRef}
                               type="file"
                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                               className="absolute inset-0 cursor-pointer opacity-0"
@@ -878,7 +1037,11 @@ export default function AssessmentApplyPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Submitting...
+                        {submissionStage === 'form'
+                          ? "Submitting..."
+                          : submissionStage === 'documents'
+                          ? "Uploading Documents..."
+                          : "Completing..."}
                       </>
                     ) : (
                       <>

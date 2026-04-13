@@ -99,6 +99,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
+    console.log('[GET Documents] Auth user:', {
+      id: authUser.id,
+      email: authUser.email,
+      role: authUser.role
+    });
+
     // Build query - only select columns that exist in the table
     let query = supabase
       .from('application_documents')
@@ -180,10 +186,16 @@ export async function GET(request: NextRequest) {
           .select('id')
           .eq('user_id', authUser.id)
           .maybeSingle();
+        
+        console.log('[GET Documents] Student record for filtering:', studentRecord);
+        
         if (studentRecord) {
           query = query.eq('applications.student_id', studentRecord.id);
+          console.log('[GET Documents] Filtering by student_id:', studentRecord.id);
         } else {
+          // No student record - return empty result
           query = query.eq('applications.student_id', '00000000-0000-0000-0000-000000000000');
+          console.log('[GET Documents] No student record found, returning empty result');
         }
       } else if (authUser.role === 'partner') {
         // applications.partner_id stores users.id
@@ -200,6 +212,12 @@ export async function GET(request: NextRequest) {
     query = query.order('created_at', { ascending: false });
 
     const { data: documents, error } = await query;
+
+    console.log('[GET Documents] Query result:', {
+      count: documents?.length || 0,
+      error: error?.message,
+      documentIds: documents?.map(d => d.id)
+    });
 
     if (error) {
       console.error('Error fetching documents:', error);
@@ -513,13 +531,53 @@ export async function DELETE(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const appData = docRecord.applications as any;
     let isOwner = false;
+    
+    console.log('[DELETE Document] Auth user:', {
+      id: authUser.id,
+      email: authUser.email,
+      role: authUser.role
+    });
+    console.log('[DELETE Document] Application data:', {
+      student_id: appData.student_id,
+      partner_id: appData.partner_id
+    });
+    
     if (authUser.role === 'student') {
       const { data: studentRecord } = await supabase
         .from('students')
         .select('id')
         .eq('user_id', authUser.id)
         .maybeSingle();
-      isOwner = studentRecord?.id === appData.student_id;
+      
+      console.log('[DELETE Document] Student record:', studentRecord);
+      console.log('[DELETE Document] Ownership check:', {
+        studentRecordId: studentRecord?.id,
+        appStudentId: appData.student_id,
+        isMatch: studentRecord?.id === appData.student_id
+      });
+      
+      // Auto-fix: Create missing student record for student users
+      if (!studentRecord) {
+        console.log('[DELETE Document] Auto-fixing missing student record for user:', authUser.id);
+        const { data: newStudent, error: createError } = await supabase
+          .from('students')
+          .insert({
+            user_id: authUser.id,
+            email: authUser.email,
+          })
+          .select('id')
+          .single();
+        
+        if (createError) {
+          console.error('[DELETE Document] Failed to auto-create student record:', createError);
+        } else {
+          console.log('[DELETE Document] Created student record:', newStudent?.id);
+          // Re-check ownership with the new student record
+          isOwner = newStudent?.id === appData.student_id;
+        }
+      } else {
+        isOwner = studentRecord.id === appData.student_id;
+      }
     } else if (authUser.role === 'partner') {
       // Use proper partner access control
       const partnerAuthResult = await verifyPartnerAuth(request);
@@ -534,8 +592,23 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    console.log('[DELETE Document] Final check:', {
+      isOwner,
+      role: authUser.role,
+      isAdmin: authUser.role === 'admin'
+    });
+
     if (!isOwner && authUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ 
+        error: 'Forbidden',
+        details: {
+          userRole: authUser.role,
+          isOwner,
+          reason: authUser.role === 'student' 
+            ? 'Student record not found or does not match application owner'
+            : 'Access denied'
+        }
+      }, { status: 403 });
     }
 
     // Delete from Supabase Storage

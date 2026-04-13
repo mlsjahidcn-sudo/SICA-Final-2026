@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import { NavDocuments } from "@/components/dashboard-v2-nav-docs"
 import { NavMain } from "@/components/dashboard-v2-nav-main"
@@ -141,6 +142,14 @@ const navData = {
       url: "/admin/v2/partners",
       icon: (
         <IconBuilding
+        />
+      ),
+    },
+    {
+      title: "Success Cases",
+      url: "/admin/v2/success-cases",
+      icon: (
+        <IconUserStar
         />
       ),
     },

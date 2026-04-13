@@ -174,6 +174,28 @@ export function Header() {
     },
   ];
 
+  // Mobile navigation items with icons
+  const mainNavItems = [
+    { label: 'Free Assessment', href: '/assessment', icon: IconSparkles, highlight: true },
+    { label: 'Universities', href: '/universities', icon: IconSchool },
+    { label: 'Blog', href: '/blog', icon: IconFileText },
+    { label: 'Success Cases', href: '/success-cases', icon: IconAward },
+  ];
+
+  const aboutNavItems = [
+    { label: 'About', href: '/about', icon: IconInfoCircle },
+    { label: 'Partners', href: '/partners', icon: IconBuilding },
+    { label: 'Contact', href: '/contact', icon: IconMail },
+  ];
+
+  const programItems = [
+    { label: "Bachelor's Degrees", href: '/programs?degree_type=bachelor' },
+    { label: "Master's Degrees", href: '/programs?degree_type=master' },
+    { label: 'PhD Programs', href: '/programs?degree_type=phd' },
+    { label: 'Language Programs', href: '/programs?degree_type=language' },
+    { label: 'Short-term Programs', href: '/programs?degree_type=short_term' },
+  ];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
@@ -277,6 +299,15 @@ export function Header() {
               <NavigationMenuLink asChild>
                 <Link href="/blog" className={navigationMenuTriggerStyle()}>
                   Blog
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+
+            {/* Success Cases */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link href="/success-cases" className={navigationMenuTriggerStyle()}>
+                  Success Cases
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
@@ -432,7 +463,7 @@ export function Header() {
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               
               {/* Header with close button */}
-              <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
                 <Image
                   src="/logo.png"
                   alt="SICA"
@@ -444,193 +475,206 @@ export function Header() {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => setIsOpen(false)}
-                  className="h-10 w-10"
+                  className="h-10 w-10 rounded-full hover:bg-muted transition-colors"
                 >
                   <IconX className="h-5 w-5" />
                 </Button>
               </div>
 
-              <div className="px-4 py-4">
-                {/* User Info */}
+              <div className="px-4 py-4 space-y-4">
+                {/* User Info Card - Enhanced */}
                 {user && (
-                  <div className="mb-4 pb-4 border-b">
+                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/10">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-12 w-12 ring-2 ring-primary/20">
                         <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getUserInitials()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{user.full_name}</div>
+                        <div className="font-semibold text-base truncate">{user.full_name}</div>
                         <div className="text-sm text-muted-foreground truncate">{user.email}</div>
+                        <Badge variant="secondary" className="mt-1.5 text-xs capitalize">
+                          {user.role}
+                        </Badge>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* CTA Button */}
-                <Link href="/apply" onClick={() => setIsOpen(false)} className="block mb-4">
-                  <Button className="w-full h-11 text-base">
+                {/* CTA Button - Enhanced */}
+                <Link href="/apply" onClick={() => setIsOpen(false)}>
+                  <Button className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 transition-all duration-300 active:scale-[0.98]">
+                    <IconSend className="h-5 w-5 mr-2" />
                     Apply Now
                   </Button>
                 </Link>
 
-                {/* Main Navigation */}
-                <nav className="space-y-1">
-                  <Link
-                    href="/assessment"
-                    className="block py-3.5 text-primary font-medium text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Free Assessment
-                  </Link>
+                {/* Main Navigation Section */}
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                    Main Menu
+                  </div>
+                  {mainNavItems.map((item) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 py-3 px-3 rounded-lg transition-all duration-200 active:scale-[0.98]",
+                          item.highlight 
+                            ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15" 
+                            : "hover:bg-muted text-foreground hover:text-primary"
+                        )}
+                      >
+                        <IconComponent className={cn(
+                          "h-5 w-5 flex-shrink-0",
+                          item.highlight ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                        )} />
+                        <span className="text-base">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
 
-                  <Link
-                    href="/universities"
-                    className="block py-3.5 text-foreground hover:text-primary transition-colors text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Universities
-                  </Link>
-
-                  <Link
-                    href="/blog"
-                    className="block py-3.5 text-foreground hover:text-primary transition-colors text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Blog
-                  </Link>
-
-                  {/* Programs with Collapsible */}
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <button className="w-full flex items-center justify-between py-3.5 text-foreground hover:text-primary transition-colors text-base">
-                        <span>Programs</span>
-                        <IconChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-4 border-l ml-1 mt-1 mb-2">
-                      <Link
-                        href="/programs?degree_type=bachelor"
-                        className="block py-2.5 text-muted-foreground hover:text-primary transition-colors text-sm"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Bachelor&apos;s Degrees
-                      </Link>
-                      <Link
-                        href="/programs?degree_type=master"
-                        className="block py-2.5 text-muted-foreground hover:text-primary transition-colors text-sm"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Master&apos;s Degrees
-                      </Link>
-                      <Link
-                        href="/programs?degree_type=phd"
-                        className="block py-2.5 text-muted-foreground hover:text-primary transition-colors text-sm"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        PhD Programs
-                      </Link>
-                      <Link
-                        href="/programs?degree_type=language"
-                        className="block py-2.5 text-muted-foreground hover:text-primary transition-colors text-sm"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Language Programs
-                      </Link>
+                {/* Programs Collapsible Section - Enhanced */}
+                <Collapsible className="group">
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted transition-all duration-200 text-foreground hover:text-primary">
+                      <IconGlobe className="h-5 w-5 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="flex-1 text-left text-base">Programs</span>
+                      <IconChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-data-[state=open]:rotate-180" />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-1 overflow-hidden">
+                    <div className="pl-4 border-l-2 border-primary/20 ml-2.5 space-y-1">
+                      {programItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center gap-2 py-2.5 px-3 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-200 text-sm"
+                        >
+                          <IconChevronRight className="h-3.5 w-3.5" />
+                          <span>{item.label}</span>
+                        </Link>
+                      ))}
                       <Link
                         href="/programs"
-                        className="block py-2.5 text-primary font-medium text-sm"
                         onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2.5 px-3 rounded-lg text-primary font-medium hover:bg-primary/5 transition-all duration-200 text-sm"
                       >
-                        View All Programs
+                        <IconChevronRight className="h-3.5 w-3.5" />
+                        <span>View All Programs</span>
                       </Link>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
-                  <Link
-                    href="/about"
-                    className="block py-3.5 text-foreground hover:text-primary transition-colors text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
+                <Separator className="my-4" />
+
+                {/* About Section */}
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
                     About
-                  </Link>
-
-                  <Link
-                    href="/partners"
-                    className="block py-3.5 text-foreground hover:text-primary transition-colors text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Partners
-                  </Link>
-
-                  <Link
-                    href="/contact"
-                    className="block py-3.5 text-foreground hover:text-primary transition-colors text-base"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Contact
-                  </Link>
-                </nav>
+                  </div>
+                  {aboutNavItems.map((item) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200 active:scale-[0.98]"
+                      >
+                        <IconComponent className="h-5 w-5 flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-base">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
 
                 {/* Account Section (logged in) */}
                 {user && (
-                  <div className="mt-4 pt-4 border-t space-y-1">
-                    <Link
-                      href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'}
-                      className="block py-3 text-foreground hover:text-primary transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    {user.role === 'student' && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                        Account
+                      </div>
                       <Link
-                        href="/assessment/track"
-                        className="block py-3 text-foreground hover:text-primary transition-colors"
+                        href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'}
+                        className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200"
                         onClick={() => setIsOpen(false)}
                       >
-                        My Assessments
+                        <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                        <span className="text-base">Dashboard</span>
                       </Link>
-                    )}
-                    {user.role === 'admin' && (
                       <Link
-                        href="/admin/v2"
-                        className="block py-3 text-foreground hover:text-primary transition-colors"
+                        href={user.role === 'partner' ? '/partner-v2/profile' : user.role === 'student' ? '/student-v2/profile' : '/profile'}
+                        className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200"
                         onClick={() => setIsOpen(false)}
                       >
-                        Admin Panel
+                        <IconUser className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                        <span className="text-base">Profile</span>
                       </Link>
-                    )}
-                    {user.role === 'partner' && (
-                      <Link
-                        href="/partner-v2"
-                        className="block py-3 text-foreground hover:text-primary transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        Partner Portal
-                      </Link>
-                    )}
-                  </div>
+                      {user.role === 'student' && (
+                        <Link
+                          href="/assessment/track"
+                          className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <IconFileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                          <span className="text-base">My Assessments</span>
+                        </Link>
+                      )}
+                      {user.role === 'admin' && (
+                        <Link
+                          href="/admin/v2"
+                          className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <IconSettings className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                          <span className="text-base">Admin Panel</span>
+                        </Link>
+                      )}
+                      {user.role === 'partner' && (
+                        <Link
+                          href="/partner-v2"
+                          className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted text-foreground hover:text-primary transition-all duration-200"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <IconBuilding className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                          <span className="text-base">Partner Portal</span>
+                        </Link>
+                      )}
+                    </div>
+                  </>
                 )}
 
-                {/* Auth Buttons */}
+                {/* Auth Section */}
                 <div className="mt-4 pt-4 border-t">
                   {user ? (
                     <Button
                       variant="ghost"
-                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 gap-3 h-11 transition-all duration-200"
                       onClick={handleSignOut}
                     >
-                      Sign Out
+                      <IconLogout className="h-5 w-5" />
+                      <span className="text-base">Sign Out</span>
                     </Button>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
                       <Link href="/login" onClick={() => setIsOpen(false)}>
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full h-11 gap-2 transition-all duration-200">
+                          <IconLogin className="h-4 w-4" />
                           Sign In
                         </Button>
                       </Link>
                       <Link href="/register" onClick={() => setIsOpen(false)}>
-                        <Button className="w-full">
+                        <Button className="w-full h-11 gap-2 transition-all duration-200">
+                          <IconUser className="h-4 w-4" />
                           Register
                         </Button>
                       </Link>
@@ -641,22 +685,24 @@ export function Header() {
                 {/* Portal Links (not logged in) */}
                 {!user && (
                   <div className="mt-4 pt-4 border-t">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-2">
                       Portals
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 px-3">
                       <Link
                         href="/login"
-                        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
                         onClick={() => setIsOpen(false)}
                       >
+                        <IconBuilding className="h-4 w-4" />
                         Partner
                       </Link>
                       <Link
                         href="/login"
-                        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
                         onClick={() => setIsOpen(false)}
                       >
+                        <IconSettings className="h-4 w-4" />
                         Admin
                       </Link>
                     </div>

@@ -822,7 +822,7 @@ export default function NewApplicationPage() {
                   {isCompleted ? <IconCheck className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                 </div>
                 <span
-                  className={`text-xs hidden sm:inline ${
+                  className={`text-xs ${
                     isCompleted || isCurrent ? "text-foreground font-medium" : "text-muted-foreground"
                   }`}
                 >

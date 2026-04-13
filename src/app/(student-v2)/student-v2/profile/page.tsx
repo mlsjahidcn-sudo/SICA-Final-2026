@@ -588,7 +588,7 @@ export default function ProfilePage() {
 
       {/* Profile Tabs */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="passport">Passport</TabsTrigger>
           <TabsTrigger value="academic">Academic</TabsTrigger>
