@@ -1232,7 +1232,6 @@ export default function NewProgramPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* University Selector Dialog */}
       <Dialog open={showUniversityDialog} onOpenChange={setShowUniversityDialog}>
