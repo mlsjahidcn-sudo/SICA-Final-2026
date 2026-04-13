@@ -108,8 +108,8 @@ function ApplicationsContent() {
               id: "prog1",
               name: "Computer Science and Technology",
               degree_level: "Master",
-              tuition_per_year: 35000,
-              tuition_currency: "CNY",
+              tuition_fee_per_year: 35000,
+              currency: "CNY",
               universities: {
                 id: "uni1",
                 name_en: "Tsinghua University",
@@ -129,8 +129,8 @@ function ApplicationsContent() {
               id: "prog2",
               name: "Data Science",
               degree_level: "Master",
-              tuition_per_year: 30000,
-              tuition_currency: "CNY",
+              tuition_fee_per_year: 30000,
+              currency: "CNY",
               universities: {
                 id: "uni2",
                 name_en: "Peking University",
@@ -149,8 +149,8 @@ function ApplicationsContent() {
               id: "prog3",
               name: "International Business",
               degree_level: "Bachelor",
-              tuition_per_year: 25000,
-              tuition_currency: "CNY",
+              tuition_fee_per_year: 25000,
+              currency: "CNY",
               universities: {
                 id: "uni3",
                 name_en: "Fudan University",

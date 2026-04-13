@@ -90,6 +90,12 @@ interface Student {
   english_test_score?: string;
   english_test_date?: string;
   passport_number?: string;
+  users?: {
+    id: string;
+    full_name?: string;
+    email?: string;
+    referred_by_partner_id?: string;
+  };
 }
 
 interface TimelineEvent {

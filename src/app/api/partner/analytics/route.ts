@@ -38,11 +38,8 @@ function getPartnerUserId(user: { id: string; role: string; partner_id?: string 
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== Partner Analytics GET called ===');
     const user = await verifyAuthToken(request);
-    console.log('verifyAuthToken returned user:', user ? { id: user.id, role: user.role, partner_id: user.partner_id } : null);
     if (!user) {
-      console.log('No user - returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -61,7 +58,6 @@ export async function GET(request: NextRequest) {
     }
     
     const partnerId = partnerRecord.id;
-    console.log('Using partnerId:', partnerId);
     
     // Get time range from query params (default 30 days)
     const days = parseInt(request.nextUrl.searchParams.get('days') || '30');

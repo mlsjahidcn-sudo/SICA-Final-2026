@@ -14,6 +14,7 @@ import {
   IconPhoto,
   IconFileText
 } from "@tabler/icons-react"
+import { getDocumentTypeOptions } from "@/lib/document-types"
 
 interface FileUploadProps {
   onUpload: (file: File) => Promise<void>
@@ -285,30 +286,19 @@ interface DocumentTypeSelectProps {
   disabled?: boolean
 }
 
-const DOCUMENT_TYPES = [
-  { value: 'passport', label: 'Passport' },
-  { value: 'diploma', label: 'Diploma/Degree Certificate' },
-  { value: 'transcript', label: 'Academic Transcript' },
-  { value: 'language_certificate', label: 'Language Test Certificate (IELTS/TOEFL/HSK)' },
-  { value: 'photo', label: 'Passport Photo' },
-  { value: 'recommendation', label: 'Recommendation Letter' },
-  { value: 'cv', label: 'CV/Resume' },
-  { value: 'study_plan', label: 'Study Plan/Personal Statement' },
-  { value: 'financial_proof', label: 'Financial Support Proof' },
-  { value: 'medical_exam', label: 'Medical Examination Report' },
-  { value: 'police_clearance', label: 'Police Clearance Certificate' },
-  { value: 'other', label: 'Other Document' }
-]
-
 export function DocumentTypeSelect({ 
   value, 
   onChange, 
   requiredTypes,
   disabled = false 
 }: DocumentTypeSelectProps) {
+  // Get all document type options from shared config
+  const allTypes = getDocumentTypeOptions()
+  
+  // Filter to only required types if specified
   const types = requiredTypes 
-    ? DOCUMENT_TYPES.filter(t => requiredTypes.includes(t.value))
-    : DOCUMENT_TYPES
+    ? allTypes.filter(t => requiredTypes.includes(t.value))
+    : allTypes
 
   return (
     <select

@@ -124,10 +124,8 @@ export async function PATCH(
       .select(`
         id,
         status,
-        intake,
         updated_at,
-        personal_statement,
-        study_plan
+        profile_snapshot
       `)
       .single();
 
@@ -136,11 +134,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to autosave' }, { status: 500 });
     }
 
+    // Extract snapshot fields for frontend convenience
+    const snapshot = (application?.profile_snapshot || {}) as Record<string, unknown>;
+
     return NextResponse.json({ 
       success: true,
       message: 'Draft autosaved',
       saved_at: application?.updated_at,
-      application 
+      application: {
+        id: application?.id,
+        status: application?.status,
+        updated_at: application?.updated_at,
+        intake: snapshot.intake || null,
+        personal_statement: snapshot.personal_statement || null,
+        study_plan: snapshot.study_plan || null,
+      }
     });
 
   } catch (error) {

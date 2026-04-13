@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { 
+  DOCUMENT_TYPES, 
+  getAllowedMimeTypes, 
+  getDocumentTypeLabel,
+  normalizeDocumentType 
+} from '@/lib/document-types';
 
 /**
  * Check if a partner user can access a specific application.
@@ -75,22 +81,6 @@ async function canPartnerAccessApplication(
     return false;
   }
 }
-
-// Allowed document types and their MIME types
-const ALLOWED_DOCUMENT_TYPES: Record<string, { label: string; mimeTypes: string[] }> = {
-  passport: { label: 'Passport', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  diploma: { label: 'Diploma', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  transcript: { label: 'Academic Transcript', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  language_certificate: { label: 'Language Certificate', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  photo: { label: 'Passport Photo', mimeTypes: ['image/jpeg', 'image/png'] },
-  recommendation: { label: 'Recommendation Letter', mimeTypes: ['application/pdf'] },
-  cv: { label: 'CV/Resume', mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] },
-  study_plan: { label: 'Study Plan', mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] },
-  financial_proof: { label: 'Financial Proof', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  medical_exam: { label: 'Medical Exam Report', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  police_clearance: { label: 'Police Clearance', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] },
-  other: { label: 'Other Document', mimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] },
-};
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const STORAGE_BUCKET = 'documents';
@@ -283,26 +273,37 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Normalize document type (handle legacy types)
+    const normalizedDocType = normalizeDocumentType(documentType)
+    
     // Validate document type
-    if (!ALLOWED_DOCUMENT_TYPES[documentType]) {
+    if (!DOCUMENT_TYPES[normalizedDocType]) {
       return NextResponse.json({ 
         error: 'Invalid document type',
-        allowed_types: Object.keys(ALLOWED_DOCUMENT_TYPES)
+        allowed_types: Object.keys(DOCUMENT_TYPES),
+        details: `Document type "${documentType}" is not recognized. Please select a valid document type.`
       }, { status: 400 });
     }
 
     // Validate file type
-    const allowedMimeTypes = ALLOWED_DOCUMENT_TYPES[documentType].mimeTypes;
+    const allowedMimeTypes = getAllowedMimeTypes(normalizedDocType);
     if (!allowedMimeTypes.includes(file.type)) {
+      const docLabel = getDocumentTypeLabel(normalizedDocType);
       return NextResponse.json({ 
-        error: `Invalid file type for ${ALLOWED_DOCUMENT_TYPES[documentType].label}. Allowed: ${allowedMimeTypes.join(', ')}`
+        error: `Invalid file type for ${docLabel}`,
+        allowed_types: allowedMimeTypes,
+        received_type: file.type,
+        details: `File type "${file.type}" is not allowed for ${docLabel}. Allowed types: ${allowedMimeTypes.join(', ')}`
       }, { status: 400 });
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ 
-        error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`
+        error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        max_size_bytes: MAX_FILE_SIZE,
+        received_size_bytes: file.size,
+        details: `Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please reduce the file size to under ${MAX_FILE_SIZE / 1024 / 1024}MB.`
       }, { status: 400 });
     }
 
@@ -351,7 +352,7 @@ export async function POST(request: NextRequest) {
       .from('application_documents')
       .select('id, file_key')
       .eq('application_id', applicationId)
-      .eq('document_type', documentType)
+      .eq('document_type', normalizedDocType) // Use normalized type
       .maybeSingle();
 
     // If replacing, delete old file from storage
@@ -366,7 +367,7 @@ export async function POST(request: NextRequest) {
     // Generate file path in Supabase Storage: {application_id}/{document_type}_{timestamp}.{ext}
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `${applicationId}/${documentType}_${timestamp}_${sanitizedFileName}`;
+    const filePath = `${applicationId}/${normalizedDocType}_${timestamp}_${sanitizedFileName}`;
 
     // Upload to Supabase Storage
     const arrayBuffer = await file.arrayBuffer();
@@ -380,7 +381,27 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Error uploading to Supabase Storage:', uploadError);
-      return NextResponse.json({ error: 'Failed to upload file', details: uploadError.message }, { status: 500 });
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to upload file';
+      let errorDetails = uploadError.message;
+      
+      if (uploadError.message.includes('Bucket not found')) {
+        errorMessage = 'Storage bucket not configured';
+        errorDetails = 'The document storage bucket is not set up. Please contact support.';
+      } else if (uploadError.message.includes('exceeded') || uploadError.message.includes('quota')) {
+        errorMessage = 'Storage quota exceeded';
+        errorDetails = 'The storage limit has been reached. Please contact support.';
+      } else if (uploadError.message.includes('permission')) {
+        errorMessage = 'Permission denied';
+        errorDetails = 'You do not have permission to upload files. Please contact support.';
+      }
+      
+      return NextResponse.json({ 
+        error: errorMessage,
+        details: errorDetails,
+        storage_error: uploadError.message
+      }, { status: 500 });
     }
 
     // Generate signed URL for the uploaded file
@@ -403,7 +424,7 @@ export async function POST(request: NextRequest) {
     // Upsert document record - only use columns that exist in the table
     const docRecord: Record<string, unknown> = {
       application_id: applicationId,
-      document_type: documentType,
+      document_type: normalizedDocType, // Use normalized type
       file_key: filePath,
       file_name: file.name,
       file_size: file.size,

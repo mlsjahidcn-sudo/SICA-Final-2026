@@ -55,7 +55,11 @@ export function DocumentChecklist({
 
   const fetchChecklist = React.useCallback(async () => {
     try {
-      const response = await fetch(`/api/student/applications/${applicationId}/documents/checklist`)
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/student/applications/${applicationId}/documents/checklist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (response.ok) {
         const data = await response.json()
         setChecklist(data.checklist)

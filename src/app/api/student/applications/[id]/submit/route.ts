@@ -94,12 +94,11 @@ export async function POST(
         id,
         status,
         submitted_at,
-        intake,
         programs (
           id,
-          name_en,
+          name,
           universities (
-            name_en
+            name
           )
         )
       `)

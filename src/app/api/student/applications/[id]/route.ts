@@ -66,7 +66,8 @@ export async function GET(
           id,
           document_type,
           status,
-          file_url,
+          file_key,
+          file_name,
           rejection_reason,
           created_at
         )
@@ -155,17 +156,33 @@ export async function PUT(
       updated_at: new Date().toISOString(),
     };
 
-    // Only update provided fields (only fields that exist in the database)
-    const allowedFields = [
-      'personal_statement',
-      'study_plan',
-      'intake',
-    ];
+    // Handle profile_snapshot fields (personal_statement, study_plan, intake)
+    // These should be merged into profile_snapshot JSONB column
+    const profileSnapshotFields = ['personal_statement', 'study_plan', 'intake'];
+    const snapshotUpdates: Record<string, unknown> = {};
 
-    for (const field of allowedFields) {
+    for (const field of profileSnapshotFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        snapshotUpdates[field] = body[field];
       }
+    }
+
+    // If there are snapshot updates, merge them into existing profile_snapshot
+    if (Object.keys(snapshotUpdates).length > 0) {
+      // Get current profile_snapshot
+      const { data: currentApp } = await supabase
+        .from('applications')
+        .select('profile_snapshot')
+        .eq('id', id)
+        .single();
+
+      const currentSnapshot = (currentApp?.profile_snapshot || {}) as Record<string, unknown>;
+      updateData.profile_snapshot = { ...currentSnapshot, ...snapshotUpdates };
+    }
+
+    // Handle program_id update (direct column)
+    if (body.program_id !== undefined) {
+      updateData.program_id = body.program_id;
     }
 
     const { data: application, error } = await supabase
@@ -175,8 +192,8 @@ export async function PUT(
       .select(`
         id,
         status,
-        intake,
         updated_at,
+        profile_snapshot,
         programs (
           id,
           name,
@@ -184,7 +201,9 @@ export async function PUT(
           universities (
             id,
             name_en,
-            city
+            city,
+            province,
+            logo_url
           )
         )
       `)
@@ -195,7 +214,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update application' }, { status: 500 });
     }
 
-    return NextResponse.json({ application });
+    // Extract snapshot fields for frontend convenience
+    const snapshot = (application?.profile_snapshot || {}) as Record<string, unknown>;
+
+    return NextResponse.json({ 
+      application: {
+        ...application,
+        intake: snapshot.intake || null,
+        personal_statement: snapshot.personal_statement || null,
+        study_plan: snapshot.study_plan || null,
+      }
+    });
 
   } catch (error) {
     console.error('Error in application PUT:', error);

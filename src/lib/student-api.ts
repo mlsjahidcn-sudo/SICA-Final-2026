@@ -247,6 +247,8 @@ export interface WorkExperienceEntry {
   start_date: string;
   end_date?: string;
   description?: string;
+  city?: string;
+  country?: string;
 }
 
 export interface EducationHistoryEntry {

@@ -32,6 +32,7 @@ const STUDENT_COMPLETION_FIELDS = [
 // JSONB fields that count as "completed" when they have at least one entry
 const STUDENT_ARRAY_COMPLETION_FIELDS = [
   'education_history',
+  'work_experience',
   'family_members',
   'extracurricular_activities',
   'awards',

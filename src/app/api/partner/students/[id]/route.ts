@@ -92,7 +92,7 @@ export async function GET(
     // Get applications for this student
     const { data: applications } = await supabase
       .from('applications')
-      .select('id, status, created_at, programs (id, name, degree, universities (id, name))')
+      .select('id, status, created_at, programs (id, name, degree_level, universities (id, name))')
       .eq('student_id', student?.id)
       .neq('status', 'draft')
       .order('created_at', { ascending: false });

@@ -1,84 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
-
-// Required document types for different degree levels
-const REQUIRED_DOCUMENTS_BY_DEGREE: Record<string, string[]> = {
-  Bachelor: [
-    'passport_copy',
-    'high_school_diploma',
-    'high_school_transcript',
-    'hsk_certificate',
-    'ielts_toefl_report',
-    'passport_photo',
-    'health_exam',
-    'non_criminal_record',
-    'financial_proof',
-  ],
-  Master: [
-    'passport_copy',
-    'bachelor_diploma',
-    'bachelor_transcript',
-    'hsk_certificate',
-    'ielts_toefl_report',
-    'passport_photo',
-    'cv_resume',
-    'study_plan',
-    'recommendation_letter_1',
-    'recommendation_letter_2',
-    'health_exam',
-    'non_criminal_record',
-    'financial_proof',
-  ],
-  PhD: [
-    'passport_copy',
-    'master_diploma',
-    'master_transcript',
-    'bachelor_diploma',
-    'bachelor_transcript',
-    'hsk_certificate',
-    'ielts_toefl_report',
-    'passport_photo',
-    'cv_resume',
-    'study_plan',
-    'recommendation_letter_1',
-    'recommendation_letter_2',
-    'research_proposal',
-    'health_exam',
-    'non_criminal_record',
-    'financial_proof',
-  ],
-};
-
-// Document type labels for display
-export const DOCUMENT_TYPE_LABELS: Record<string, { en: string; zh: string; description: string }> = {
-  passport_copy: { en: 'Passport Copy', zh: '护照复印件', description: 'Valid passport copy (first page)' },
-  high_school_diploma: { en: 'High School Diploma (Notarized)', zh: '高中毕业证（公证）', description: 'High school graduation certificate with notarization' },
-  high_school_transcript: { en: 'High School Transcript (Notarized)', zh: '高中成绩单（公证）', description: 'Academic transcript from high school with notarization' },
-  bachelor_diploma: { en: 'Bachelor Diploma (Notarized)', zh: '学士学位证（公证）', description: 'Bachelor degree certificate with notarization' },
-  bachelor_transcript: { en: 'Bachelor Transcript (Notarized)', zh: '本科成绩单（公证）', description: 'Academic transcript from bachelor studies with notarization' },
-  master_diploma: { en: 'Master Diploma (Notarized)', zh: '硕士学位证（公证）', description: 'Master degree certificate with notarization' },
-  master_transcript: { en: 'Master Transcript (Notarized)', zh: '硕士成绩单（公证）', description: 'Academic transcript from master studies with notarization' },
-  hsk_certificate: { en: 'HSK Certificate', zh: 'HSK证书', description: 'Chinese proficiency test (HSK) certificate' },
-  ielts_toefl_report: { en: 'IELTS/TOEFL Score Report', zh: '雅思/托福成绩单', description: 'English proficiency test score report' },
-  language_certificate: { en: 'Language Certificate', zh: '语言证书', description: 'HSK, IELTS, TOEFL or other language test result' },
-  passport_photo: { en: 'Passport-size Photos', zh: '证件照', description: 'Recent passport-size photos meeting Chinese visa requirements' },
-  cv_resume: { en: 'CV/Resume', zh: '简历', description: 'Curriculum vitae or resume' },
-  study_plan: { en: 'Study Plan', zh: '学习计划', description: 'Detailed study plan' },
-  personal_statement_doc: { en: 'Personal Statement', zh: '个人陈述', description: 'Statement of purpose / motivation letter' },
-  recommendation_letter_1: { en: 'Recommendation Letter 1', zh: '推荐信1', description: 'First academic recommendation letter' },
-  recommendation_letter_2: { en: 'Recommendation Letter 2', zh: '推荐信2', description: 'Second academic recommendation letter' },
-  recommendation: { en: 'Recommendation Letter', zh: '推荐信', description: 'Academic recommendation letter(s)' },
-  research_proposal: { en: 'Research Proposal', zh: '研究计划', description: 'Detailed research proposal for PhD studies' },
-  financial_proof: { en: 'Financial Proof', zh: '财力证明', description: 'Bank statement showing financial capability' },
-  bank_statement: { en: 'Bank Statement', zh: '银行证明', description: 'Bank statement for financial guarantee' },
-  sponsor_letter: { en: 'Sponsor Letter', zh: '资助信', description: 'Financial sponsor declaration letter' },
-  health_exam: { en: 'Health Examination Form', zh: '体检表', description: 'Foreigner Physical Examination Form' },
-  non_criminal_record: { en: 'Non-criminal Record', zh: '无犯罪记录', description: 'Police clearance certificate' },
-  medical_exam: { en: 'Medical Exam Report', zh: '体检报告', description: 'Medical examination report' },
-  police_clearance: { en: 'Police Clearance', zh: '无犯罪记录', description: 'Police clearance certificate' },
-  other: { en: 'Other Document', zh: '其他文档', description: 'Additional supporting document' },
-};
+import { 
+  DOCUMENT_TYPES, 
+  REQUIRED_DOCUMENTS_BY_DEGREE,
+  getDocumentTypeLabel,
+  getDocumentTypeDescription
+} from '@/lib/document-types';
 
 // GET /api/student/applications/[id]/documents/checklist
 export async function GET(
@@ -113,8 +41,8 @@ export async function GET(
         status,
         programs (
           id,
-          name_en,
-          degree_type
+          name,
+          degree_level
         )
       `)
       .eq('id', id)
@@ -133,12 +61,12 @@ export async function GET(
     // Get uploaded documents
     const { data: uploadedDocs } = await supabase
       .from('application_documents')
-      .select('id, document_type, status, file_name, uploaded_at, verification_status')
+      .select('id, document_type, status, file_name, created_at, rejection_reason')
       .eq('application_id', id);
 
-    // Determine required documents based on degree type
-    const degreeType = programData?.degree_type || 'Bachelor';
-    const requiredTypes = REQUIRED_DOCUMENTS_BY_DEGREE[degreeType] || REQUIRED_DOCUMENTS_BY_DEGREE.Bachelor;
+    // Determine required documents based on degree level (use degree_level, fallback to Bachelor)
+    const degreeLevel = programData?.degree_level || 'Bachelor';
+    const requiredTypes = REQUIRED_DOCUMENTS_BY_DEGREE[degreeLevel] || REQUIRED_DOCUMENTS_BY_DEGREE.Bachelor;
 
     // Build checklist
     const uploadedMap = new Map(
@@ -147,7 +75,7 @@ export async function GET(
 
     const checklist = requiredTypes.map(docType => {
       const uploaded = uploadedMap.get(docType);
-      const label = DOCUMENT_TYPE_LABELS[docType] || { 
+      const label = DOCUMENT_TYPES[docType] || { 
         en: docType, 
         zh: docType, 
         description: '' 
@@ -155,14 +83,14 @@ export async function GET(
 
       return {
         document_type: docType,
-        label_en: label.en,
-        label_zh: label.zh,
-        description: label.description,
+        label_en: getDocumentTypeLabel(docType, 'en'),
+        label_zh: getDocumentTypeLabel(docType, 'zh'),
+        description: getDocumentTypeDescription(docType),
         is_required: true,
         is_uploaded: !!uploaded,
-        status: uploaded?.status || uploaded?.verification_status || 'not_uploaded',
+        status: uploaded?.status || 'not_uploaded',
         file_name: uploaded?.file_name || null,
-        uploaded_at: uploaded?.uploaded_at || null,
+        uploaded_at: uploaded?.created_at || null,
         document_id: uploaded?.id || null,
       };
     });
@@ -173,7 +101,7 @@ export async function GET(
     );
 
     const extraChecklist = extraDocs.map(doc => {
-      const label = DOCUMENT_TYPE_LABELS[doc.document_type] || { 
+      const label = DOCUMENT_TYPES[doc.document_type] || { 
         en: doc.document_type, 
         zh: doc.document_type, 
         description: '' 
@@ -181,14 +109,14 @@ export async function GET(
 
       return {
         document_type: doc.document_type,
-        label_en: label.en,
-        label_zh: label.zh,
-        description: label.description,
+        label_en: getDocumentTypeLabel(doc.document_type, 'en'),
+        label_zh: getDocumentTypeLabel(doc.document_type, 'zh'),
+        description: getDocumentTypeDescription(doc.document_type),
         is_required: false,
         is_uploaded: true,
-        status: doc.status || doc.verification_status || 'pending',
+        status: doc.status || 'pending',
         file_name: doc.file_name,
-        uploaded_at: doc.uploaded_at,
+        uploaded_at: doc.created_at,
         document_id: doc.id,
       };
     });
@@ -209,8 +137,8 @@ export async function GET(
 
     return NextResponse.json({
       application_id: id,
-      degree_type: degreeType,
-      program_name: programData?.name_en,
+      degree_level: degreeLevel,
+      program_name: programData?.name,
       checklist: [...checklist, ...extraChecklist],
       summary: {
         total_required: totalRequired,

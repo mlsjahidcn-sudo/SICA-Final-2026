@@ -8,34 +8,77 @@ export async function GET(request: NextRequest) {
     if (user instanceof NextResponse) return user;
 
     const supabase = getSupabaseClient();
-    
-    // Get partner record (applications.partner_id references partners.id, not users.id)
-    const { data: partnerRecord, error: partnerError } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (partnerError || !partnerRecord) {
-      console.error('Error fetching partner record:', partnerError);
-      return NextResponse.json({ error: 'Partner record not found' }, { status: 404 });
-    }
-    
-    const partnerId = partnerRecord.id;
-    
+
     // Get time range from query params (default 30 days)
     const days = parseInt(request.nextUrl.searchParams.get('days') || '30');
     const now = new Date();
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const lastPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
-    
+
+    // Determine access scope: admin sees all team members' students, member sees only their own
+    const isAdmin = !user.partner_role || user.partner_role === 'partner_admin';
+
+    // Get the list of referrer IDs this partner user can see
+    let referrerIds: string[];
+    if (isAdmin) {
+      // Admin sees applications from students referred by themselves + all team members
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
+        .eq('role', 'partner');
+
+      referrerIds = (teamMembers || []).map(m => m.id);
+      if (!referrerIds.includes(user.id)) referrerIds.push(user.id);
+    } else {
+      // Member sees only students they referred
+      referrerIds = [user.id];
+    }
+
+    // Find students referred by these partner users
+    const { data: referredStudents } = await supabase
+      .from('users')
+      .select('id')
+      .in('referred_by_partner_id', referrerIds)
+      .eq('role', 'student');
+
+    const referredUserIds = (referredStudents || []).map(s => s.id);
+
+    // Get student record IDs for these users
+    let studentIds: string[] = [];
+    if (referredUserIds.length > 0) {
+      const { data: studentRecs } = await supabase
+        .from('students')
+        .select('id')
+        .in('user_id', referredUserIds);
+      studentIds = (studentRecs || []).map(s => s.id);
+    }
+
     // Get total count and status breakdown
     let appsQuery = supabase
       .from('applications')
       .select('status, created_at, submitted_at')
-      .not('status', 'eq', 'draft')
-      .eq('partner_id', partnerId);
-    
+      .not('status', 'eq', 'draft');
+
+    // Filter by student IDs (team referral access)
+    if (studentIds.length > 0) {
+      appsQuery = appsQuery.in('student_id', studentIds);
+    } else {
+      // No students found - return empty stats
+      return NextResponse.json({
+        stats: {
+          totalApplications: 0,
+          pending: 0,
+          underReview: 0,
+          accepted: 0,
+          rejected: 0,
+          thisMonth: 0,
+          lastMonth: 0,
+        },
+        recentApplications: [],
+      });
+    }
+
     const { data: applications, error: appsError } = await appsQuery;
     
     if (appsError) {
@@ -88,7 +131,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .not('status', 'eq', 'draft')
-      .eq('partner_id', partnerId)
+      .in('student_id', studentIds)
       .order('created_at', { ascending: false })
       .limit(5);
     

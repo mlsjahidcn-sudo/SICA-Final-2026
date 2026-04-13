@@ -60,14 +60,14 @@ interface ApplicationDetail {
     id: string
     name: string
     degree_level: string
-    discipline: string
-    teaching_language: string
-    duration_months: number
-    tuition_per_year: number
-    tuition_currency: string
-    intake_months: string[]
-    application_deadline_fall?: string
-    application_deadline_spring?: string
+    category: string
+    language: string
+    duration_years: number
+    tuition_fee_per_year: number
+    currency: string
+    scholarship_coverage?: string
+    scholarship_types?: string[]
+    application_end_date?: string
     universities?: {
       id: string
       name_en: string
@@ -77,7 +77,7 @@ interface ApplicationDetail {
       website_url: string | null
     }
   }
-  documents?: {
+  application_documents?: {
     id: string
     document_type: string
     status: string
@@ -293,7 +293,7 @@ export default function ApplicationDetailPage() {
             <div className="flex items-center gap-2">
               <IconCash className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {application.programs?.tuition_currency} {application.programs?.tuition_per_year?.toLocaleString()}/year
+                {application.programs?.currency} {application.programs?.tuition_fee_per_year?.toLocaleString()}/year
               </span>
             </div>
           </div>
@@ -305,17 +305,16 @@ export default function ApplicationDetailPage() {
         <CardContent className="pt-6">
           <ApplicationProgress 
             status={application.status} 
-            documentsComplete={!!application.documents?.length}
+            documentsComplete={!!application.application_documents?.length}
           />
         </CardContent>
       </Card>
 
       {/* Deadline Warning */}
-      {application.intake && (
+      {application.programs?.application_end_date && (
         <ApplicationDeadline
-          intake={application.intake}
-          deadlineFall={application.programs?.application_deadline_fall}
-          deadlineSpring={application.programs?.application_deadline_spring}
+          intake={application.intake || ''}
+          deadlineDate={application.programs.application_end_date}
           applicationStatus={application.status}
         />
       )}
@@ -353,7 +352,7 @@ export default function ApplicationDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">
-            Documents ({application.documents?.length || 0})
+            Documents ({application.application_documents?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
@@ -372,19 +371,32 @@ export default function ApplicationDetailPage() {
                 </div>
                 <Separator />
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Discipline</span>
-                  <span className="font-medium">{application.programs?.discipline}</span>
+                  <span className="text-muted-foreground">Category</span>
+                  <span className="font-medium">{application.programs?.category || 'N/A'}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Duration</span>
-                  <span className="font-medium">{application.programs?.duration_months} months</span>
+                  <span className="font-medium">
+                    {application.programs?.duration_years 
+                      ? `${application.programs.duration_years} year${application.programs.duration_years > 1 ? 's' : ''}` 
+                      : 'N/A'}
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Intake</span>
-                  <span className="font-medium">{application.programs?.intake_months?.join(", ")}</span>
+                  <span className="text-muted-foreground">Language</span>
+                  <span className="font-medium">{application.programs?.language || 'N/A'}</span>
                 </div>
+                {application.programs?.scholarship_coverage && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Scholarship</span>
+                      <span className="font-medium">{application.programs.scholarship_coverage}</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

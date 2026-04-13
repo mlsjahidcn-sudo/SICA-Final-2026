@@ -39,8 +39,8 @@ import {
   IconSearch,
   IconArrowsDiff,
   IconStar,
+  IconLoader2,
 } from '@tabler/icons-react';
-import { Loader2 } from 'lucide-react';
 
 interface University {
   id: string;
@@ -256,7 +256,7 @@ export default function UniversityComparePage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <IconLoader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
 
@@ -379,7 +379,7 @@ export default function UniversityComparePage() {
                 }}
               />
               <Button onClick={handleSearch} disabled={searching}>
-                {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <IconSearch className="h-4 w-4" />}
+                {searching ? <IconLoader2 className="h-4 w-4 animate-spin" /> : <IconSearch className="h-4 w-4" />}
               </Button>
             </div>
             <div className="max-h-[300px] overflow-y-auto space-y-2">

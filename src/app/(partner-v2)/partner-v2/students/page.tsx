@@ -118,15 +118,12 @@ export default function PartnerV2StudentsPage() {
       params.append('pageSize', '20');
       if (searchQuery) params.append('search', searchQuery);
 
-      console.log('Fetching students with params:', params.toString());
       const response = await fetch(`/api/partner/students?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
-      console.log('Students API response status:', response.status);
       if (response.ok) {
         const data: StudentsResponse = await response.json();
-        console.log('Students data:', data);
         if (append) {
           setStudents(prev => [...prev, ...data.students]);
         } else {

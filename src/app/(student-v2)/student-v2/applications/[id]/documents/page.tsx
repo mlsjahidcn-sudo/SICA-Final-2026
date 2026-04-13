@@ -69,8 +69,10 @@ export default function ApplicationDocumentsPage() {
 
   const fetchApplication = React.useCallback(async () => {
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/student/applications/${applicationId}`, {
-        credentials: 'include'
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       
       if (response.ok) {
@@ -98,8 +100,10 @@ export default function ApplicationDocumentsPage() {
     setLoading(true)
     
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/documents?application_id=${applicationId}`, {
-        credentials: 'include'
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       
       if (response.ok) {
@@ -179,6 +183,8 @@ export default function ApplicationDocumentsPage() {
     setUploadingType(documentType)
 
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const formData = new FormData()
       formData.append('application_id', applicationId)
       formData.append('document_type', documentType)
@@ -186,8 +192,8 @@ export default function ApplicationDocumentsPage() {
 
       const response = await fetch('/api/documents', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
-        credentials: 'include'
       })
 
       if (response.ok) {
@@ -206,8 +212,10 @@ export default function ApplicationDocumentsPage() {
 
   const handleDownload = async (documentId: string, fileName: string) => {
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/documents/${documentId}/url`, {
-        credentials: 'include'
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       
       if (response.ok) {
@@ -233,9 +241,11 @@ export default function ApplicationDocumentsPage() {
     if (!confirm("Are you sure you want to delete this document?")) return
     
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const response = await fetch(`/api/documents?id=${documentId}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       
       if (response.ok) {
@@ -465,6 +475,8 @@ function AdditionalDocumentUpload({
     setUploading(true)
     
     try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const formData = new FormData()
       formData.append('application_id', applicationId)
       formData.append('document_type', selectedType)
@@ -472,8 +484,8 @@ function AdditionalDocumentUpload({
 
       const response = await fetch('/api/documents', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
-        credentials: 'include'
       })
 
       if (response.ok) {

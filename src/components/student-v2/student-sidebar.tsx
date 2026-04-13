@@ -38,8 +38,6 @@ import {
   IconFileText, 
   IconFiles, 
   IconCalendar, 
-  IconSchool, 
-  IconBook, 
   IconBell, 
   IconSettings,
   IconHelp,
@@ -81,16 +79,6 @@ const navItems = [
     title: "Meetings",
     url: "/student-v2/meetings",
     icon: <IconCalendar />,
-  },
-  {
-    title: "Universities",
-    url: "/student-v2/universities",
-    icon: <IconSchool />,
-  },
-  {
-    title: "Programs",
-    url: "/student-v2/programs",
-    icon: <IconBook />,
   },
   {
     title: "Notifications",

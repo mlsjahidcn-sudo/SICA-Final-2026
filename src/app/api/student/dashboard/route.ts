@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
         meeting_url,
         applications (
           programs (
-            name_en,
+            name,
             universities (
-              name_en
+              name
             )
           )
         )
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         applications (
           id,
           programs (
-            name_en
+            name
           )
         )
       `)
@@ -101,10 +101,10 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         programs (
-          name_en,
-          degree_type,
+          name,
+          degree_level,
           universities (
-            name_en,
+            name,
             city
           )
         )

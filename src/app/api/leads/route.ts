@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
       major_interest,
       preferred_language,
       budget_range,
-      interest,
       preferred_programs,
       preferred_universities,
       source,
@@ -44,12 +43,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // Build insert data compatible with current PostgREST schema cache
-    // PostgREST may cache old schema, so we insert using both old and new column names
-    // Old schema: first_name, last_name, phone, desired_program
-    // New schema: name, whatsapp_number, degree_level, major_interest
-    // Strategy: Try with new columns first; if fails, retry with old-only columns
-    const insertDataNew: Record<string, unknown> = {
+    // Build insert data with both old and new schema columns for compatibility
+    const insertData: Record<string, unknown> = {
+      // Old schema columns (for backward compatibility)
       first_name: name,
       last_name: '',
       phone: whatsapp_number,
@@ -59,50 +55,19 @@ export async function POST(request: NextRequest) {
       source: source || 'chat',
       status: 'new',
       type: 'b2c',
+      // New schema columns
       name,
       whatsapp_number,
       degree_level,
       major_interest,
+      preferred_language: preferred_language || null,
+      budget_range: budget_range || null,
+      preferred_programs: preferred_programs?.length ? preferred_programs : null,
+      preferred_universities: preferred_universities?.length ? preferred_universities : null,
+      chat_session_id: chat_session_id || null,
     };
 
-    const insertDataOld: Record<string, unknown> = {
-      first_name: name,
-      last_name: '',
-      phone: whatsapp_number,
-      email,
-      nationality: nationality || null,
-      desired_program: major_interest,
-      source: source || 'chat',
-      status: 'new',
-      type: 'b2c',
-    };
-
-    if (preferred_language) {
-      insertDataNew.preferred_language = preferred_language;
-      insertDataOld.preferred_language = preferred_language;
-    }
-    if (budget_range) {
-      insertDataNew.budget_range = budget_range;
-      insertDataOld.budget_range = budget_range;
-    }
-    if (interest) {
-      insertDataNew.interest = interest;
-      insertDataOld.interest = interest;
-    }
-    if (preferred_programs?.length) {
-      insertDataNew.preferred_programs = preferred_programs;
-      insertDataOld.preferred_programs = preferred_programs;
-    }
-    if (preferred_universities?.length) {
-      insertDataNew.preferred_universities = preferred_universities;
-      insertDataOld.preferred_universities = preferred_universities;
-    }
-    if (chat_session_id) {
-      insertDataNew.chat_session_id = chat_session_id;
-      insertDataOld.chat_session_id = chat_session_id;
-    }
-
-    // Check for duplicate lead (same email + degree + major within last 30 days)
+    // Check for duplicate lead (same email within last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -124,10 +89,10 @@ export async function POST(request: NextRequest) {
           nationality: nationality || null,
           preferred_language: preferred_language || null,
           budget_range: budget_range || null,
-          interest: interest || null,
           desired_program: major_interest,
           degree_level,
           major_interest,
+          name,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingLead[0].id)
@@ -139,63 +104,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 });
       }
 
-      // Try updating new schema columns
-      await supabase
-        .from('leads')
-        .update({
-          name,
-          whatsapp_number,
-          degree_level,
-          major_interest,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingLead[0].id);
-
       return NextResponse.json({ lead: updated, updated: true });
     }
 
-    // Create new lead - try new schema first, fall back to old schema
-    let lead = null;
-    let error = null;
-
-    // Try with new columns
-    const resultNew = await supabase
+    // Create new lead
+    const { data: lead, error } = await supabase
       .from('leads')
-      .insert(insertDataNew)
+      .insert(insertData)
       .select()
       .single();
-
-    if (resultNew.error) {
-      // Fall back to old schema columns only
-      const resultOld = await supabase
-        .from('leads')
-        .insert(insertDataOld)
-        .select()
-        .single();
-
-      lead = resultOld.data;
-      error = resultOld.error;
-    } else {
-      lead = resultNew.data;
-    }
 
     if (error) {
       console.error('Error creating lead:', JSON.stringify(error));
       return NextResponse.json({ error: 'Failed to create lead', details: error.message || String(error) }, { status: 500 });
-    }
-
-    // Backfill new schema columns that PostgREST cache may not recognize yet
-    // Try updating with new columns - will succeed once cache refreshes
-    if (lead?.id) {
-      await supabase
-        .from('leads')
-        .update({
-          name,
-          whatsapp_number,
-          degree_level,
-          major_interest,
-        })
-        .eq('id', lead.id);
     }
 
     return NextResponse.json({ lead }, { status: 201 });

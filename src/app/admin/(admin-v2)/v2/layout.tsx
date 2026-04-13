@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
+import { AdminRealtimeProvider } from '@/components/admin-v2/admin-realtime-provider';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function AdminV2Layout({
   children,
@@ -46,5 +48,10 @@ export default function AdminV2Layout({
   }
 
   // No sidebar - v2 has its own built-in sidebar
-  return <>{children}</>;
+  return (
+    <AdminRealtimeProvider userId={user?.id}>
+      {children}
+      <Toaster richColors position="top-right" />
+    </AdminRealtimeProvider>
+  );
 }

@@ -71,9 +71,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status);
     }
 
-    // Apply search filter (search in program name or university name)
+    // Apply search filter (search in program name)
+    // Note: Cannot filter on nested relations like programs.universities.name_en in PostgREST
     if (search) {
-      query = query.or(`programs.name.ilike.%${search}%,programs.universities.name_en.ilike.%${search}%`);
+      query = query.ilike('programs.name', `%${search}%`);
     }
 
     query = query
@@ -87,8 +88,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
+    // Extract intake, personal_statement, study_plan from profile_snapshot for frontend convenience
+    const processedApplications = (applications || []).map(app => {
+      const { profile_snapshot, ...rest } = app;
+      const snapshot = profile_snapshot as Record<string, unknown> | null;
+      return {
+        ...rest,
+        intake: snapshot?.intake || null,
+        personal_statement: snapshot?.personal_statement || null,
+        study_plan: snapshot?.study_plan || null,
+      };
+    });
+
     return NextResponse.json({
-      applications: applications || [],
+      applications: processedApplications,
       total: count || 0,
       page,
       limit,

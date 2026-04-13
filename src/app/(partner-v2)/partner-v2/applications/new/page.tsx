@@ -277,7 +277,6 @@ export default function PartnerNewApplicationPage() {
   }
 
   const createDraftApplication = async () => {
-    console.log("createDraftApplication called! formData:", formData, "showRequestNote:", showRequestNote)
     if (!formData.student_id) {
       toast.error("Please select a student first")
       return false
@@ -301,7 +300,6 @@ export default function PartnerNewApplicationPage() {
         requested_university_program_note: showRequestNote ? formData.requested_university_program_note : null,
         selected_program_ids: formData.program_ids // API creates one app per program
       }
-      console.log("requestBody to /api/applications:", requestBody)
       
       const response = await fetch("/api/applications", {
         method: "POST",
@@ -314,7 +312,6 @@ export default function PartnerNewApplicationPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log("response data:", data)
         
         // API now creates one application per selected program
         const count = data.count || 1
@@ -329,7 +326,6 @@ export default function PartnerNewApplicationPage() {
         return true
       } else {
         const error = await response.json()
-        console.log("error response:", error)
         toast.error(error.error || "Failed to create application")
         return false
       }
@@ -341,7 +337,6 @@ export default function PartnerNewApplicationPage() {
   }
 
   const handleNext = async () => {
-    console.log("handleNext called, currentStep:", currentStep, "formData.student_id:", formData.student_id)
     // Step 0: Student selection - just move to next step
     if (currentStep === 0) {
       if (!formData.student_id) {

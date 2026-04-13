@@ -67,7 +67,8 @@ export async function GET(
             name_en,
             name_cn,
             city,
-            province
+            province,
+            logo_url
           )
         )
       `)
@@ -410,7 +411,10 @@ export async function PUT(
           degree_level,
           universities (
             id,
-            name_en
+            name_en,
+            city,
+            province,
+            logo_url
           )
         )
       `)

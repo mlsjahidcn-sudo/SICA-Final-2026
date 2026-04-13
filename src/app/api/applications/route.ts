@@ -152,14 +152,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Search filter
+    // Note: Cannot filter on nested relations like programs.universities.name_en in PostgREST
+    // University search is handled separately via universityId filter
     if (search) {
       query = query.or(`
         students.first_name.ilike.%${search}%,
         students.last_name.ilike.%${search}%,
         students.email.ilike.%${search}%,
         students.nationality.ilike.%${search}%,
-        programs.name.ilike.%${search}%,
-        programs.universities.name_en.ilike.%${search}%
+        programs.name.ilike.%${search}%
       `);
     }
 

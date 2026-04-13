@@ -22,6 +22,7 @@ interface DeadlineInfo {
 
 interface ApplicationDeadlineProps {
   intake: string
+  deadlineDate?: string | null
   deadlineFall?: string | null
   deadlineSpring?: string | null
   applicationStatus: string
@@ -120,14 +121,41 @@ function getApplicableDeadline(
 
 export function ApplicationDeadline({
   intake,
+  deadlineDate,
   deadlineFall,
   deadlineSpring,
   applicationStatus,
   className,
 }: ApplicationDeadlineProps) {
   const deadlineInfo = React.useMemo(() => {
+    // If deadlineDate is provided, use it directly
+    if (deadlineDate) {
+      const deadline = parseDeadline(deadlineDate)
+      if (deadline) {
+        const now = new Date()
+        const diffTime = deadline.getTime() - now.getTime()
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        let status: 'upcoming' | 'urgent' | 'passed' | 'unknown'
+        if (daysRemaining < 0) {
+          status = 'passed'
+        } else if (daysRemaining <= 14) {
+          status = 'urgent'
+        } else {
+          status = 'upcoming'
+        }
+        
+        return {
+          intake,
+          deadline: deadline.toISOString(),
+          status,
+          daysRemaining,
+        }
+      }
+    }
+    // Fall back to fall/spring specific deadlines
     return getApplicableDeadline(intake, deadlineFall, deadlineSpring)
-  }, [intake, deadlineFall, deadlineSpring])
+  }, [intake, deadlineDate, deadlineFall, deadlineSpring])
 
   // Don't show if already accepted or rejected
   if (['accepted', 'rejected'].includes(applicationStatus)) {

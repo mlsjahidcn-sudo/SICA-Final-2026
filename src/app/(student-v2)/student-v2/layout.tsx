@@ -3,6 +3,7 @@
 import { StudentSidebar } from "@/components/student-v2/student-sidebar"
 import { StudentRealtimeProvider } from "@/components/student-v2/student-realtime-provider"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { Toaster } from "@/components/ui/sonner"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function StudentLayout({
@@ -20,6 +21,7 @@ export default function StudentLayout({
           {children}
         </SidebarInset>
       </SidebarProvider>
+      <Toaster richColors position="top-right" />
     </StudentRealtimeProvider>
   )
 }

@@ -3,14 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { Loader2 } from 'lucide-react';
+import { IconLoader2, IconClock, IconX } from '@tabler/icons-react';
 import { PartnerSidebar } from '@/components/partner-v2/partner-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { SiteHeader } from '@/components/site-header';
 import { PartnerCommandPalette } from '@/components/partner-v2/partner-command-palette';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, XCircle } from 'lucide-react';
 
 export default function PartnerV2Layout({
   children,
@@ -34,7 +33,7 @@ export default function PartnerV2Layout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <IconLoader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -45,7 +44,7 @@ export default function PartnerV2Layout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <IconLoader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Checking permissions...</p>
         </div>
       </div>
@@ -60,7 +59,7 @@ export default function PartnerV2Layout({
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Clock className="h-8 w-8 text-amber-600" />
+                <IconClock className="h-8 w-8 text-amber-600" />
               </div>
             </div>
             <CardTitle className="text-2xl">Approval Pending</CardTitle>
@@ -100,7 +99,7 @@ export default function PartnerV2Layout({
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="h-16 w-16 rounded-full bg-red-500/10 flex items-center justify-center">
-                <XCircle className="h-8 w-8 text-red-600" />
+                <IconX className="h-8 w-8 text-red-600" />
               </div>
             </div>
             <CardTitle className="text-2xl">Application Rejected</CardTitle>

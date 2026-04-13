@@ -48,6 +48,7 @@ import {
 } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { studentApi, type StudentProfile, type WorkExperienceEntry, type EducationHistoryEntry, type FamilyMemberEntry, type ExtracurricularActivityEntry, type AwardEntry, type PublicationEntry, type ResearchExperienceEntry, type ScholarshipApplicationData, type FinancialGuaranteeData } from "@/lib/student-api"
+import { getDocumentTypeLabel, getDocumentTypeOptions, getDocumentTypeDescription, normalizeDocumentType } from "@/lib/document-types"
 
 interface ProfileFormData {
   // User fields
@@ -179,6 +180,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = React.useState<StudentProfile | null>(null)
   const [formData, setFormData] = React.useState<ProfileFormData>(initialFormData)
   const [saveSuccess, setSaveSuccess] = React.useState(false)
+  const [isDemoMode, setIsDemoMode] = React.useState(false)
 
   const fetchProfile = React.useCallback(async () => {
     setFetching(true)
@@ -187,11 +189,12 @@ export default function ProfilePage() {
     
     if (error) {
       if (error === 'Unauthorized') {
+        // Show demo data with clear warning for development
         const mockProfile: StudentProfile = {
           user: {
-            id: "user1",
-            email: "john.doe@email.com",
-            full_name: "John Doe",
+            id: "demo-user",
+            email: "demo@example.com",
+            full_name: "Demo User",
             phone: "+1 234 567 8900",
           },
           studentProfile: {
@@ -201,7 +204,7 @@ export default function ProfilePage() {
             date_of_birth: "1998-05-15",
             gender: "Male",
             current_address: "123 Main St, New York, NY 10001",
-            emergency_contact_name: "Jane Doe",
+            emergency_contact_name: "Emergency Contact",
             emergency_contact_phone: "+1 234 567 8901",
             highest_education: "Bachelor's Degree",
             institution_name: "University of California",
@@ -213,19 +216,28 @@ export default function ProfilePage() {
               { institution: "University of California", degree: "Bachelor's Degree", field_of_study: "Computer Science", start_date: "2018-09", end_date: "2022-06", gpa: "3.7", city: "Berkeley", country: "United States" }
             ],
             family_members: [
-              { name: "Jane Doe", relationship: "Mother", occupation: "Teacher", phone: "+1 234 567 8901", email: "jane.doe@email.com" }
+              { name: "Family Member", relationship: "Parent", occupation: "Teacher", phone: "+1 234 567 8901", email: "family@example.com" }
             ],
           },
           profileCompletion: 65
         }
         setProfile(mockProfile)
         setFormData(profileToFormData(mockProfile))
+        setIsDemoMode(true)
+        toast.warning('Demo Mode', {
+          description: 'You are viewing demo data. Please log in to access your profile.',
+          duration: 6000,
+        })
       } else {
         console.error("Error fetching profile:", error)
+        toast.error('Failed to load profile', {
+          description: error,
+        })
       }
     } else if (data) {
       setProfile(data)
       setFormData(profileToFormData(data))
+      setIsDemoMode(false)
     }
     
     setFetching(false)
@@ -527,12 +539,23 @@ export default function ProfilePage() {
             <IconRefresh className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
+          <Button onClick={handleSave} disabled={loading || isDemoMode}>
             {loading ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconDeviceFloppy className="h-4 w-4 mr-2" />}
             Save Changes
           </Button>
         </div>
       </div>
+
+      {/* Demo Mode Warning */}
+      {isDemoMode && (
+        <div className="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800/50 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded-lg">
+          <IconAlertCircle className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Demo Mode</p>
+            <p className="text-sm opacity-80">You are viewing demo data. Please log in to access and save your real profile information.</p>
+          </div>
+        </div>
+      )}
 
       {/* Save Success Indicator */}
       {saveSuccess && (
@@ -1480,21 +1503,6 @@ interface ProfileApplication {
   }
 }
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  passport: 'Passport',
-  diploma: 'Diploma/Degree Certificate',
-  transcript: 'Academic Transcript',
-  language_certificate: 'Language Test Certificate',
-  photo: 'Passport Photo',
-  recommendation: 'Recommendation Letter',
-  cv: 'CV/Resume',
-  study_plan: 'Study Plan',
-  financial_proof: 'Financial Support Proof',
-  medical_exam: 'Medical Examination Report',
-  police_clearance: 'Police Clearance Certificate',
-  other: 'Other Document',
-}
-
 const STATUS_BADGE: Record<string, { className: string; label: string }> = {
   verified: { className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', label: 'Verified' },
   pending: { className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', label: 'Pending' },
@@ -1647,8 +1655,8 @@ function ProfileDocumentsTab() {
                   <SelectValue placeholder="Select document type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(DOC_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  {getDocumentTypeOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1734,7 +1742,7 @@ function ProfileDocumentsTab() {
                             }`} />
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium truncate">{DOC_TYPE_LABELS[doc.document_type] || doc.document_type}</p>
+                                <p className="text-sm font-medium truncate">{getDocumentTypeLabel(doc.document_type)}</p>
                                 <span className={`text-xs px-1.5 py-0.5 rounded ${badge.className}`}>{badge.label}</span>
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
@@ -1751,7 +1759,7 @@ function ProfileDocumentsTab() {
                                 <IconFileText className="h-4 w-4" />
                               </Button>
                             )}
-                            {doc.status === 'pending' && (
+                            {(doc.status === 'pending' || doc.status === 'rejected') && (
                               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(doc.id)} title="Delete">
                                 <IconTrash className="h-4 w-4" />
                               </Button>
@@ -1783,17 +1791,17 @@ function ProfileDocumentsTab() {
             <h4 className="font-medium">Required for Most Applications</h4>
             <div className="grid gap-2">
               {[
-                { type: 'passport', label: 'Passport Copy', desc: 'Valid passport photo page' },
-                { type: 'diploma', label: 'Academic Certificates (Notarized)', desc: 'Highest degree certificate with notarization' },
-                { type: 'transcript', label: 'Academic Transcripts (Notarized)', desc: 'Official transcripts with notarization' },
-                { type: 'study_plan', label: 'Study Plan', desc: 'Detailed study plan for the program' },
-                { type: 'recommendation', label: 'Recommendation Letters (2)', desc: 'From professors or supervisors' },
-                { type: 'cv', label: 'CV / Resume', desc: 'Comprehensive curriculum vitae' },
-                { type: 'photo', label: 'Passport-size Photos', desc: 'Recent photos meeting Chinese visa requirements' },
-                { type: 'medical_exam', label: 'Health Examination Form', desc: 'Foreigner Physical Examination Form' },
-                { type: 'police_clearance', label: 'Non-criminal Record', desc: 'Police clearance certificate' },
+                { type: 'passport_copy', desc: 'Valid passport photo page' },
+                { type: 'bachelor_diploma', desc: 'Highest degree certificate with notarization' },
+                { type: 'bachelor_transcript', desc: 'Official transcripts with notarization' },
+                { type: 'study_plan', desc: 'Detailed study plan for the program' },
+                { type: 'recommendation', desc: 'From professors or supervisors' },
+                { type: 'cv_resume', desc: 'Comprehensive curriculum vitae' },
+                { type: 'passport_photo', desc: 'Recent photos meeting Chinese visa requirements' },
+                { type: 'health_exam', desc: 'Foreigner Physical Examination Form' },
+                { type: 'non_criminal_record', desc: 'Police clearance certificate' },
               ].map((doc) => {
-                const uploaded = documents.some(d => d.document_type === doc.type)
+                const uploaded = documents.some(d => normalizeDocumentType(d.document_type) === doc.type)
                 return (
                   <div key={doc.type} className="flex items-start gap-3 p-3 rounded-lg border">
                     <div className={`mt-0.5 h-5 w-5 rounded-full flex-shrink-0 flex items-center justify-center ${
@@ -1802,7 +1810,7 @@ function ProfileDocumentsTab() {
                       {uploaded && <IconStar className="h-3 w-3 text-green-600" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{doc.label}</p>
+                      <p className="text-sm font-medium">{getDocumentTypeLabel(doc.type)}</p>
                       <p className="text-xs text-muted-foreground">{doc.desc}</p>
                     </div>
                   </div>
@@ -1817,11 +1825,11 @@ function ProfileDocumentsTab() {
             <h4 className="font-medium">Additional Documents (Program-Specific)</h4>
             <div className="grid gap-2">
               {[
-                { type: 'language_certificate', label: 'HSK / IELTS / TOEFL Certificate', desc: 'Language proficiency test results' },
-                { type: 'financial_proof', label: 'Bank Statement', desc: 'Financial guarantee document' },
-                { type: 'other', label: 'Other Documents', desc: 'Program-specific requirements' },
+                { type: 'language_certificate', desc: 'Language proficiency test results' },
+                { type: 'financial_proof', desc: 'Financial guarantee document' },
+                { type: 'other', desc: 'Program-specific requirements' },
               ].map((doc) => {
-                const uploaded = documents.some(d => d.document_type === doc.type)
+                const uploaded = documents.some(d => normalizeDocumentType(d.document_type) === doc.type)
                 return (
                   <div key={doc.type} className="flex items-start gap-3 p-3 rounded-lg border">
                     <div className={`mt-0.5 h-5 w-5 rounded-full flex-shrink-0 flex items-center justify-center ${
@@ -1830,7 +1838,7 @@ function ProfileDocumentsTab() {
                       {uploaded && <IconStar className="h-3 w-3 text-green-600" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{doc.label}</p>
+                      <p className="text-sm font-medium">{getDocumentTypeLabel(doc.type)}</p>
                       <p className="text-xs text-muted-foreground">{doc.desc}</p>
                     </div>
                   </div>

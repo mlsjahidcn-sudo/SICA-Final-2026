@@ -113,9 +113,6 @@ export async function PUT(request: NextRequest) {
   const requestData = await request.json();
   const supabase = getSupabaseClient();
 
-  console.log('PUT profile - received data keys:', Object.keys(requestData));
-  console.log('PUT profile - student_profile keys:', requestData.student_profile ? Object.keys(requestData.student_profile) : 'none');
-
   try {
     // ── Step 1: Update users table (full_name, phone) ──
     const userUpdateData: Record<string, unknown> = {};
@@ -281,27 +278,8 @@ export async function PUT(request: NextRequest) {
 
       console.log('PUT profile - student data saved successfully');
 
-      // ── Step 3: Update profile_completion ──
-      const { data: refreshedUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      const { data: refreshedStudent } = await supabase
-        .from('students')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      const completion = calculateProfileCompletion(refreshedUser, refreshedStudent);
-
-      await supabase
-        .from('students')
-        .update({ profile_completion: completion })
-        .eq('user_id', userId);
-
-      console.log('PUT profile - profile completion updated:', completion + '%');
+      // Note: profile_completion is calculated at runtime in GET requests
+      // No need to persist it to database
     }
 
     // ── Step 4: Return updated profile ──

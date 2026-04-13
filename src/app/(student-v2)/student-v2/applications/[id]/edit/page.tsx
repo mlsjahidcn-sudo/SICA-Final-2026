@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import {
   Select,
   SelectContent,
@@ -28,20 +29,34 @@ import {
   IconDeviceFloppy,
   IconCalendar,
   IconCheck,
-  IconAlertCircle
+  IconAlertCircle,
+  IconMapPin,
+  IconClock,
+  IconCash,
+  IconBuilding,
+  IconCertificate
 } from "@tabler/icons-react"
 import { useAutosave, AutosaveStatus } from "@/hooks/use-autosave"
 import { toast } from "sonner"
 
 interface ProgramInfo {
   id: string
-  name_en: string
+  name: string
+  name_en?: string
   name_cn?: string
-  degree_type: string
+  degree_level?: string
+  degree_type?: string
   intake_months?: string[]
+  tuition_fee_per_year?: number
+  currency?: string
+  duration_years?: number
   universities?: {
+    id: string
     name_en: string
+    name_cn?: string
     city?: string
+    province?: string
+    logo_url?: string | null
   }
 }
 
@@ -59,6 +74,7 @@ export default function EditApplicationPage() {
   })
   const [program, setProgram] = React.useState<ProgramInfo | null>(null)
   const [status, setStatus] = React.useState<string>("draft")
+  const [createdAt, setCreatedAt] = React.useState<string>("")
 
   // Autosave hook
   const autosave = useAutosave({
@@ -90,6 +106,7 @@ export default function EditApplicationPage() {
           })
           setProgram(data.application.programs)
           setStatus(data.application.status)
+          setCreatedAt(data.application.created_at)
         } else {
           toast.error("Failed to load application")
           router.push("/student-v2/applications")
@@ -133,10 +150,30 @@ export default function EditApplicationPage() {
                   formData.study_plan.trim() && 
                   formData.intake
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })
+  }
+
+  const getStatusBadge = (appStatus: string) => {
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      draft: { label: "Draft", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+      submitted: { label: "Submitted", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+      under_review: { label: "Under Review", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+      accepted: { label: "Accepted", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+      rejected: { label: "Rejected", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+    }
+    const config = statusConfig[appStatus] || statusConfig.draft
+    return <Badge className={config.className}>{config.label}</Badge>
+  }
+
   if (fetching) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <IconLoader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -148,56 +185,100 @@ export default function EditApplicationPage() {
         <IconArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Edit Application</h1>
-          <p className="text-muted-foreground">Update your application details</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AutosaveStatus 
-            isSaving={autosave.isSaving}
-            lastSavedAt={autosave.lastSavedAt}
-            error={autosave.error}
-            hasUnsavedChanges={autosave.hasUnsavedChanges}
-          />
-          <Button onClick={handleSave} disabled={saving || autosave.isSaving}>
-            {saving ? (
-              <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <IconDeviceFloppy className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
-          </Button>
-        </div>
-      </div>
-
-      {/* Program Info */}
-      {program && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-primary/10">
-                  <IconSchool className="h-6 w-6 text-primary" />
+      {/* Header Card - Matching Application Detail Page */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              {program?.universities?.logo_url ? (
+                <Avatar className="h-16 w-16 rounded-xl">
+                  <AvatarImage
+                    src={program.universities.logo_url}
+                    alt={program.universities.name_en}
+                  />
+                  <AvatarFallback className="rounded-xl bg-primary/10">
+                    <IconSchool className="h-8 w-8 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <IconSchool className="h-8 w-8 text-primary" />
                 </div>
-                <div>
-                  <p className="font-medium">{program.name_en}</p>
-                  {program.name_cn && (
-                    <p className="text-sm text-muted-foreground">{program.name_cn}</p>
+              )}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <CardTitle className="text-xl">
+                    {program?.name || program?.name_en}
+                  </CardTitle>
+                  {getStatusBadge(status)}
+                </div>
+                <CardDescription className="text-base">
+                  {program?.universities?.name_en}
+                </CardDescription>
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  {program?.universities?.city && (
+                    <div className="flex items-center gap-1">
+                      <IconMapPin className="h-4 w-4" />
+                      {program.universities.city}
+                      {program.universities.province && `, ${program.universities.province}`}
+                    </div>
                   )}
-                  <p className="text-sm text-muted-foreground">
-                    {program.universities?.name_en} • {program.degree_type}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <IconCertificate className="h-4 w-4" />
+                    {program?.degree_level || program?.degree_type}
+                  </div>
                 </div>
               </div>
-              <Badge variant={status === "draft" ? "secondary" : "default"}>
-                {status}
-              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex items-center gap-3">
+              <AutosaveStatus 
+                isSaving={autosave.isSaving}
+                lastSavedAt={autosave.lastSavedAt}
+                error={autosave.error}
+                hasUnsavedChanges={autosave.hasUnsavedChanges}
+              />
+              <Button onClick={handleSave} disabled={saving || autosave.isSaving}>
+                {saving ? (
+                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <IconDeviceFloppy className="h-4 w-4 mr-2" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {createdAt && (
+              <div className="flex items-center gap-2 text-sm">
+                <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                <span>Created: {formatDate(createdAt)}</span>
+              </div>
+            )}
+            {program?.duration_years && (
+              <div className="flex items-center gap-2 text-sm">
+                <IconClock className="h-4 w-4 text-muted-foreground" />
+                <span>Duration: {program.duration_years} year{program.duration_years > 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {program?.tuition_fee_per_year && (
+              <div className="flex items-center gap-2 text-sm">
+                <IconCash className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {program.currency || 'CNY'} {program.tuition_fee_per_year.toLocaleString()}/year
+                </span>
+              </div>
+            )}
+            {formData.intake && (
+              <div className="flex items-center gap-2 text-sm">
+                <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                <span>Intake: {formData.intake}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Intake Selection */}
       <Card>
@@ -286,26 +367,26 @@ export default function EditApplicationPage() {
       </Card>
 
       {/* Validation Summary */}
-      <Card className={isValid ? "border-green-200 bg-green-50 dark:bg-green-950/20" : "border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20"}>
+      <Card className={isValid ? "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800" : "border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800"}>
         <CardContent className="pt-6">
           <div className="flex items-start gap-3">
             {isValid ? (
-              <IconCheck className="h-5 w-5 text-green-600 mt-0.5" />
+              <IconCheck className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             ) : (
-              <IconAlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <IconAlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
             )}
             <div>
               <p className={`font-medium ${isValid ? "text-green-700 dark:text-green-400" : "text-yellow-700 dark:text-yellow-400"}`}>
                 {isValid ? "Ready for Submission" : "Incomplete Application"}
               </p>
               <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                <li className={formData.personal_statement.trim() ? "text-green-600" : "text-yellow-600"}>
+                <li className={formData.personal_statement.trim() ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
                   {formData.personal_statement.trim() ? "✓" : "○"} Personal statement
                 </li>
-                <li className={formData.study_plan.trim() ? "text-green-600" : "text-yellow-600"}>
+                <li className={formData.study_plan.trim() ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
                   {formData.study_plan.trim() ? "✓" : "○"} Study plan
                 </li>
-                <li className={formData.intake ? "text-green-600" : "text-yellow-600"}>
+                <li className={formData.intake ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
                   {formData.intake ? "✓" : "○"} Intake selection
                 </li>
               </ul>
@@ -316,11 +397,11 @@ export default function EditApplicationPage() {
 
       {/* Actions */}
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => router.back()}>
+   <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={saving || autosave.isSaving}
         >
           {saving ? (

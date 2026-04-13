@@ -43,17 +43,15 @@ import {
   IconTrash,
   IconLayoutColumns,
   IconList,
+  IconLoader2,
+  IconFilter,
+  IconCalendar,
+  IconAlertCircle,
+  IconCircleCheck,
+  IconClock,
+  IconListCheck,
+  IconClipboardList,
 } from '@tabler/icons-react';
-import {
-  Loader2,
-  Filter,
-  Calendar,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ListTodo,
-  ClipboardList,
-} from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 
@@ -79,10 +77,10 @@ interface Task {
 }
 
 const statuses = [
-  { value: 'todo', label: 'To Do', icon: ListTodo },
-  { value: 'in_progress', label: 'In Progress', icon: Clock },
-  { value: 'done', label: 'Done', icon: CheckCircle2 },
-  { value: 'cancelled', label: 'Cancelled', icon: AlertCircle },
+  { value: 'todo', label: 'To Do', icon: IconListCheck },
+  { value: 'in_progress', label: 'In Progress', icon: IconClock },
+  { value: 'done', label: 'Done', icon: IconCircleCheck },
+  { value: 'cancelled', label: 'Cancelled', icon: IconAlertCircle },
 ];
 
 const priorities = [
@@ -299,7 +297,7 @@ export default function PartnerTasksPage() {
       <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+            <IconLoader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
             <p className="text-muted-foreground">Loading tasks...</p>
           </div>
         </div>
@@ -317,7 +315,7 @@ export default function PartnerTasksPage() {
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
-              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <IconAlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
               <p className="text-destructive font-medium mb-2">Failed to load tasks</p>
               <p className="text-muted-foreground text-sm">{error}</p>
               <Button variant="outline" className="mt-4" onClick={() => { setError(null); setLoading(true); }}>
@@ -371,7 +369,7 @@ export default function PartnerTasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-md bg-muted p-2"><ListTodo className="h-4 w-4 text-muted-foreground" /></div>
+              <div className="rounded-md bg-muted p-2"><IconListCheck className="h-4 w-4 text-muted-foreground" /></div>
               <div><p className="text-2xl font-bold">{todoCount}</p><p className="text-xs text-muted-foreground">To Do</p></div>
             </div>
           </CardContent>
@@ -379,7 +377,7 @@ export default function PartnerTasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-md bg-muted p-2"><Clock className="h-4 w-4 text-muted-foreground" /></div>
+              <div className="rounded-md bg-muted p-2"><IconClock className="h-4 w-4 text-muted-foreground" /></div>
               <div><p className="text-2xl font-bold">{inProgressCount}</p><p className="text-xs text-muted-foreground">In Progress</p></div>
             </div>
           </CardContent>
@@ -387,7 +385,7 @@ export default function PartnerTasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-md bg-muted p-2"><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></div>
+              <div className="rounded-md bg-muted p-2"><IconCircleCheck className="h-4 w-4 text-muted-foreground" /></div>
               <div><p className="text-2xl font-bold">{doneCount}</p><p className="text-xs text-muted-foreground">Completed</p></div>
             </div>
           </CardContent>
@@ -395,7 +393,7 @@ export default function PartnerTasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-md bg-muted p-2"><AlertCircle className="h-4 w-4 text-destructive" /></div>
+              <div className="rounded-md bg-muted p-2"><IconAlertCircle className="h-4 w-4 text-destructive" /></div>
               <div><p className="text-2xl font-bold">{overdueCount}</p><p className="text-xs text-muted-foreground">Overdue</p></div>
             </div>
           </CardContent>
@@ -406,7 +404,7 @@ export default function PartnerTasksPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <IconFilter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Filters</span>
           </div>
         </CardHeader>
@@ -451,7 +449,7 @@ export default function PartnerTasksPage() {
           <CardContent>
             {filteredTasks.length === 0 ? (
               <div className="text-center py-12">
-                <ClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <IconClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                 <p className="text-muted-foreground font-medium">No tasks found</p>
                 <p className="text-muted-foreground/70 text-sm mt-1">
                   {tasks.length === 0 ? 'Create a new task to get started' : 'Try adjusting your filters'}
@@ -492,7 +490,7 @@ export default function PartnerTasksPage() {
                               <Badge variant={getPriorityBadgeVariant(task.priority)}>{priorityInfo.label}</Badge>
                               {task.due_date && (
                                 <span className={`inline-flex items-center gap-1 text-xs ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                  <Calendar className="h-3 w-3" />
+                                  <IconCalendar className="h-3 w-3" />
                                   {overdue ? 'Overdue: ' : 'Due: '}{formatDate(task.due_date)}
                                 </span>
                               )}
@@ -518,7 +516,7 @@ export default function PartnerTasksPage() {
                               )}
                               {task.status === 'done' && (
                                 <DropdownMenuItem onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleUpdateStatus(task.id, 'todo'); }}>
-                                  <ListTodo className="h-4 w-4 mr-2" /> Reopen
+                                  <IconListCheck className="h-4 w-4 mr-2" /> Reopen
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
@@ -580,7 +578,7 @@ export default function PartnerTasksPage() {
                               </Badge>
                               {task.due_date && (
                                 <span className={`inline-flex items-center gap-0.5 text-[10px] ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                  <Calendar className="h-2.5 w-2.5" />
+                                  <IconCalendar className="h-2.5 w-2.5" />
                                   {overdue ? 'Overdue' : formatDate(task.due_date)}
                                 </span>
                               )}
@@ -615,7 +613,7 @@ export default function PartnerTasksPage() {
                                     handleUpdateStatus(task.id, 'todo');
                                   }}
                                 >
-                                  <ListTodo className="h-3 w-3 mr-0.5" /> Reopen
+                                  <IconListCheck className="h-3 w-3 mr-0.5" /> Reopen
                                 </Button>
                               )}
                               <Button
@@ -724,7 +722,7 @@ export default function PartnerTasksPage() {
                       disabled={isUpdating}
                       onClick={() => handleUpdateStatus(selectedTask.id, 'in_progress')}
                     >
-                      {isUpdating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconProgress className="h-4 w-4 mr-1" />}
+                      {isUpdating ? <IconLoader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconProgress className="h-4 w-4 mr-1" />}
                       In Progress
                     </Button>
                   )}
@@ -734,7 +732,7 @@ export default function PartnerTasksPage() {
                       disabled={isUpdating}
                       onClick={() => handleUpdateStatus(selectedTask.id, 'done')}
                     >
-                      {isUpdating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconCheck className="h-4 w-4 mr-1" />}
+                      {isUpdating ? <IconLoader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconCheck className="h-4 w-4 mr-1" />}
                       Done
                     </Button>
                   )}
@@ -745,7 +743,7 @@ export default function PartnerTasksPage() {
                       disabled={isUpdating}
                       onClick={() => handleUpdateStatus(selectedTask.id, 'todo')}
                     >
-                      {isUpdating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ListTodo className="h-4 w-4 mr-1" />}
+                      {isUpdating ? <IconLoader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconListCheck className="h-4 w-4 mr-1" />}
                       Reopen
                     </Button>
                   )}
@@ -816,7 +814,7 @@ export default function PartnerTasksPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
             <Button onClick={handleCreateTask} disabled={isCreating || !newTask.title.trim()}>
-              {isCreating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconPlus className="h-4 w-4 mr-1" />}
+              {isCreating ? <IconLoader2 className="h-4 w-4 mr-1 animate-spin" /> : <IconPlus className="h-4 w-4 mr-1" />}
               Create Task
             </Button>
           </DialogFooter>
