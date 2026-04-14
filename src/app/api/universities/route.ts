@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('province', province);
     }
     if (type && type !== 'all') {
-      countQuery = countQuery.eq('type', type);
+      countQuery = countQuery.contains('type', [type]);
     }
     if (category && category !== 'all') {
       countQuery = countQuery.eq('category', category);
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       dataQuery = dataQuery.eq('province', province);
     }
     if (type && type !== 'all') {
-      dataQuery = dataQuery.eq('type', type);
+      dataQuery = dataQuery.contains('type', [type]);
     }
     if (category && category !== 'all') {
       dataQuery = dataQuery.eq('category', category);

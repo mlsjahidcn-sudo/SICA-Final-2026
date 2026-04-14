@@ -54,7 +54,7 @@ interface University {
   city: string
   address: string | null
   website: string | null
-  type: string | null
+  type: string[] | null
   tags: string[]
   category: string | null
   ranking_national: number | null
@@ -175,28 +175,28 @@ export default function UniversityDetailPage() {
     )
   }
 
-  const getTypeBadge = (uniType: string | null) => {
+  const getTypeBadge = (uniType: string[] | null) => {
     const colors: Record<string, string> = {
       "985": "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400",
       "211": "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400",
       "Double First-Class": "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400",
       "Provincial": "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400",
     }
-    
+
     const labels: Record<string, string> = {
       "985": "985 Project",
       "211": "211 Project",
       "Double First-Class": "Double First-Class",
       "Provincial": "Provincial Key",
     }
-    
-    if (!uniType) return null
-    
-    return (
-      <Badge variant="outline" className={colors[uniType] || "bg-gray-100 text-gray-700 border-gray-200"}>
-        {labels[uniType] || uniType}
+
+    if (!uniType || uniType.length === 0) return null
+
+    return uniType.map((type) => (
+      <Badge key={type} variant="outline" className={colors[type] || "bg-gray-100 text-gray-700 border-gray-200"}>
+        {labels[type] || type}
       </Badge>
-    )
+    ))
   }
 
   const formatTuition = (min: number | null, max: number | null, currency: string | null) => {

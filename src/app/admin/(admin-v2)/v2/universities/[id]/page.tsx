@@ -41,7 +41,7 @@ interface UniversityDetail {
   city: string
   country: string | null
   location: string | null
-  type: string | null
+  type: string[] | null
   category: string | null
   tier: string | null
   ranking_national: number | null
@@ -259,11 +259,13 @@ function UniversityDetailContent({ universityId }: { universityId: string }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <div className="text-sm text-muted-foreground">Type</div>
-                  <div className="font-medium">
-                    {university.type ? (
-                      <Badge variant="outline" className={getTypeBadgeStyle(university.type)}>
-                        {getTypeLabel(university.type)}
-                      </Badge>
+                  <div className="font-medium flex flex-wrap gap-2">
+                    {university.type && university.type.length > 0 ? (
+                      university.type.map((type) => (
+                        <Badge key={type} variant="outline" className={getTypeBadgeStyle(type)}>
+                          {getTypeLabel(type)}
+                        </Badge>
+                      ))
                     ) : '—'}
                   </div>
                 </div>
