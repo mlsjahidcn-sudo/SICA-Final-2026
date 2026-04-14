@@ -34,11 +34,11 @@ export default function FavoritesPage() {
       // Use mock data for development if unauthorized
       if (error === 'Unauthorized') {
         setFavorites([
-          { id: "1", user_id: "user1", entity_id: "uni1", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni1", name_en: "Tsinghua University", name_cn: "清华大学", city: "Beijing", province: "Beijing", type: "985", ranking_national: 1 } },
-          { id: "2", user_id: "user1", entity_id: "uni2", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni2", name_en: "Peking University", name_cn: "北京大学", city: "Beijing", province: "Beijing", type: "985", ranking_national: 2 } },
+          { id: "1", user_id: "user1", entity_id: "uni1", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni1", name_en: "Tsinghua University", name_cn: "清华大学", city: "Beijing", province: "Beijing", type: ["985"], ranking_national: 1 } },
+          { id: "2", user_id: "user1", entity_id: "uni2", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni2", name_en: "Peking University", name_cn: "北京大学", city: "Beijing", province: "Beijing", type: ["985"], ranking_national: 2 } },
           { id: "3", user_id: "user1", entity_id: "prog1", entity_type: "program", created_at: new Date().toISOString(), entity: { id: "prog1", name_en: "Computer Science", degree_type: "Master", tuition_per_year: 35000, tuition_currency: "CNY", universities: { id: "uni1", name_en: "Tsinghua University", city: "Beijing" } } },
           { id: "4", user_id: "user1", entity_id: "prog2", entity_type: "program", created_at: new Date().toISOString(), entity: { id: "prog2", name_en: "Data Science", degree_type: "Master", tuition_per_year: 30000, tuition_currency: "CNY", universities: { id: "uni2", name_en: "Peking University", city: "Beijing" } } },
-          { id: "5", user_id: "user1", entity_id: "uni3", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni3", name_en: "Zhejiang University", name_cn: "浙江大学", city: "Hangzhou", province: "Zhejiang", type: "985", ranking_national: 4 } },
+          { id: "5", user_id: "user1", entity_id: "uni3", entity_type: "university", created_at: new Date().toISOString(), entity: { id: "uni3", name_en: "Zhejiang University", name_cn: "浙江大学", city: "Hangzhou", province: "Zhejiang", type: ["985"], ranking_national: 4 } },
         ])
       } else {
         console.error("Error fetching favorites:", error)

@@ -1241,8 +1241,6 @@ export const universities = pgTable("universities", {
 	facilitiesCn: text("facilities_cn"),
 	accommodationInfoEn: text("accommodation_info_en"),
 	accommodationInfoCn: text("accommodation_info_cn"),
-	addressEn: text("address_en"),
-	addressCn: text("address_cn"),
 }, (table) => [
 	index("universities_category_idx").using("btree", table.category.asc().nullsLast().op("text_ops")),
 	index("universities_city_idx").using("btree", table.city.asc().nullsLast().op("text_ops")),

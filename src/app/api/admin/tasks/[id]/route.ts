@@ -105,10 +105,12 @@ export async function GET(
       
       // Transform the nested structure
       if (appData) {
+        const studentData = Array.isArray(appData.students) ? appData.students[0] : appData.students;
+        const userData = studentData?.users ? (Array.isArray(studentData.users) ? studentData.users[0] : studentData.users) : null;
         application = {
           id: appData.id,
-          student: appData.students?.users ? { full_name: appData.students.users.full_name } : undefined,
-          program: appData.programs || undefined,
+          student: userData ? { full_name: userData.full_name } : undefined,
+          program: Array.isArray(appData.programs) ? appData.programs[0] : appData.programs || undefined,
         };
       }
     }

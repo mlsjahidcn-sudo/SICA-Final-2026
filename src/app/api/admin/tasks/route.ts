@@ -120,10 +120,12 @@ export async function GET(request: NextRequest) {
       
       // Transform the nested structure
       for (const app of (applications || [])) {
+        const studentData = Array.isArray(app.students) ? app.students[0] : app.students;
+        const userData = studentData?.users ? (Array.isArray(studentData.users) ? studentData.users[0] : studentData.users) : null;
         applicationMap.set(app.id, {
           id: app.id,
-          student: app.students?.users ? { full_name: app.students.users.full_name } : undefined,
-          program: app.programs || undefined,
+          student: userData ? { full_name: userData.full_name } : undefined,
+          program: Array.isArray(app.programs) ? app.programs[0] : app.programs || undefined,
         });
       }
     }
