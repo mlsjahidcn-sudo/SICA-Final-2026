@@ -67,7 +67,7 @@ interface University {
   address_cn: string | null;
   website: string | null;
   slug: string | null;
-  type: string | null;
+  type: string[] | null;
   tags: string[];
   category: string | null;
   ranking_national: number | null;
@@ -546,15 +546,17 @@ function InfoSidebarCard({ university }: { university: University }) {
       )}
 
       {/* University Type */}
-      {university.type && (
+      {university.type && university.type.length > 0 && (
         <Card size="sm">
           <CardHeader>
             <CardTitle>Type</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Badge variant="outline" className={getTypeBadgeStyle(university.type)}>
-              {getTypeLabel(university.type)}
-            </Badge>
+          <CardContent className="flex flex-wrap gap-2">
+            {university.type.map((type) => (
+              <Badge key={type} variant="outline" className={getTypeBadgeStyle(type)}>
+                {getTypeLabel(type)}
+              </Badge>
+            ))}
           </CardContent>
         </Card>
       )}
@@ -797,15 +799,17 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                   </div>
                 </div>
                 
-                {/* Type Badge */}
-                {university.type && (
-                  <div className="mt-2">
-                    <Badge variant="outline" className={cn(
-                      "text-sm px-3 py-1",
-                      getTypeBadgeStyle(university.type)
-                    )}>
-                      {getTypeLabel(university.type)}
-                    </Badge>
+                {/* Type Badges */}
+                {university.type && university.type.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {university.type.map((type) => (
+                      <Badge key={type} variant="outline" className={cn(
+                        "text-sm px-3 py-1",
+                        getTypeBadgeStyle(type)
+                      )}>
+                        {getTypeLabel(type)}
+                      </Badge>
+                    ))}
                   </div>
                 )}
                 
@@ -922,55 +926,108 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="divide-y">
+                    <>
+                      {/* Mobile Card View */}
+                      <div className="md:hidden space-y-3">
                         {programs.map((program) => (
-                          <div 
-                            key={program.id} 
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
-                          >
-                            {/* Degree Badge */}
-                            <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px] shrink-0">
-                              {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
-                               program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
-                               program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
-                               program.degree_level || 'N/A'}
-                            </Badge>
+                          <Card key={program.id} className="overflow-hidden">
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                {/* Header: Badge + Name */}
+                                <div className="space-y-2">
+                                  <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px]">
+                                    {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
+                                     program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
+                                     program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
+                                     program.degree_level || 'N/A'}
+                                  </Badge>
+                                  <Link 
+                                    href={
+                                      university.slug && program.slug 
+                                        ? `/universities/${university.slug}/programs/${program.slug}` 
+                                        : `/programs/${program.id}`
+                                    } 
+                                    className="font-medium text-base hover:underline block line-clamp-2"
+                                  >
+                                    {program.name}
+                                  </Link>
+                                </div>
 
-                            {/* Program Name */}
-                            <Link 
-                              href={
-                                university.slug && program.slug 
-                                  ? `/universities/${university.slug}/programs/${program.slug}` 
-                                  : `/programs/${program.id}`
-                              } 
-                              className="font-medium text-sm hover:underline truncate min-w-0"
-                            >
-                              {program.name}
-                            </Link>
+                                {/* Metadata */}
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1.5">
+                                    <IconLanguage className="h-4 w-4" />
+                                    {program.language}
+                                  </span>
+                                  {program.tuition_fee_per_year && (
+                                    <span className="flex items-center gap-1.5 font-medium text-foreground">
+                                      <IconCoinYuan className="h-4 w-4" />
+                                      {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}/year
+                                    </span>
+                                  )}
+                                </div>
 
-                            {/* Metadata - inline */}
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-auto">
-                              <span className="flex items-center gap-1">
-                                <IconLanguage className="h-3 w-3" />
-                                {program.language}
-                              </span>
-                              {program.tuition_fee_per_year && (
-                                <span className="flex items-center gap-1 font-medium text-foreground">
-                                  <IconCoinYuan className="h-3 w-3" />
-                                  {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Apply Button */}
-                            <Button size="sm" variant="default" className="h-7 px-3 text-xs shrink-0" asChild>
-                              <Link href={`/apply?program_id=${program.id}`}>Apply</Link>
-                            </Button>
-                          </div>
+                                {/* Apply Button */}
+                                <Button size="sm" variant="default" className="w-full" asChild>
+                                  <Link href={`/apply?program_id=${program.id}`}>Apply Now</Link>
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                    </div>
+
+                      {/* Desktop List View */}
+                      <div className="hidden md:block rounded-lg border overflow-hidden">
+                        <div className="divide-y">
+                          {programs.map((program) => (
+                            <div 
+                              key={program.id} 
+                              className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                            >
+                              {/* Degree Badge */}
+                              <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px] shrink-0">
+                                {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
+                                 program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
+                                 program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
+                                 program.degree_level || 'N/A'}
+                              </Badge>
+
+                              {/* Program Name */}
+                              <Link 
+                                href={
+                                  university.slug && program.slug 
+                                    ? `/universities/${university.slug}/programs/${program.slug}` 
+                                    : `/programs/${program.id}`
+                                } 
+                                className="font-medium text-sm hover:underline truncate min-w-0"
+                              >
+                                {program.name}
+                              </Link>
+
+                              {/* Metadata - inline */}
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-auto">
+                                <span className="flex items-center gap-1">
+                                  <IconLanguage className="h-3 w-3" />
+                                  {program.language}
+                                </span>
+                                {program.tuition_fee_per_year && (
+                                  <span className="flex items-center gap-1 font-medium text-foreground">
+                                    <IconCoinYuan className="h-3 w-3" />
+                                    {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Apply Button */}
+                              <Button size="sm" variant="default" className="h-7 px-3 text-xs shrink-0" asChild>
+                                <Link href={`/apply?program_id=${program.id}`}>Apply</Link>
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </TabsContent>
 

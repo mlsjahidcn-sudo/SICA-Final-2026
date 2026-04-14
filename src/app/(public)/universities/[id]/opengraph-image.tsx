@@ -139,7 +139,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 📍 {university.city}, {university.province}
               </div>
             )}
-            {university.type && (
+            {university.type && university.type.length > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -150,7 +150,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                   fontSize: 22,
                 }}
               >
-                🏛️ {university.type}
+                🏛️ {university.type.join(', ')}
               </div>
             )}
           </div>

@@ -73,23 +73,48 @@ const classificationTypes = [
 interface AIGeneratedData {
   name_en: string;
   name_cn: string;
-  description: string;
+  short_name?: string;
+  description_en?: string;
+  description_cn?: string;
+  facilities_en?: string;
+  facilities_cn?: string;
+  accommodation_info_en?: string;
+  accommodation_info_cn?: string;
+  address_en?: string;
+  address_cn?: string;
   province: string;
   city: string;
   type: string;
   category: string;
-  established_year: number | null;
-  website_url: string | null;
+  tier?: string;
+  founded_year?: number | null;
+  website?: string | null;
+  ranking_national?: number;
+  ranking_international?: number;
+  student_count?: number;
+  international_student_count?: number;
+  teaching_languages?: string[];
+  scholarship_available?: boolean;
+  scholarship_percentage?: number;
+  scholarship_info?: string;
+  scholarship_info_cn?: string;
+  logo_url?: string;
+  cover_image_url?: string;
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string[];
-  short_name?: string;
-  ranking_national?: number;
-  ranking_world?: number;
-  scholarship_available?: boolean;
-  scholarship_percentage?: number;
-  logo_url?: string;
-  cover_image_url?: string;
+  tuition_min?: number;
+  tuition_max?: number;
+  tuition_currency?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  latitude?: number;
+  longitude?: number;
+  application_deadline?: string;
+  intake_months?: string[];
+  csca_required?: boolean;
+  has_application_fee?: boolean;
+  acceptance_flexibility?: string;
 }
 
 export default function NewUniversityPage() {
@@ -106,13 +131,24 @@ export default function NewUniversityPage() {
     slug: '',
     province: '',
     city: '',
-    type: '',
+    type: [] as string[],
     category: '',
     tier: '',
     ranking_national: '',
     ranking_world: '',
-    website_url: '',
+    website: '',
     description: '',
+    description_en: '',
+    description_cn: '',
+    facilities: '',
+    facilities_en: '',
+    facilities_cn: '',
+    accommodation_info: '',
+    accommodation_info_en: '',
+    accommodation_info_cn: '',
+    address: '',
+    address_en: '',
+    address_cn: '',
     logo_url: '',
     cover_image_url: '',
     tuition_min: '',
@@ -122,7 +158,22 @@ export default function NewUniversityPage() {
     scholarship_percentage: '',
     scholarship_info: '',
     scholarship_info_cn: '',
-    established_year: '',
+    founded_year: '',
+    student_count: '',
+    international_student_count: '',
+    teaching_languages: [] as string[],
+    contact_email: '',
+    contact_phone: '',
+    latitude: '',
+    longitude: '',
+    application_deadline: '',
+    intake_months: [] as string[],
+    csca_required: false,
+    has_application_fee: false,
+    acceptance_flexibility: '',
+    meta_title: '',
+    meta_description: '',
+    meta_keywords: [] as string[],
     is_active: true,
   })
 
@@ -167,37 +218,116 @@ export default function NewUniversityPage() {
       // Map AI response to form data
       const updatedFormData = {
         ...formData,
+        // Basic info
         name_en: generated.name_en || formData.name_en,
         name_cn: generated.name_cn || formData.name_cn,
         short_name: generated.short_name || formData.short_name,
+        website: generated.website || formData.website,
+        founded_year: generated.founded_year?.toString() || formData.founded_year,
+        
+        // Location
         province: generated.province || formData.province,
         city: generated.city || formData.city,
+        address_en: generated.address_en || formData.address_en,
+        address_cn: generated.address_cn || formData.address_cn,
+        latitude: generated.latitude?.toString() || formData.latitude,
+        longitude: generated.longitude?.toString() || formData.longitude,
+        
+        // Classification
         category: mapCategory(generated.category) || formData.category,
-        established_year: generated.established_year?.toString() || formData.established_year,
-        website_url: generated.website_url || formData.website_url,
-        description: generated.description || formData.description,
+        tier: generated.tier || formData.tier,
         ranking_national: generated.ranking_national?.toString() || formData.ranking_national,
-        ranking_world: generated.ranking_world?.toString() || formData.ranking_world,
+        ranking_world: generated.ranking_international?.toString() || formData.ranking_world,
+        
+        // Descriptions (bilingual)
+        description: generated.description_en || generated.description_cn || formData.description,
+        description_en: generated.description_en || formData.description_en,
+        description_cn: generated.description_cn || formData.description_cn,
+        
+        // Facilities (bilingual)
+        facilities_en: generated.facilities_en || formData.facilities_en,
+        facilities_cn: generated.facilities_cn || formData.facilities_cn,
+        
+        // Accommodation (bilingual)
+        accommodation_info_en: generated.accommodation_info_en || formData.accommodation_info_en,
+        accommodation_info_cn: generated.accommodation_info_cn || formData.accommodation_info_cn,
+        
+        // Media
         logo_url: generated.logo_url || formData.logo_url,
         cover_image_url: generated.cover_image_url || formData.cover_image_url,
+        
+        // Student info
+        student_count: generated.student_count?.toString() || formData.student_count,
+        international_student_count: generated.international_student_count?.toString() || formData.international_student_count,
+        teaching_languages: generated.teaching_languages || formData.teaching_languages,
+        
+        // Tuition
+        tuition_min: generated.tuition_min?.toString() || formData.tuition_min,
+        tuition_max: generated.tuition_max?.toString() || formData.tuition_max,
+        tuition_currency: generated.tuition_currency || formData.tuition_currency,
+        
+        // Scholarship
         scholarship_available: generated.scholarship_available ?? formData.scholarship_available,
         scholarship_percentage: generated.scholarship_percentage?.toString() || formData.scholarship_percentage,
+        scholarship_info: generated.scholarship_info || formData.scholarship_info,
+        scholarship_info_cn: generated.scholarship_info_cn || formData.scholarship_info_cn,
+        
+        // Admissions
+        application_deadline: generated.application_deadline || formData.application_deadline,
+        intake_months: generated.intake_months || formData.intake_months,
+        csca_required: generated.csca_required ?? formData.csca_required,
+        has_application_fee: generated.has_application_fee ?? formData.has_application_fee,
+        acceptance_flexibility: generated.acceptance_flexibility || formData.acceptance_flexibility,
+        
+        // Contact
+        contact_email: generated.contact_email || formData.contact_email,
+        contact_phone: generated.contact_phone || formData.contact_phone,
+        
+        // SEO
+        meta_title: generated.meta_title || formData.meta_title,
+        meta_description: generated.meta_description || formData.meta_description,
+        meta_keywords: generated.meta_keywords || formData.meta_keywords,
+        
         // Generate slug from name if not set
         slug: formData.slug || generateSlug(generated.name_en || formData.name_en),
       }
 
-      // Handle type classification
+      // Handle type classification (now an array)
       if (generated.type) {
         const typeMap: Record<string, string> = {
           '985': '985',
           '211': '211',
           'double_first_class': 'Double First-Class',
+          'double first-class': 'Double First-Class',
+          'double first class': 'Double First-Class',
           'public': 'Provincial',
           'private': 'Provincial',
+          'provincial': 'Provincial',
         }
-        const mappedType = typeMap[generated.type.toLowerCase().replace(/[-\s]/g, '_')]
-        if (mappedType) {
-          updatedFormData.type = mappedType
+        
+        // If AI returns an array, map each type
+        if (Array.isArray(generated.type)) {
+          updatedFormData.type = generated.type
+            .map(t => typeMap[t.toLowerCase().replace(/[-\s]/g, '_')] || t)
+            .filter(Boolean)
+        } else if (typeof generated.type === 'string') {
+          // If AI returns a single string, check for multiple types in the string
+          const typeStr = generated.type.toLowerCase()
+          const types: string[] = []
+          
+          // Check for each type in the string
+          if (typeStr.includes('985')) types.push('985')
+          if (typeStr.includes('211')) types.push('211')
+          if (typeStr.includes('double') && typeStr.includes('first')) types.push('Double First-Class')
+          if (typeStr.includes('provincial') || typeStr.includes('public')) types.push('Provincial')
+          
+          // If no types found, use the mapped single type
+          if (types.length === 0) {
+            const mappedType = typeMap[typeStr.replace(/[-\s]/g, '_')]
+            if (mappedType) types.push(mappedType)
+          }
+          
+          updatedFormData.type = types.length > 0 ? types : ['Provincial']
         }
       }
 
@@ -271,11 +401,15 @@ export default function NewUniversityPage() {
         body: JSON.stringify({
           ...formData,
           ranking_national: formData.ranking_national ? parseInt(formData.ranking_national) : null,
-          ranking_world: formData.ranking_world ? parseInt(formData.ranking_world) : null,
-          established_year: formData.established_year ? parseInt(formData.established_year) : null,
+          ranking_international: formData.ranking_world ? parseInt(formData.ranking_world) : null,
+          founded_year: formData.founded_year ? parseInt(formData.founded_year) : null,
+          student_count: formData.student_count ? parseInt(formData.student_count) : null,
+          international_student_count: formData.international_student_count ? parseInt(formData.international_student_count) : null,
           tuition_min: formData.tuition_min ? parseFloat(formData.tuition_min) : null,
           tuition_max: formData.tuition_max ? parseFloat(formData.tuition_max) : null,
           scholarship_percentage: formData.scholarship_percentage ? parseInt(formData.scholarship_percentage) : null,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         }),
       })
 
@@ -451,23 +585,23 @@ export default function NewUniversityPage() {
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="website_url">Website</Label>
+                      <Label htmlFor="website">Website</Label>
                       <Input
-                        id="website_url"
+                        id="website"
                         type="url"
                         placeholder="https://www.example.edu.cn"
-                        value={formData.website_url}
-                        onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="established_year">Founded Year</Label>
+                      <Label htmlFor="founded_year">Founded Year</Label>
                       <Input
-                        id="established_year"
+                        id="founded_year"
                         type="number"
                         placeholder="e.g., 1911"
-                        value={formData.established_year}
-                        onChange={(e) => setFormData({ ...formData, established_year: e.target.value })}
+                        value={formData.founded_year}
+                        onChange={(e) => setFormData({ ...formData, founded_year: e.target.value })}
                       />
                     </div>
                   </div>
@@ -524,20 +658,31 @@ export default function NewUniversityPage() {
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div className="space-y-2">
-                      <Label htmlFor="type">University Type</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(value) => setFormData({ ...formData, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {classificationTypes.map((ct) => (
-                            <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label>University Type(s) *</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {classificationTypes.map((ct) => (
+                          <Badge
+                            key={ct.value}
+                            variant={formData.type.includes(ct.value) ? "default" : "outline"}
+                            className={`cursor-pointer transition-colors ${
+                              formData.type.includes(ct.value) 
+                                ? ct.color 
+                                : 'hover:bg-accent'
+                            }`}
+                            onClick={() => {
+                              const newTypes = formData.type.includes(ct.value)
+                                ? formData.type.filter(t => t !== ct.value)
+                                : [...formData.type, ct.value]
+                              setFormData({ ...formData, type: newTypes })
+                            }}
+                          >
+                            {ct.label}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Click to select multiple types
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="category">University Category</Label>
@@ -605,26 +750,74 @@ export default function NewUniversityPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="description">General Description</Label>
+                    <Label htmlFor="description_en">Description (English)</Label>
                     <Textarea
-                      id="description"
-                      placeholder="University description..."
+                      id="description_en"
+                      placeholder="University description in English..."
                       rows={4}
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      value={formData.description_en}
+                      onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="University description..."
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description_cn">Description (Chinese)</Label>
+                    <Textarea
+                      id="description_cn"
+                      placeholder="大学描述（中文）..."
+                      rows={4}
+                      value={formData.description_cn}
+                      onChange={(e) => setFormData({ ...formData, description_cn: e.target.value })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Facilities & Accommodation */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Facilities & Accommodation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="facilities_en">Facilities (English)</Label>
+                    <Textarea
+                      id="facilities_en"
+                      placeholder="Campus facilities description in English..."
+                      rows={3}
+                      value={formData.facilities_en}
+                      onChange={(e) => setFormData({ ...formData, facilities_en: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="facilities_cn">Facilities (Chinese)</Label>
+                    <Textarea
+                      id="facilities_cn"
+                      placeholder="校园设施描述（中文）..."
+                      rows={3}
+                      value={formData.facilities_cn}
+                      onChange={(e) => setFormData({ ...formData, facilities_cn: e.target.value })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="accommodation_info_en">Accommodation Info (English)</Label>
+                    <Textarea
+                      id="accommodation_info_en"
+                      placeholder="Accommodation information in English..."
+                      rows={3}
+                      value={formData.accommodation_info_en}
+                      onChange={(e) => setFormData({ ...formData, accommodation_info_en: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accommodation_info_cn">Accommodation Info (Chinese)</Label>
+                    <Textarea
+                      id="accommodation_info_cn"
+                      placeholder="住宿信息（中文）..."
+                      rows={3}
+                      value={formData.accommodation_info_cn}
+                      onChange={(e) => setFormData({ ...formData, accommodation_info_cn: e.target.value })}
+                    />
                   </div>
                 </CardContent>
               </Card>

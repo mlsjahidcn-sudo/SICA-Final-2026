@@ -140,7 +140,7 @@ export async function GET(
                 📍 {university.city}, {university.province}
               </div>
             )}
-            {university.type && (
+            {university.type && university.type.length > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -151,7 +151,7 @@ export async function GET(
                   fontSize: 22,
                 }}
               >
-                🏛️ {university.type}
+                🏛️ {university.type.join(', ')}
               </div>
             )}
           </div>

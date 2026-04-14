@@ -86,7 +86,7 @@ Return ONLY the JSON, no other text or markdown.`;
 University Name: ${university.name_en}
 Chinese Name: ${university.name_cn || 'N/A'}
 Location: ${university.city}, ${university.province}
-Type: ${university.type || 'N/A'}
+Type: ${university.type && university.type.length > 0 ? university.type.join(', ') : 'N/A'}
 Category: ${university.category || 'N/A'}
 National Ranking: ${university.ranking_national || 'N/A'}
 World Ranking: ${university.ranking_world || 'N/A'}

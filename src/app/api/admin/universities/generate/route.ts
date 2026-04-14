@@ -29,22 +29,39 @@ Return your response ONLY as a valid JSON object with the following structure, n
   "address_cn": "Full address in Chinese characters",
   "province": "Province name in English (e.g., Beijing, Shanghai, Guangdong, Jiangsu)",
   "city": "City name in English (e.g., Beijing, Shanghai, Guangzhou, Nanjing)",
-  "type": "One of: 985, 211, Double First-Class, Provincial, Private",
+  "country": "China",
+  "latitude": 39.9042,
+  "longitude": 116.4074,
+  "type": ["985", "211"] - Array of classifications. Can include multiple: "985", "211", "Double First-Class", "Provincial", "Private". For example: ["985", "211"] or ["Double First-Class"] or ["Provincial"],
   "category": "One of: Comprehensive, Science & Technology, Medical, Agricultural, Normal (Teacher Training), Finance & Economics, Language, Arts, Law, Sports, Pharmaceutical, Aerospace, Maritime, Petroleum, Forestry",
+  "tier": "One of: Tier 1, Tier 2, Tier 3, Tier 4, Tier 5 (based on reputation and rankings)",
   "founded_year": 4-digit year number (or null if unknown),
   "website": "Official website URL (must be real if known, or null)",
   "ranking_national": National ranking number (1-300, based on actual rankings if known, or reasonable estimate),
   "ranking_international": QS/THE world ranking number (or null if not ranked in top 500),
   "student_count": Total student count (approximate, typical for the university type),
   "international_student_count": International student count (approximate),
-  "teaching_languages": ["English", "Chinese"] - array of languages used for instruction,
-  "scholarship_available": true/false - whether the university typically offers scholarships to international students,
+  "faculty_count": Faculty count (approximate),
+  "teaching_languages": ["English", "Chinese"],
+  "scholarship_available": true/false,
   "scholarship_percentage": Typical scholarship coverage percentage (e.g., 50 for 50% coverage),
+  "scholarship_info": "Detailed English description of scholarship opportunities for international students",
+  "scholarship_info_cn": "Detailed Chinese description of scholarship opportunities",
   "logo_url": "URL to university logo (use official website or Wikipedia if known, or null)",
   "cover_image_url": "URL to campus image (use Wikipedia Commons if available, or null)",
+  "tuition_min": Minimum annual tuition in CNY (for international students)",
+  "tuition_max": Maximum annual tuition in CNY",
+  "tuition_currency": "CNY",
+  "contact_email": "Admissions office email (or null)",
+  "contact_phone": "Admissions office phone (or null)",
+  "application_deadline": "Application deadline as text string (e.g., 'June 30', 'Rolling admissions', 'March 15 for fall semester', or null)",
+  "intake_months": ["September", "March"],
+  "csca_required": true/false,
+  "has_application_fee": true/false,
+  "acceptance_flexibility": "Flexible / Moderate / Strict",
   "meta_title": "SEO-optimized title (format: 'Study at [University Name] | Study In China 2025 | SICA')",
   "meta_description": "SEO-optimized meta description (150-160 characters), compelling for search engines, include university name, location, and key features",
-  "meta_keywords": ["keyword1", "keyword2", ...] - array of 8-12 relevant SEO keywords
+  "meta_keywords": ["keyword1", "keyword2", ...]
 }
 
 Important guidelines:
@@ -52,8 +69,11 @@ Important guidelines:
 - For Chinese universities you don't recognize, make reasonable estimates based on similar universities
 - Names must be accurate - double-check Chinese character names
 - Rankings should be realistic estimates based on university reputation
-- Descriptions should be informative and professional
+- Descriptions should be informative and professional (at least 300 words/characters)
 - Include the university's actual website if known
+- For coordinates, use the city center coordinates as approximation if exact campus location unknown
+- Scholarship info should describe CSC, provincial, and university-specific scholarships available
+- Tuition should be realistic ranges for international students in CNY
 - meta_description should be engaging and include "Study in China"
 - meta_keywords should include: university name, location, "study in China", "international students", "Chinese university", degree types offered, etc.
 - Return ONLY the JSON, no other text or markdown`;
@@ -101,19 +121,64 @@ Important: Provide accurate, real information if this is a well-known university
       generatedData.meta_keywords = generatedData.meta_keywords.split(',').map((k: string) => k.trim());
     }
 
-    // Normalize type field
+    // Ensure teaching_languages is an array
+    if (typeof generatedData.teaching_languages === 'string') {
+      generatedData.teaching_languages = generatedData.teaching_languages.split(',').map((l: string) => l.trim());
+    }
+
+    // Ensure intake_months is an array
+    if (typeof generatedData.intake_months === 'string') {
+      generatedData.intake_months = generatedData.intake_months.split(',').map((m: string) => m.trim());
+    }
+
+    // Normalize type field (now an array)
     if (generatedData.type) {
-      const typeLower = generatedData.type.toLowerCase().replace(/[-\s]/g, ' ');
-      if (typeLower.includes('985')) {
-        generatedData.type = '985';
-      } else if (typeLower.includes('211')) {
-        generatedData.type = '211';
-      } else if (typeLower.includes('double') || typeLower.includes('first class')) {
-        generatedData.type = 'Double First-Class';
-      } else if (typeLower.includes('provincial') || typeLower.includes('public')) {
-        generatedData.type = 'Provincial';
-      } else if (typeLower.includes('private')) {
-        generatedData.type = 'Private';
+      const typeMap: Record<string, string> = {
+        '985': '985',
+        '211': '211',
+        'double_first_class': 'Double First-Class',
+        'double first-class': 'Double First-Class',
+        'double first class': 'Double First-Class',
+        'public': 'Provincial',
+        'private': 'Provincial',
+        'provincial': 'Provincial',
+      }
+      
+      // If AI returns an array, map each type
+      if (Array.isArray(generatedData.type)) {
+        generatedData.type = generatedData.type
+          .map((t: string) => typeMap[t.toLowerCase().replace(/[-\s]/g, '_')] || t)
+          .filter(Boolean)
+      } else if (typeof generatedData.type === 'string') {
+        // If AI returns a single string, check for multiple types in the string
+        const typeStr = generatedData.type.toLowerCase()
+        const types: string[] = []
+        
+        // Check for each type in the string
+        if (typeStr.includes('985')) types.push('985')
+        if (typeStr.includes('211')) types.push('211')
+        if (typeStr.includes('double') && typeStr.includes('first')) types.push('Double First-Class')
+        if (typeStr.includes('provincial') || typeStr.includes('public')) types.push('Provincial')
+        if (typeStr.includes('private')) types.push('Provincial')
+        
+        // If no types found, use the mapped single type
+        if (types.length === 0) {
+          const mappedType = typeMap[typeStr.replace(/[-\s]/g, '_')]
+          if (mappedType) types.push(mappedType)
+        }
+        
+        generatedData.type = types.length > 0 ? types : ['Provincial']
+      }
+    } else {
+      // Default to Provincial if no type provided
+      generatedData.type = ['Provincial']
+    }
+
+    // Normalize tier field
+    if (generatedData.tier) {
+      const tierMatch = generatedData.tier.match(/tier\s*(\d)/i);
+      if (tierMatch) {
+        generatedData.tier = `Tier ${tierMatch[1]}`;
       }
     }
 
@@ -126,6 +191,11 @@ Important: Provide accurate, real information if this is a well-known university
     }
     if (generatedData.cover_image_url && !generatedData.cover_image_url.startsWith('http')) {
       generatedData.cover_image_url = null;
+    }
+
+    // Ensure country is set
+    if (!generatedData.country) {
+      generatedData.country = 'China';
     }
 
     return NextResponse.json({ university: generatedData });

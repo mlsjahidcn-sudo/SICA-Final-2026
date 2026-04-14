@@ -98,11 +98,44 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Enrich tasks with user info
+    // Collect application IDs for tasks related to applications
+    const applicationIds = (tasks || [])
+      .filter(task => task.related_to_type === 'application' && task.related_to_id)
+      .map(task => task.related_to_id);
+
+    // Fetch application data with student and program info
+    const applicationMap = new Map<string, { id: string; student?: { full_name: string }; program?: { id: string; name: string; degree_level: string } }>();
+    if (applicationIds.length > 0) {
+      const { data: applications } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          students (
+            id,
+            users (full_name)
+          ),
+          programs (id, name, degree_level)
+        `)
+        .in('id', applicationIds);
+      
+      // Transform the nested structure
+      for (const app of (applications || [])) {
+        applicationMap.set(app.id, {
+          id: app.id,
+          student: app.students?.users ? { full_name: app.students.users.full_name } : undefined,
+          program: app.programs || undefined,
+        });
+      }
+    }
+
+    // Enrich tasks with user info and application data
     const enrichedTasks = (tasks || []).map(task => ({
       ...task,
       creator: task.creator_id ? userMap.get(task.creator_id) || null : null,
       assignee: task.assignee_id ? userMap.get(task.assignee_id) || null : null,
+      application: task.related_to_type === 'application' && task.related_to_id 
+        ? applicationMap.get(task.related_to_id) || null 
+        : null,
       admin_task_comments: (task.admin_task_comments || []).map((comment: { user_id?: string; [key: string]: unknown }) => ({
         ...comment,
         user: comment.user_id ? userMap.get(comment.user_id) || null : null,
@@ -135,7 +168,32 @@ export async function POST(request: NextRequest) {
       creatorId = user?.id;
     }
 
-    const { title, description, status, priority, due_date, assignee_id, assignee_role, related_to_type, related_to_id, partner_id } = body;
+    const { 
+      title, 
+      description, 
+      status, 
+      priority, 
+      dueDate,
+      due_date, 
+      assigneeId,
+      assignee_id, 
+      assigneeRole,
+      assignee_role, 
+      relatedToType,
+      related_to_type, 
+      relatedToId,
+      related_to_id, 
+      partnerId,
+      partner_id 
+    } = body;
+
+    // Support both camelCase and snake_case for flexibility
+    const finalDueDate = dueDate || due_date;
+    const finalAssigneeId = assigneeId || assignee_id;
+    const finalAssigneeRole = assigneeRole || assignee_role;
+    const finalRelatedToType = relatedToType || related_to_type;
+    const finalRelatedToId = relatedToId || related_to_id;
+    const finalPartnerId = partnerId || partner_id;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -148,14 +206,14 @@ export async function POST(request: NextRequest) {
         description,
         status: status || 'todo',
         priority: priority || 'medium',
-        due_date,
-        assignee_id,
-        assignee_role,
+        due_date: finalDueDate,
+        assignee_id: finalAssigneeId,
+        assignee_role: finalAssigneeRole,
         creator_id: creatorId || null,
         creator_role: 'admin',
-        related_to_type,
-        related_to_id,
-        partner_id,
+        related_to_type: finalRelatedToType,
+        related_to_id: finalRelatedToId,
+        partner_id: finalPartnerId,
       })
       .select()
       .single();

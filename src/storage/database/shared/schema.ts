@@ -1188,8 +1188,10 @@ export const universities = pgTable("universities", {
 	province: varchar({ length: 100 }).notNull(),
 	city: varchar({ length: 100 }).notNull(),
 	address: text(),
+	addressEn: text("address_en"),
+	addressCn: text("address_cn"),
 	website: varchar({ length: 255 }),
-	type: varchar({ length: 50 }).notNull(),
+	type: jsonb().notNull(), // Changed to JSONB array for multi-select support
 	category: varchar({ length: 50 }),
 	rankingNational: integer("ranking_national"),
 	rankingInternational: integer("ranking_international"),

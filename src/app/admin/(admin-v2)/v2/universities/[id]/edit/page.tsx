@@ -114,7 +114,7 @@ interface UniversityFormData {
   location: string
   
   // Classification
-  type: string
+  type: string[]
   category: string
   tier: string
   ranking_national: string
@@ -174,7 +174,7 @@ const initialFormData: UniversityFormData = {
   city: '',
   country: 'China',
   location: '',
-  type: '',
+  type: [],
   category: '',
   tier: '',
   ranking_national: '',
@@ -269,7 +269,7 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
             city: u.city || '',
             country: u.country || 'China',
             location: u.location || '',
-            type: u.type || '',
+            type: Array.isArray(u.type) ? u.type : [],
             category: u.category || '',
             tier: u.tier || '',
             ranking_national: u.ranking_national?.toString() || '',
@@ -639,20 +639,31 @@ function EditUniversityContent({ universityId }: { universityId: string }) {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="type">University Type</Label>
-                    <Select
-                      value={formData.type}
-                      onValueChange={(value) => handleInputChange('type', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classificationTypes.map(type => (
-                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>University Type(s)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {classificationTypes.map(type => (
+                        <Badge
+                          key={type.value}
+                          variant={formData.type.includes(type.value) ? "default" : "outline"}
+                          className={`cursor-pointer transition-colors ${
+                            formData.type.includes(type.value) 
+                              ? type.color 
+                              : 'hover:bg-accent'
+                          }`}
+                          onClick={() => {
+                            const newTypes = formData.type.includes(type.value)
+                              ? formData.type.filter(t => t !== type.value)
+                              : [...formData.type, type.value]
+                            handleInputChange('type', newTypes as any)
+                          }}
+                        >
+                          {type.label}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Click to select multiple types
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>

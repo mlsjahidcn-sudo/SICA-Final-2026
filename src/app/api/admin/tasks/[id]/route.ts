@@ -87,10 +87,37 @@ export async function GET(
       }
     }
 
+    // Fetch related application data if task is linked to an application
+    let application = null;
+    if (data.related_to_type === 'application' && data.related_to_id) {
+      const { data: appData } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          students (
+            id,
+            users (full_name)
+          ),
+          programs (id, name, degree_level)
+        `)
+        .eq('id', data.related_to_id)
+        .single();
+      
+      // Transform the nested structure
+      if (appData) {
+        application = {
+          id: appData.id,
+          student: appData.students?.users ? { full_name: appData.students.users.full_name } : undefined,
+          program: appData.programs || undefined,
+        };
+      }
+    }
+
     const enrichedTask = {
       ...data,
       creator: data.creator_id ? userMap.get(data.creator_id) || null : null,
       assignee: data.assignee_id ? userMap.get(data.assignee_id) || null : null,
+      application,
       admin_task_comments: (data.admin_task_comments || []).map((comment: { user_id?: string; [key: string]: unknown }) => ({
         ...comment,
         user: comment.user_id ? userMap.get(comment.user_id) || null : null,

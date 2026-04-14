@@ -44,7 +44,8 @@ import {
   IconLogout,
   IconUserCircle,
   IconPlus,
-  IconStar
+  IconStar,
+  IconClipboardList
 } from "@tabler/icons-react"
 import { IconInnerShadowTop } from "@tabler/icons-react"
 import { studentApi } from "@/lib/student-api"
@@ -79,6 +80,11 @@ const navItems = [
     title: "Meetings",
     url: "/student-v2/meetings",
     icon: <IconCalendar />,
+  },
+  {
+    title: "Tasks",
+    url: "/student-v2/tasks",
+    icon: <IconClipboardList />,
   },
   {
     title: "Notifications",

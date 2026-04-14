@@ -168,9 +168,9 @@ export default function FavoritesPage() {
                         <IconMapPin className="h-4 w-4" />
                         <span>{fav.entity?.city}, {fav.entity?.province}</span>
                       </div>
-                      {fav.entity?.type && (
-                        <Badge variant="outline">{fav.entity.type}</Badge>
-                      )}
+                      {fav.entity?.type && fav.entity.type.length > 0 && fav.entity.type.map((type) => (
+                        <Badge key={type} variant="outline">{type}</Badge>
+                      ))}
                       {fav.entity?.ranking_national && (
                         <div className="flex items-center gap-2 text-sm">
                           <IconTrophy className="h-4 w-4 text-yellow-500" />

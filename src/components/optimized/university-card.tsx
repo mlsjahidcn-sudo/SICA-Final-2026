@@ -20,7 +20,7 @@ export interface UniversityCardData {
   cover_image_url?: string | null;
   province: string;
   city: string;
-  type: string;
+  type: string[];
   category?: string | null;
   ranking_national?: number | null;
   ranking_international?: number | null;
@@ -92,11 +92,11 @@ function UniversityCardInner({
 
           {/* Badges */}
           <div className="flex flex-wrap gap-1.5 mt-3">
-            {university.type && (
-              <Badge variant="secondary" className="text-xs">
-                {university.type}
+            {university.type && university.type.length > 0 && university.type.map((type) => (
+              <Badge key={type} variant="secondary" className="text-xs">
+                {type}
               </Badge>
-            )}
+            ))}
             {university.scholarship_available && (
               <Badge variant="outline" className="text-xs text-green-600 border-green-200">
                 Scholarship

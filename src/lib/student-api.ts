@@ -593,7 +593,7 @@ export interface Favorite {
     name_cn?: string;
     city?: string;
     province?: string;
-    type?: string;
+    type?: string[];
     logo_url?: string;
     ranking_national?: number;
     degree_type?: string;
