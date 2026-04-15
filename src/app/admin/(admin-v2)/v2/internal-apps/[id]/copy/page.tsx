@@ -153,17 +153,21 @@ function CopyInternalAppContent() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/v2/internal-apps">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to List
           </Link>
         </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Copy to Another University</h1>
+          <p className="text-muted-foreground">Create a new application with the same student data</p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="max-w-3xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <Copy className="h-6 w-6 text-muted-foreground" />

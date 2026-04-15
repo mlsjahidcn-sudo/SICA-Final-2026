@@ -19,34 +19,25 @@ export async function GET(request: NextRequest) {
     const applicationId = searchParams.get('application_id');
 
     let query = supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
-        document_type,
+        student_id,
+        application_id,
+        type,
         status,
         file_key,
         file_name,
         file_size,
-        content_type,
+        mime_type,
         rejection_reason,
         uploaded_at,
+        uploaded_by,
         created_at,
-        updated_at,
-        applications (
-          id,
-          programs (
-            id,
-            name_en,
-            universities (
-              id,
-              name_en
-            )
-          )
-        )
+        updated_at
       `);
 
-    // applications.student_id references students.id, NOT users.id
-    // Must look up the student record to get the correct student_id
+    // Get student profile ID
     const { data: studentRecord } = await supabase
       .from('students')
       .select('id')
@@ -57,9 +48,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [], stats: { total: 0, verified: 0, pending: 0, rejected: 0 } });
     }
 
-    query = query.eq('applications.student_id', studentRecord.id);
+    // Get all documents for the student (student-centric approach)
+    query = query.eq('student_id', studentRecord.id);
 
-    // Filter by application
+    // Filter by application (optional link)
     if (applicationId) {
       query = query.eq('application_id', applicationId);
     }
@@ -97,7 +89,13 @@ export async function GET(request: NextRequest) {
             url = urlData?.publicUrl || null;
           }
         }
-        return { ...doc, url };
+        // Map field names for compatibility
+        return {
+          ...doc,
+          document_type: doc.type,
+          content_type: doc.mime_type,
+          url
+        };
       })
     );
 
@@ -133,21 +131,21 @@ export async function POST(request: NextRequest) {
     if (user instanceof NextResponse) return user;
 
     const formData = await request.formData();
-    const applicationId = formData.get('application_id') as string;
+    const studentId = formData.get('student_id') as string; // Primary identifier
+    const applicationId = formData.get('application_id') as string | null; // Optional link
     const documentType = formData.get('document_type') as string;
     const file = formData.get('file') as File;
 
-    if (!applicationId || !documentType || !file) {
+    if (!studentId || !documentType || !file) {
       return NextResponse.json(
-        { error: 'Application ID, document type, and file are required' },
+        { error: 'Student ID, document type, and file are required' },
         { status: 400 }
       );
     }
 
     const supabase = getSupabaseClient();
 
-    // applications.student_id references students.id, NOT users.id
-    // Look up the student record first
+    // Verify student owns this student_id
     const { data: studentRecord } = await supabase
       .from('students')
       .select('id')
@@ -158,24 +156,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
-    // Verify application belongs to user
-    const { data: application } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('id', applicationId)
-      .eq('student_id', studentRecord.id)
-      .single();
-
-    if (!application) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    // Security check: student can only upload to their own profile
+    if (studentRecord.id !== studentId) {
+      return NextResponse.json({ error: 'Forbidden - can only upload to your own profile' }, { status: 403 });
     }
 
-    // Check if document already exists for this type
+    // If application_id provided, verify it belongs to this student
+    if (applicationId) {
+      const { data: application } = await supabase
+        .from('applications')
+        .select('student_id')
+        .eq('id', applicationId)
+        .single();
+      
+      if (!application || application.student_id !== studentId) {
+        return NextResponse.json({ error: 'Application does not belong to you' }, { status: 400 });
+      }
+    }
+
+    // Check if document already exists for this type (student-centric)
     const { data: existingDoc } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select('id, file_key')
-      .eq('application_id', applicationId)
-      .eq('document_type', documentType)
+      .eq('student_id', studentId)
+      .eq('type', documentType)
       .maybeSingle();
 
     // If replacing, delete old file from storage
@@ -190,7 +194,7 @@ export async function POST(request: NextRequest) {
     // Upload file to Supabase Storage
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `${user.id}/${applicationId}/${documentType}_${timestamp}_${sanitizedFileName}`;
+    const filePath = `${studentId}/${documentType}_${timestamp}_${sanitizedFileName}`;
     
     const arrayBuffer = await file.arrayBuffer();
     const { data: uploadData, error: uploadError } = await supabase
@@ -222,20 +226,21 @@ export async function POST(request: NextRequest) {
       publicUrl = urlData?.publicUrl || '';
     }
 
-    // Create or update document record - only use columns that exist
+    // Create or update document record using documents table
     let result;
     if (existingDoc?.id) {
       // Update existing record
       const { data, error } = await supabase
-        .from('application_documents')
+        .from('documents')
         .update({
           file_key: uploadData.path,
           file_name: file.name,
           file_size: file.size,
-          content_type: file.type,
+          mime_type: file.type,
           status: 'pending',
           uploaded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          uploaded_by: user.id, // Track who uploaded the document
         })
         .eq('id', existingDoc.id)
         .select()
@@ -244,17 +249,19 @@ export async function POST(request: NextRequest) {
     } else {
       // Insert new record
       const { data, error } = await supabase
-        .from('application_documents')
+        .from('documents')
         .insert({
-          application_id: applicationId,
-          document_type: documentType,
+          student_id: studentId,
+          application_id: applicationId || null,
+          type: documentType,
           file_key: uploadData.path,
           file_name: file.name,
           file_size: file.size,
-          content_type: file.type,
+          mime_type: file.type,
           status: 'pending',
           uploaded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          uploaded_by: user.id, // Track who uploaded the document
         })
         .select()
         .single();
@@ -272,8 +279,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create document record' }, { status: 500 });
     }
 
+    // Map field names for response
+    const responseDoc = {
+      ...result.data,
+      document_type: result.data.type,
+      content_type: result.data.mime_type,
+      url: publicUrl
+    };
+
     return NextResponse.json({ 
-      document: { ...result.data, url: publicUrl }
+      document: responseDoc
     }, { status: 201 });
 
   } catch (error) {

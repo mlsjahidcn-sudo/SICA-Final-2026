@@ -170,14 +170,18 @@ function EditInternalAppContent() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/v2/internal-apps">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to List
           </Link>
         </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Application</h1>
+          <p className="text-muted-foreground">Update application details</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -417,16 +421,19 @@ function EditInternalAppContent() {
           </CardContent>
         </Card>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" asChild>
-            <Link href="/admin/v2/internal-apps">Cancel</Link>
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Update Application
-          </Button>
-        </div>
+      <Card className="border-t-4 border-t-primary">
+        <CardContent className="pt-6">
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" asChild>
+              <Link href="/admin/v2/internal-apps">Cancel</Link>
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Update Application
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       </form>
     </div>
   )

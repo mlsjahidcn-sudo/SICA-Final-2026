@@ -34,7 +34,8 @@ export interface Document {
 }
 
 interface DocumentUploadProps {
-  applicationId: string;
+  applicationId?: string; // Optional - for linking to application
+  studentId: string; // Required - documents belong to student
   documentType: string;
   label: string;
   description: string;
@@ -74,6 +75,7 @@ function getFileIcon(contentType: string) {
 
 export function DocumentUpload({
   applicationId,
+  studentId,
   documentType,
   label,
   description,
@@ -137,7 +139,10 @@ export function DocumentUpload({
     try {
       const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const formData = new FormData();
-      formData.append('application_id', applicationId);
+      formData.append('student_id', studentId); // Primary identifier
+      if (applicationId) {
+        formData.append('application_id', applicationId); // Optional link
+      }
       formData.append('document_type', documentType);
       formData.append('file', file);
 

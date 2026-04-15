@@ -310,6 +310,16 @@ function LoginForm() {
               Create an account
             </Link>
           </p>
+
+          {/* Partner Registration Link */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-center text-sm text-muted-foreground">
+              Are you an educational agency?{' '}
+              <Link href="/partner/register" className="text-primary hover:underline font-semibold">
+                Register as a Partner
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

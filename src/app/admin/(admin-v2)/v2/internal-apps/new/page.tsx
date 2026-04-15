@@ -16,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
-import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 
 const MISSING_DOC_OPTIONS = [
@@ -107,14 +106,18 @@ function NewInternalAppContent() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/v2/internal-apps">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to List
           </Link>
         </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">New Application</h1>
+          <p className="text-muted-foreground">Create a new internal application</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -354,16 +357,19 @@ function NewInternalAppContent() {
           </CardContent>
         </Card>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" asChild>
-            <Link href="/admin/v2/internal-apps">Cancel</Link>
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Application
-          </Button>
-        </div>
+      <Card className="border-t-4 border-t-primary">
+        <CardContent className="pt-6">
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" asChild>
+              <Link href="/admin/v2/internal-apps">Cancel</Link>
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Application
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       </form>
     </div>
   )

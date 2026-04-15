@@ -2,8 +2,9 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // Email configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.EMAIL_FROM || 'SICA <noreply@sica.edu>';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@sica.edu';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'SICA <noreply@studyinchina.academy>';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@studyinchina.academy';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://studyinchina.academy';
 
 // Document type labels for email templates
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
@@ -124,160 +125,146 @@ export function getApplicationSubmittedTemplate(data: ApplicationEmailData): Ema
   const subject = `Application Submitted - ${data.programName} at ${data.universityName}`;
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application Submitted</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Study In China Academy</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Application Successfully Submitted!</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Application Successfully Submitted!</h2>
-    
-    <p>Dear ${data.studentName},</p>
-    
-    <p>Thank you for submitting your application to <strong>${data.programName}</strong> at <strong>${data.universityName}</strong>.</p>
-    
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-      <p style="margin: 0;"><strong>Application ID:</strong> ${data.applicationId}</p>
-      <p style="margin: 10px 0 0 0;"><strong>Status:</strong> Under Review</p>
-    </div>
-    
-    <h3 style="color: #374151;">What's Next?</h3>
-    <ol style="color: #4b5563;">
-      <li>Our team will review your application and documents</li>
-      <li>You may be contacted for additional information</li>
-      <li>You'll receive updates on your application status via email</li>
-    </ol>
-    
-    <p>You can track your application status by logging into your student portal.</p>
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/student/applications" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      View Your Application
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>Thank you for submitting your application to <strong>${data.programName}</strong> at <strong>${data.universityName}</strong>.</p>
+  
+  <p><strong>Application ID:</strong> ${data.applicationId}<br>
+  <strong>Status:</strong> Under Review</p>
+  
+  <h3>What's Next?</h3>
+  <ol>
+    <li>Our team will review your application and documents</li>
+    <li>You may be contacted for additional information</li>
+    <li>You'll receive updates on your application status via email</li>
+  </ol>
+  
+  <p>Track your application status: <a href="${APP_URL}/student/applications">View Application</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Application Successfully Submitted!
+
+Dear ${data.studentName},
+
+Thank you for submitting your application to ${data.programName} at ${data.universityName}.
+
+Application ID: ${data.applicationId}
+Status: Under Review
+
+What's Next?
+1. Our team will review your application and documents
+2. You may be contacted for additional information
+3. You'll receive updates on your application status via email
+
+Track your application status: View Application
+${APP_URL}/student/applications
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
  * Application status update email
  */
 export function getApplicationStatusUpdateTemplate(data: ApplicationEmailData): EmailPayload {
-  const statusMessages: Record<string, { title: string; color: string }> = {
-    under_review: { title: 'Under Review', color: '#3b82f6' },
-    document_request: { title: 'Additional Documents Required', color: '#f59e0b' },
-    interview_scheduled: { title: 'Interview Scheduled', color: '#8b5cf6' },
-    accepted: { title: 'Congratulations! Accepted', color: '#10b981' },
-    rejected: { title: 'Application Update', color: '#ef4444' },
+  const statusMessages: Record<string, string> = {
+    under_review: 'Under Review',
+    document_request: 'Additional Documents Required',
+    interview_scheduled: 'Interview Scheduled',
+    accepted: 'Congratulations! Accepted',
+    rejected: 'Application Update',
   };
 
-  const statusInfo = statusMessages[data.status || 'under_review'] || statusMessages.under_review;
-  const subject = `Application Update: ${statusInfo.title} - ${data.programName}`;
+  const statusTitle = statusMessages[data.status || 'under_review'] || 'Under Review';
+  const subject = `Application Update: ${statusTitle} - ${data.programName}`;
 
-  let additionalContent = '';
+  let statusDetails = '';
+  let statusDetailsText = '';
 
   if (data.status === 'interview_scheduled' && data.interviewDate) {
-    additionalContent = `
-      <div style="background: #ede9fe; border-left: 4px solid #8b5cf6; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0;"><strong>Interview Date:</strong> ${data.interviewDate}</p>
-        ${data.interviewLink ? `<p style="margin: 10px 0 0 0;"><a href="${data.interviewLink}" style="color: #8b5cf6;">Join Interview</a></p>` : ''}
-      </div>
-    `;
+    statusDetails = `<p><strong>Interview Date:</strong> ${data.interviewDate}</p>`;
+    if (data.interviewLink) {
+      statusDetails += `<p>Join Link: <a href="${data.interviewLink}">${data.interviewLink}</a></p>`;
+    }
+    statusDetailsText = `Interview Date: ${data.interviewDate}\n${data.interviewLink ? `Join Link: ${data.interviewLink}` : ''}`;
   }
 
   if (data.status === 'rejected' && data.rejectionReason) {
-    additionalContent = `
-      <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0;"><strong>Reason:</strong> ${data.rejectionReason}</p>
-      </div>
-    `;
+    statusDetails = `<p><strong>Reason:</strong> ${data.rejectionReason}</p>`;
+    statusDetailsText = `Reason: ${data.rejectionReason}`;
   }
 
   if (data.status === 'accepted') {
-    additionalContent = `
-      <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0;">Congratulations! Your application has been accepted. You will receive further instructions shortly.</p>
-      </div>
-    `;
+    statusDetails = `<p>Congratulations! Your application has been accepted. You will receive further instructions shortly.</p>`;
+    statusDetailsText = 'Congratulations! Your application has been accepted. You will receive further instructions shortly.';
   }
-
+  
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application Status Update</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Study In China Academy</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Application Status Update</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Application Status Update</h2>
-    
-    <p>Dear ${data.studentName},</p>
-    
-    <p>Your application to <strong>${data.programName}</strong> at <strong>${data.universityName}</strong> has been updated.</p>
-    
-    <div style="background: ${statusInfo.color}15; border-left: 4px solid ${statusInfo.color}; padding: 15px; margin: 20px 0;">
-      <p style="margin: 0; font-size: 18px; color: ${statusInfo.color};"><strong>${statusInfo.title}</strong></p>
-      <p style="margin: 10px 0 0 0;"><strong>Application ID:</strong> ${data.applicationId}</p>
-    </div>
-    
-    ${additionalContent}
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/student/applications" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      View Application Details
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>Your application to <strong>${data.programName}</strong> at <strong>${data.universityName}</strong> has been updated.</p>
+  
+  <p><strong>Status:</strong> ${statusTitle}<br>
+  <strong>Application ID:</strong> ${data.applicationId}</p>
+  
+  ${statusDetails}
+  
+  <p>View your application details: <a href="${APP_URL}/student/applications">View Application</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Application Status Update
+
+Dear ${data.studentName},
+
+Your application to ${data.programName} at ${data.universityName} has been updated.
+
+Status: ${statusTitle}
+Application ID: ${data.applicationId}
+
+${statusDetailsText}
+
+View your application details: ${APP_URL}/student/applications
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -290,61 +277,56 @@ export function getDocumentStatusTemplate(data: DocumentEmailData): EmailPayload
     : `Document Requires Attention - ${data.documentType}`;
 
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document Status Update</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Study In China Academy</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Document Status Update</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Document Status Update</h2>
-    
-    <p>Dear ${data.studentName},</p>
-    
-    ${isVerified ? `
-      <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #10b981;"><strong>✓ Your ${data.documentType} has been verified!</strong></p>
-      </div>
-      <p>Great news! Your submitted document has been reviewed and approved by our team.</p>
-    ` : `
-      <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
-        <p style="margin: 0; color: #ef4444;"><strong>✗ Your ${data.documentType} needs revision</strong></p>
-        ${data.rejectionReason ? `<p style="margin: 10px 0 0 0;"><strong>Reason:</strong> ${data.rejectionReason}</p>` : ''}
-      </div>
-      <p>Please log in to your portal to upload a corrected version of your document.</p>
-    `}
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/student/applications" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      ${isVerified ? 'View Application' : 'Update Document'}
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  ${isVerified ? `
+    <p><strong>Your ${data.documentType} has been verified!</strong></p>
+    <p>Great news! Your submitted document has been reviewed and approved by our team.</p>
+  ` : `
+    <p><strong>Your ${data.documentType} needs revision</strong></p>
+    ${data.rejectionReason ? `<p><strong>Reason:</strong> ${data.rejectionReason}</p>` : ''}
+    <p>Please log in to your portal to upload a corrected version of your document.</p>
+  `}
+  
+  <p><a href="${APP_URL}/student/applications">View Application</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Document Status Update
+
+Dear ${data.studentName},
+
+${isVerified ? 
+`Your ${data.documentType} has been verified!
+
+Great news! Your submitted document has been reviewed and approved by our team.` :
+`Your ${data.documentType} needs revision.
+
+${data.rejectionReason ? `Reason: ${data.rejectionReason}\n\n` : ''}Please log in to your portal to upload a corrected version of your document.`
+}
+
+View your applications: ${APP_URL}/student/applications
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -354,60 +336,47 @@ export function getNewApplicationAdminTemplate(data: ApplicationEmailData): Emai
   const subject = `New Application Received - ${data.studentName}`;
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Application</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">SICA Admin</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>New Application Received</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">New Application Received</h2>
-    
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-      <tr>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Student:</strong></td>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.studentName}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Email:</strong></td>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.studentEmail}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Program:</strong></td>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.programName}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>University:</strong></td>
-        <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.universityName}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px 0;"><strong>Application ID:</strong></td>
-        <td style="padding: 10px 0;">${data.applicationId}</td>
-      </tr>
-    </table>
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/admin/applications/${data.applicationId}" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      Review Application
-    </a>
-  </div>
+  <p>A new application has been submitted:</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      This is an automated notification from SICA Admin Portal
-    </p>
-  </div>
-</body>
-</html>
+  <p>
+    <strong>Student:</strong> ${data.studentName}<br>
+    <strong>Email:</strong> ${data.studentEmail}<br>
+    <strong>Program:</strong> ${data.programName}<br>
+    <strong>University:</strong> ${data.universityName}<br>
+    <strong>Application ID:</strong> ${data.applicationId}
+  </p>
+  
+  <p>Review this application: <a href="${APP_URL}/admin/applications/${data.applicationId}">Review Now</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 12px; color: #999;">
+    This is an automated notification from SICA Admin Portal
+  </p>
+</div>
   `;
 
-  return { to: ADMIN_EMAIL, subject, html };
+  const text = `
+New Application Received
+
+A new application has been submitted:
+
+Student: ${data.studentName}
+Email: ${data.studentEmail}
+Program: ${data.programName}
+University: ${data.universityName}
+Application ID: ${data.applicationId}
+
+Review this application: ${APP_URL}/admin/applications/${data.applicationId}
+
+---
+This is an automated notification from SICA Admin Portal
+  `.trim();
+
+  return { to: ADMIN_EMAIL, subject, html, text };
 }
 
 /**
@@ -416,62 +385,65 @@ export function getNewApplicationAdminTemplate(data: ApplicationEmailData): Emai
 export function getWelcomeTemplate(data: { name: string; email: string; role: string }): EmailPayload {
   const subject = 'Welcome to Study In China Academy';
   
-  const roleContent = data.role === 'partner' 
-    ? `<p>As a partner, you can manage student applications and track their progress through our partner portal.</p>`
-    : `<p>As a student, you can explore programs, submit applications, and track your application status through our student portal.</p>`;
+  const roleText = data.role === 'partner' 
+    ? 'As a partner, you can manage student applications and track their progress through our partner portal.'
+    : 'As a student, you can explore programs, submit applications, and track your application status through our student portal.';
 
+  const dashboardUrl = `${APP_URL}/${data.role === 'partner' ? 'partner' : 'student'}/applications`;
+  
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to SICA</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to SICA!</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Welcome to Study In China Academy!</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Hello ${data.name}!</h2>
-    
-    <p>Welcome to <strong>Study In China Academy</strong>! We're excited to have you on board.</p>
-    
-    ${roleContent}
-    
-    <h3 style="color: #374151;">Getting Started:</h3>
-    <ol style="color: #4b5563;">
-      <li>Complete your profile information</li>
-      <li>Browse available programs</li>
-      <li>${data.role === 'partner' ? 'Connect with students' : 'Submit your first application'}</li>
-    </ol>
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/${data.role === 'partner' ? 'partner' : 'student'}/applications" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      Go to Dashboard
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Hello ${data.name}!</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>Welcome to <strong>Study In China Academy</strong>! We're excited to have you on board.</p>
+  
+  <p>${roleText}</p>
+  
+  <h3>Getting Started:</h3>
+  <ol>
+    <li>Complete your profile information</li>
+    <li>Browse available programs</li>
+    <li>${data.role === 'partner' ? 'Connect with students' : 'Submit your first application'}</li>
+  </ol>
+  
+  <p>Go to your dashboard: <a href="${dashboardUrl}">Dashboard</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.email, subject, html };
+  const text = `
+Welcome to Study In China Academy!
+
+Hello ${data.name}!
+
+Welcome to Study In China Academy! We're excited to have you on board.
+
+${roleText}
+
+Getting Started:
+1. Complete your profile information
+2. Browse available programs
+3. ${data.role === 'partner' ? 'Connect with students' : 'Submit your first application'}
+
+Go to your dashboard: ${dashboardUrl}
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.email, subject, html, text };
 }
 
 /**
@@ -493,102 +465,91 @@ export function getMeetingScheduledTemplate(data: {
 }): EmailPayload {
   const subject = `Interview Scheduled: ${data.meetingTitle} - ${data.programName}`;
   
+  const platformName = data.platform ? data.platform.replace('_', ' ') : '';
+  
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meeting Scheduled</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Interview Scheduled</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Interview Scheduled</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Dear ${data.studentName},</h2>
-    
-    <p>Your interview for <strong>${data.programName}</strong> at <strong>${data.universityName}</strong> has been scheduled.</p>
-    
-    <div style="background: #ede9fe; border-left: 4px solid #8b5cf6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-      <h3 style="margin: 0 0 15px 0; color: #6d28d9;">${data.meetingTitle}</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="padding: 8px 0; color: #6b7280;"><strong>📅 Date:</strong></td>
-          <td style="padding: 8px 0;">${data.meetingDate}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #6b7280;"><strong>🕐 Time:</strong></td>
-          <td style="padding: 8px 0;">${data.meetingTime}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #6b7280;"><strong>⏱️ Duration:</strong></td>
-          <td style="padding: 8px 0;">${data.duration}</td>
-        </tr>
-        ${data.platform ? `
-        <tr>
-          <td style="padding: 8px 0; color: #6b7280;"><strong>💻 Platform:</strong></td>
-          <td style="padding: 8px 0; text-transform: capitalize;">${data.platform.replace('_', ' ')}</td>
-        </tr>
-        ` : ''}
-      </table>
-    </div>
-    
-    ${data.meetingUrl ? `
-    <div style="background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #16a34a;">Join Your Meeting</p>
-      <a href="${data.meetingUrl}" 
-         style="display: inline-block; background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        Join Now
-      </a>
-      <p style="margin: 15px 0 0 0; font-size: 12px; color: #6b7280; word-break: break-all;">Or copy link: ${data.meetingUrl}</p>
-    </div>
-    ` : ''}
-    
-    ${(data.meetingId || data.meetingPassword) ? `
-    <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; margin: 20px 0; border-radius: 8px;">
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #374151;">Meeting Details:</p>
-      ${data.meetingId ? `<p style="margin: 5px 0;"><strong>Meeting ID:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${data.meetingId}</code></p>` : ''}
-      ${data.meetingPassword ? `<p style="margin: 5px 0;"><strong>Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${data.meetingPassword}</code></p>` : ''}
-    </div>
-    ` : ''}
-    
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-      <p style="margin: 0; color: #92400e;"><strong>⚠️ Important:</strong></p>
-      <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
-        <li>Please join the meeting 5 minutes before the scheduled time</li>
-        <li>Ensure you have a stable internet connection</li>
-        <li>Test your camera and microphone beforehand</li>
-        <li>Find a quiet environment for the interview</li>
-      </ul>
-    </div>
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/student/meetings" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      View All Meetings
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you need to reschedule or have questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
+  <p>Your interview for <strong>${data.programName}</strong> at <strong>${data.universityName}</strong> has been scheduled.</p>
+  
+  <h3>${data.meetingTitle}</h3>
+  
+  <p>
+    <strong>Date:</strong> ${data.meetingDate}<br>
+    <strong>Time:</strong> ${data.meetingTime}<br>
+    <strong>Duration:</strong> ${data.duration}
+    ${platformName ? `<br><strong>Platform:</strong> ${platformName}` : ''}
+  </p>
+  
+  ${data.meetingUrl ? `
+    <p><strong>Join Meeting:</strong> <a href="${data.meetingUrl}">Join Now</a></p>
+  ` : ''}
+  
+  ${data.meetingId || data.meetingPassword ? `
+    <p>
+      ${data.meetingId ? `<strong>Meeting ID:</strong> ${data.meetingId}<br>` : ''}
+      ${data.meetingPassword ? `<strong>Password:</strong> ${data.meetingPassword}` : ''}
     </p>
-  </div>
-</body>
-</html>
+  ` : ''}
+  
+  <h3>Important:</h3>
+  <ul>
+    <li>Please join the meeting 5 minutes before the scheduled time</li>
+    <li>Ensure you have a stable internet connection</li>
+    <li>Test your camera and microphone beforehand</li>
+    <li>Find a quiet environment for the interview</li>
+  </ul>
+  
+  <p>View all your meetings: <a href="${APP_URL}/student/meetings">View Meetings</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you need to reschedule or have questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Interview Scheduled
+
+Dear ${data.studentName},
+
+Your interview for ${data.programName} at ${data.universityName} has been scheduled.
+
+${data.meetingTitle}
+
+Date: ${data.meetingDate}
+Time: ${data.meetingTime}
+Duration: ${data.duration}
+${platformName ? `Platform: ${platformName}\n` : ''}
+
+${data.meetingUrl ? `Join Meeting: ${data.meetingUrl}\n\n` : ''}
+
+${data.meetingId || data.meetingPassword ? 
+`${data.meetingId ? `Meeting ID: ${data.meetingId}\n` : ''}${data.meetingPassword ? `Password: ${data.meetingPassword}\n` : ''}\n` : ''}
+
+Important:
+- Please join the meeting 5 minutes before the scheduled time
+- Ensure you have a stable internet connection
+- Test your camera and microphone beforehand
+- Find a quiet environment for the interview
+
+View all your meetings: ${APP_URL}/student/meetings
+
+---
+If you need to reschedule or have questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -605,77 +566,81 @@ export function getMeetingReminderTemplate(data: {
   meetingUrl?: string;
   timeUntil: string;
 }): EmailPayload {
-  const subject = `⏰ Reminder: ${data.meetingTitle} ${data.timeUntil}`;
+  const subject = `Reminder: ${data.meetingTitle} ${data.timeUntil}`;
+  
+  const platformName = data.platform ? data.platform.replace('_', ' ') : '';
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meeting Reminder</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">⏰ Meeting Reminder</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Meeting Reminder</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Hi ${data.studentName},</h2>
-    
-    <p>This is a friendly reminder that you have an interview scheduled <strong>${data.timeUntil}</strong>.</p>
-    
-    <div style="background: #ede9fe; border-left: 4px solid #8b5cf6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-      <h3 style="margin: 0 0 15px 0; color: #6d28d9;">${data.meetingTitle}</h3>
-      <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${data.meetingDate}</p>
-      <p style="margin: 5px 0;"><strong>🕐 Time:</strong> ${data.meetingTime}</p>
-      <p style="margin: 5px 0;"><strong>⏱️ Duration:</strong> ${data.duration}</p>
-      ${data.platform ? `<p style="margin: 5px 0;"><strong>💻 Platform:</strong> <span style="text-transform: capitalize;">${data.platform.replace('_', ' ')}</span></p>` : ''}
-    </div>
-    
-    ${data.meetingUrl ? `
-    <div style="text-align: center; margin: 25px 0;">
-      <a href="${data.meetingUrl}" 
-         style="display: inline-block; background: #22c55e; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-        Join Meeting Now
-      </a>
-    </div>
-    ` : ''}
-    
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-      <p style="margin: 0; color: #92400e;"><strong>Quick Tips:</strong></p>
-      <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
-        <li>Test your audio and video before the meeting</li>
-        <li>Join 5 minutes early to check your connection</li>
-        <li>Have your documents ready if needed</li>
-      </ul>
-    </div>
-    
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/student/meetings" 
-       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-      View Meeting Details
-    </a>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      Questions? Contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Hi ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>This is a friendly reminder that you have an interview scheduled <strong>${data.timeUntil}</strong>.</p>
+  
+  <h3>${data.meetingTitle}</h3>
+  
+  <p>
+    <strong>Date:</strong> ${data.meetingDate}<br>
+    <strong>Time:</strong> ${data.meetingTime}<br>
+    <strong>Duration:</strong> ${data.duration}
+    ${platformName ? `<br><strong>Platform:</strong> ${platformName}` : ''}
+  </p>
+  
+  ${data.meetingUrl ? `
+    <p><strong>Join Meeting:</strong> <a href="${data.meetingUrl}">Join Now</a></p>
+  ` : ''}
+  
+  <h3>Quick Tips:</h3>
+  <ul>
+    <li>Test your audio and video before the meeting</li>
+    <li>Join 5 minutes early to check your connection</li>
+    <li>Have your documents ready if needed</li>
+  </ul>
+  
+  <p>View meeting details: <a href="${APP_URL}/student/meetings">View Meetings</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    Questions? Contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Meeting Reminder
+
+Hi ${data.studentName},
+
+This is a friendly reminder that you have an interview scheduled ${data.timeUntil}.
+
+${data.meetingTitle}
+
+Date: ${data.meetingDate}
+Time: ${data.meetingTime}
+Duration: ${data.duration}
+${platformName ? `Platform: ${platformName}\n` : ''}
+
+${data.meetingUrl ? `Join Meeting: ${data.meetingUrl}\n\n` : ''}
+
+Quick Tips:
+- Test your audio and video before the meeting
+- Join 5 minutes early to check your connection
+- Have your documents ready if needed
+
+View meeting details: ${APP_URL}/student/meetings
+
+---
+Questions? Contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -690,50 +655,44 @@ export function getMeetingCancelledTemplate(data: {
   const subject = `Meeting Cancelled: ${data.meetingTitle}`;
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meeting Cancelled</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #ef4444; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Meeting Cancelled</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Meeting Cancelled</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Dear ${data.studentName},</h2>
-    
-    <p>We regret to inform you that your meeting "<strong>${data.meetingTitle}</strong>" has been cancelled.</p>
-    
-    ${data.reason ? `
-    <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
-      <p style="margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
-    </div>
-    ` : ''}
-    
-    <p>A new meeting will be scheduled soon. You will receive a notification when a new time is available.</p>
-    
-    <p>If you have any questions or would like to reschedule, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a></p>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>We regret to inform you that your meeting "<strong>${data.meetingTitle}</strong>" has been cancelled.</p>
+  
+  ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
+  
+  <p>A new meeting will be scheduled soon. You will receive a notification when a new time is available.</p>
+  
+  <p>If you have any questions or would like to reschedule, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a></p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Meeting Cancelled
+
+Dear ${data.studentName},
+
+We regret to inform you that your meeting "${data.meetingTitle}" has been cancelled.
+
+${data.reason ? `Reason: ${data.reason}\n\n` : ''}
+
+A new meeting will be scheduled soon. You will receive a notification when a new time is available.
+
+If you have any questions or would like to reschedule, please contact us at info@studyinchina.academy
+
+---
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -747,67 +706,64 @@ export function getAssessmentSubmittedTemplate(data: {
   const subject = `Free Assessment Submitted - ${data.trackingCode}`;
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assessment Submitted</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🎓 Assessment Received</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Assessment Received</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Dear ${data.studentName},</h2>
-    
-    <p>Thank you for submitting your free assessment request to <strong>Study In China Academy</strong>!</p>
-    
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-      <p style="margin: 0; color: #92400e;"><strong>Your Tracking Code:</strong></p>
-      <p style="margin: 10px 0 0 0; font-size: 24px; font-family: monospace; color: #f59e0b; font-weight: bold;">${data.trackingCode}</p>
-    </div>
-    
-    <h3 style="color: #374151;">What Happens Next?</h3>
-    <ol style="color: #4b5563;">
-      <li>Our AI will analyze your academic profile and preferences</li>
-      <li>We'll generate personalized university recommendations</li>
-      <li>You'll receive your comprehensive assessment report within 24-48 hours</li>
-    </ol>
-    
-    <div style="background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #16a34a;">Track Your Assessment</p>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/assessment/track?code=${data.trackingCode}" 
-         style="display: inline-block; background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        Check Status
-      </a>
-    </div>
-    
-    <p style="color: #6b7280; font-size: 14px;">
-      Please save your tracking code. You'll need it along with your email to check your assessment status.
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>Thank you for submitting your free assessment request to <strong>Study In China Academy</strong>!</p>
+  
+  <p><strong>Your Tracking Code:</strong> ${data.trackingCode}</p>
+  
+  <h3>What Happens Next?</h3>
+  <ol>
+    <li>Our AI will analyze your academic profile and preferences</li>
+    <li>We'll generate personalized university recommendations</li>
+    <li>You'll receive your comprehensive assessment report within 24-48 hours</li>
+  </ol>
+  
+  <p>Track your assessment: <a href="${APP_URL}/assessment/track?code=${data.trackingCode}">Check Status</a></p>
+  
+  <p style="font-size: 14px; color: #666;">
+    Please save your tracking code. You'll need it along with your email to check your assessment status.
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Assessment Received
+
+Dear ${data.studentName},
+
+Thank you for submitting your free assessment request to Study In China Academy!
+
+Your Tracking Code: ${data.trackingCode}
+
+What Happens Next?
+1. Our AI will analyze your academic profile and preferences
+2. We'll generate personalized university recommendations
+3. You'll receive your comprehensive assessment report within 24-48 hours
+
+Track your assessment: ${APP_URL}/assessment/track?code=${data.trackingCode}
+
+Please save your tracking code. You'll need it along with your email to check your assessment status.
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 /**
@@ -818,69 +774,67 @@ export function getAssessmentReportReadyTemplate(data: {
   studentEmail: string;
   trackingCode: string;
 }): EmailPayload {
-  const subject = `Your Assessment Report is Ready! 🎉`;
+  const subject = `Your Assessment Report is Ready!`;
   
   const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assessment Report Ready</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🎉 Your Report is Ready!</h1>
-  </div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Your Report is Ready!</h2>
   
-  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <h2 style="color: #1f2937; margin-top: 0;">Dear ${data.studentName},</h2>
-    
-    <p>Great news! Your personalized assessment report has been generated and is ready for review.</p>
-    
-    <div style="background: #d1fae5; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-      <h3 style="margin: 0 0 15px 0; color: #16a34a;">Your Report Includes:</h3>
-      <ul style="margin: 0; padding-left: 20px; color: #166534;">
-        <li>Personalized university recommendations</li>
-        <li>Scholarship eligibility assessment</li>
-        <li>Application timeline & checklist</li>
-        <li>Cost estimates & budget planning</li>
-        <li>Practical tips for success</li>
-      </ul>
-    </div>
-    
-    <div style="background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #16a34a;">View Your Report</p>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sica.edu'}/assessment/track?code=${data.trackingCode}" 
-         style="display: inline-block; background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-        Access Report
-      </a>
-    </div>
-    
-    <p style="color: #6b7280; font-size: 14px;">
-      For the complete detailed report with all recommendations and personalized guidance, please contact our team via WhatsApp or email.
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-      If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy" style="color: #f59e0b;">info@studyinchina.academy</a>
-    </p>
-    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-      Best regards,<br><strong>Team SICA</strong>
-    </p>
-  </div>
+  <p>Dear ${data.studentName},</p>
   
-  <div style="background: #f9fafb; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-      © ${new Date().getFullYear()} Study In China Academy. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>
+  <p>Great news! Your personalized assessment report has been generated and is ready for review.</p>
+  
+  <h3>Your Report Includes:</h3>
+  <ul>
+    <li>Personalized university recommendations</li>
+    <li>Scholarship eligibility assessment</li>
+    <li>Application timeline & checklist</li>
+    <li>Cost estimates & budget planning</li>
+    <li>Practical tips for success</li>
+  </ul>
+  
+  <p>View your report: <a href="${APP_URL}/assessment/track?code=${data.trackingCode}">Access Report</a></p>
+  
+  <p style="font-size: 14px; color: #666;">
+    For the complete detailed report with all recommendations and personalized guidance, please contact our team via WhatsApp or email.
+  </p>
+  
+  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+  <p style="font-size: 14px; color: #666;">
+    If you have any questions, please contact us at <a href="mailto:info@studyinchina.academy">info@studyinchina.academy</a>
+  </p>
+  
+  <p>Best regards,<br><strong>Team SICA</strong></p>
+</div>
   `;
 
-  return { to: data.studentEmail, subject, html };
+  const text = `
+Your Report is Ready!
+
+Dear ${data.studentName},
+
+Great news! Your personalized assessment report has been generated and is ready for review.
+
+Your Report Includes:
+- Personalized university recommendations
+- Scholarship eligibility assessment
+- Application timeline & checklist
+- Cost estimates & budget planning
+- Practical tips for success
+
+View your report: ${APP_URL}/assessment/track?code=${data.trackingCode}
+
+For the complete detailed report with all recommendations and personalized guidance, please contact our team via WhatsApp or email.
+
+---
+If you have any questions, please contact us at info@studyinchina.academy
+
+Best regards,
+Team SICA
+  `.trim();
+
+  return { to: data.studentEmail, subject, html, text };
 }
 
 export { ADMIN_EMAIL };

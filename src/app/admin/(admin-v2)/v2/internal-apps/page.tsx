@@ -472,20 +472,27 @@ export default function InternalAppsPage() {
   }
 
   return (
-    <SidebarProvider>
-      <TooltipProvider>
-        <AppSidebar />
+    <TooltipProvider>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
         <SidebarInset>
           <SiteHeader title="Internal Applications" />
           <Suspense fallback={
-            <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           }>
             <InternalAppsListContent />
           </Suspense>
         </SidebarInset>
-      </TooltipProvider>
-    </SidebarProvider>
+      </SidebarProvider>
+    </TooltipProvider>
   )
 }

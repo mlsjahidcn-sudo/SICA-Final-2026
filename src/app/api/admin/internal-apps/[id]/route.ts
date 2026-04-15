@@ -88,8 +88,8 @@ export async function PUT(
     if (portal_link !== undefined) updateData.portal_link = portal_link;
     if (partner !== undefined) updateData.partner = partner;
     if (note !== undefined) updateData.note = note;
-    if (application_date !== undefined) updateData.application_date = application_date;
-    if (follow_up_date !== undefined) updateData.follow_up_date = follow_up_date;
+    if (application_date !== undefined) updateData.application_date = application_date || null;
+    if (follow_up_date !== undefined) updateData.follow_up_date = follow_up_date || null;
     if (comments !== undefined) updateData.comments = comments;
 
     const { data, error } = await supabase

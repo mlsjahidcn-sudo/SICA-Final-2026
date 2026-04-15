@@ -105,41 +105,29 @@ export async function GET(request: NextRequest) {
       role: authUser.role
     });
 
-    // Build query - only select columns that exist in the table
+    // Build query - use documents table which has student_id
     let query = supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
         application_id,
-        document_type,
+        student_id,
+        type,
         file_key,
         file_name,
         file_size,
-        content_type,
+        mime_type,
         status,
         rejection_reason,
         uploaded_at,
+        uploaded_by,
         created_at,
-        updated_at,
-        applications (
-          id,
-          status,
-          student_id,
-          partner_id,
-          programs (
-            id,
-            name,
-            universities (
-              id,
-              name_en
-            )
-          )
-        )
+        updated_at
       `);
 
-    // Filter by application or user
+    // Filter by student (primary) or application (secondary)
     if (applicationId) {
-      // Verify user owns the application or is admin/partner
+      // Get documents for a specific application OR student's documents
       const { data: application } = await supabase
         .from('applications')
         .select('student_id, partner_id')
@@ -177,9 +165,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      query = query.eq('application_id', applicationId);
+      // Get all documents for the student (not just this application)
+      // Documents belong to student, can be reused across applications
+      query = query.eq('student_id', application.student_id);
     } else {
-      // Get all documents for user's applications
+      // Get all documents for user's profile
       if (authUser.role === 'student') {
         const { data: studentRecord } = await supabase
           .from('students')
@@ -190,16 +180,37 @@ export async function GET(request: NextRequest) {
         console.log('[GET Documents] Student record for filtering:', studentRecord);
         
         if (studentRecord) {
-          query = query.eq('applications.student_id', studentRecord.id);
+          query = query.eq('student_id', studentRecord.id);
           console.log('[GET Documents] Filtering by student_id:', studentRecord.id);
         } else {
           // No student record - return empty result
-          query = query.eq('applications.student_id', '00000000-0000-0000-0000-000000000000');
+          query = query.eq('student_id', '00000000-0000-0000-0000-000000000000');
           console.log('[GET Documents] No student record found, returning empty result');
         }
       } else if (authUser.role === 'partner') {
-        // applications.partner_id stores users.id
-        query = query.eq('applications.partner_id', authUser.id);
+        // Partners see documents of students they referred
+        const { data: referredStudents } = await supabase
+          .from('users')
+          .select('id')
+          .eq('referred_by_partner_id', authUser.id);
+        
+        const studentUserIds = (referredStudents || []).map(u => u.id);
+        
+        if (studentUserIds.length > 0) {
+          const { data: studentRecords } = await supabase
+            .from('students')
+            .select('id')
+            .in('user_id', studentUserIds);
+          
+          const studentIds = (studentRecords || []).map(s => s.id);
+          if (studentIds.length > 0) {
+            query = query.in('student_id', studentIds);
+          } else {
+            query = query.eq('student_id', '00000000-0000-0000-0000-000000000000');
+          }
+        } else {
+          query = query.eq('student_id', '00000000-0000-0000-0000-000000000000');
+        }
       }
       // Admin can see all documents
     }
@@ -246,7 +257,13 @@ export async function GET(request: NextRequest) {
             url = urlData?.publicUrl || null;
           }
         }
-        return { ...doc, url };
+        // Map field names to match expected format
+        return {
+          ...doc,
+          document_type: doc.type,
+          content_type: doc.mime_type,
+          url
+        };
       })
     );
 
@@ -268,7 +285,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Upload a document
+// POST - Upload a document to student profile
 export async function POST(request: NextRequest) {
   try {
     const authUser = await verifyAuthToken(request);
@@ -277,17 +294,18 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const applicationId = formData.get('application_id') as string;
+    const studentId = formData.get('student_id') as string; // Primary identifier
+    const applicationId = formData.get('application_id') as string | null; // Optional link
     const documentType = formData.get('document_type') as string;
     const file = formData.get('file') as File;
 
-    console.log('Document upload - application_id:', applicationId, 'document_type:', documentType, 'file:', file ? `${file.name} (${file.size} bytes, ${file.type})` : 'missing');
+    console.log('Document upload - student_id:', studentId, 'application_id:', applicationId, 'document_type:', documentType, 'file:', file ? `${file.name} (${file.size} bytes, ${file.type})` : 'missing');
 
-    if (!applicationId || !documentType || !file) {
-      console.log('Missing required fields:', { applicationId: !!applicationId, documentType: !!documentType, file: !!file });
+    if (!studentId || !documentType || !file) {
+      console.log('Missing required fields:', { studentId: !!studentId, documentType: !!documentType, file: !!file });
       return NextResponse.json({ 
-        error: 'Application ID, document type, and file are required',
-        details: { applicationId: !!applicationId, documentType: !!documentType, file: !!file }
+        error: 'Student ID, document type, and file are required',
+        details: { studentId: !!studentId, documentType: !!documentType, file: !!file }
       }, { status: 400 });
     }
 
@@ -327,18 +345,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // Verify user owns the application or is partner/admin
-    const { data: application, error: appError } = await supabase
-      .from('applications')
-      .select('student_id, partner_id, status')
-      .eq('id', applicationId)
+    // Verify student exists
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, user_id')
+      .eq('id', studentId)
       .single();
 
-    if (appError || !application) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    if (studentError || !student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Check ownership
+    // Check ownership - student can upload to their own profile
+    // Admin can upload to any student
+    // Partner can upload to students they referred
     let isOwner = false;
     if (authUser.role === 'student') {
       const { data: studentRecord } = await supabase
@@ -346,31 +366,40 @@ export async function POST(request: NextRequest) {
         .select('id')
         .eq('user_id', authUser.id)
         .maybeSingle();
-      isOwner = studentRecord?.id === application.student_id;
+      isOwner = studentRecord?.id === studentId;
     } else if (authUser.role === 'partner') {
-      // Use proper partner access control
-      const partnerAuthResult = await verifyPartnerAuth(request);
-      if ('error' in partnerAuthResult) {
-        return partnerAuthResult.error;
-      }
-      isOwner = await canPartnerAccessApplication(
-        partnerAuthResult.user,
-        application.student_id,
-        application.partner_id,
-        supabase
-      );
+      // Check if partner referred this student
+      const { data: userRec } = await supabase
+        .from('users')
+        .select('referred_by_partner_id')
+        .eq('id', student.user_id)
+        .maybeSingle();
+      isOwner = userRec?.referred_by_partner_id === authUser.id;
     }
 
     if (!isOwner && authUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden - can only upload to your own profile or students you referred' }, { status: 403 });
+    }
+
+    // If application_id provided, verify it belongs to this student
+    if (applicationId) {
+      const { data: application } = await supabase
+        .from('applications')
+        .select('student_id')
+        .eq('id', applicationId)
+        .single();
+      
+      if (!application || application.student_id !== studentId) {
+        return NextResponse.json({ error: 'Application does not belong to this student' }, { status: 400 });
+      }
     }
 
     // Check if document already exists for this type (to replace it)
     const { data: existingDoc } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select('id, file_key')
-      .eq('application_id', applicationId)
-      .eq('document_type', normalizedDocType) // Use normalized type
+      .eq('student_id', studentId)
+      .eq('type', normalizedDocType)
       .maybeSingle();
 
     // If replacing, delete old file from storage
@@ -382,10 +411,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate file path in Supabase Storage: {application_id}/{document_type}_{timestamp}.{ext}
+    // Generate file path in Supabase Storage: {student_id}/{document_type}_{timestamp}.{ext}
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `${applicationId}/${normalizedDocType}_${timestamp}_${sanitizedFileName}`;
+    const filePath = `${studentId}/${normalizedDocType}_${timestamp}_${sanitizedFileName}`;
 
     // Upload to Supabase Storage
     const arrayBuffer = await file.arrayBuffer();
@@ -439,17 +468,19 @@ export async function POST(request: NextRequest) {
       publicUrl = urlData?.publicUrl || '';
     }
 
-    // Upsert document record - only use columns that exist in the table
+    // Upsert document record using documents table
     const docRecord: Record<string, unknown> = {
-      application_id: applicationId,
-      document_type: normalizedDocType, // Use normalized type
+      student_id: studentId,
+      application_id: applicationId || null, // Optional link to application
+      type: normalizedDocType, // Use 'type' field
       file_key: filePath,
       file_name: file.name,
       file_size: file.size,
-      content_type: file.type,
+      mime_type: file.type, // Use 'mime_type' field
       status: 'pending',
       uploaded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      uploaded_by: authUser.id, // Track who uploaded the document
     };
 
     // If replacing an existing document, include the id for upsert
@@ -457,7 +488,7 @@ export async function POST(request: NextRequest) {
     if (existingDoc?.id) {
       // Update existing record
       const { data, error } = await supabase
-        .from('application_documents')
+        .from('documents')
         .update(docRecord)
         .eq('id', existingDoc.id)
         .select()
@@ -466,7 +497,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Insert new record
       const { data, error } = await supabase
-        .from('application_documents')
+        .from('documents')
         .insert(docRecord)
         .select()
         .single();
@@ -484,8 +515,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save document', details: result.error.message }, { status: 500 });
     }
 
+    // Map field names for response
+    const responseDoc = {
+      ...result.data,
+      document_type: result.data.type,
+      content_type: result.data.mime_type,
+      url: publicUrl
+    };
+
     return NextResponse.json({ 
-      document: { ...result.data, url: publicUrl },
+      document: responseDoc,
       message: 'Document uploaded successfully'
     });
   } catch (error) {
@@ -513,12 +552,11 @@ export async function DELETE(request: NextRequest) {
 
     // Get document and verify ownership
     const { data: docRecord, error: docError } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
         file_key,
-        application_id,
-        applications!inner(student_id, partner_id)
+        student_id
       `)
       .eq('id', documentId)
       .single();
@@ -527,9 +565,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // Check ownership
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const appData = docRecord.applications as any;
+    // Check ownership - can delete if student owns it, admin, or partner who referred
     let isOwner = false;
     
     console.log('[DELETE Document] Auth user:', {
@@ -537,9 +573,8 @@ export async function DELETE(request: NextRequest) {
       email: authUser.email,
       role: authUser.role
     });
-    console.log('[DELETE Document] Application data:', {
-      student_id: appData.student_id,
-      partner_id: appData.partner_id
+    console.log('[DELETE Document] Document data:', {
+      student_id: docRecord.student_id
     });
     
     if (authUser.role === 'student') {
@@ -552,44 +587,27 @@ export async function DELETE(request: NextRequest) {
       console.log('[DELETE Document] Student record:', studentRecord);
       console.log('[DELETE Document] Ownership check:', {
         studentRecordId: studentRecord?.id,
-        appStudentId: appData.student_id,
-        isMatch: studentRecord?.id === appData.student_id
+        docStudentId: docRecord.student_id,
+        isMatch: studentRecord?.id === docRecord.student_id
       });
       
-      // Auto-fix: Create missing student record for student users
-      if (!studentRecord) {
-        console.log('[DELETE Document] Auto-fixing missing student record for user:', authUser.id);
-        const { data: newStudent, error: createError } = await supabase
-          .from('students')
-          .insert({
-            user_id: authUser.id,
-            email: authUser.email,
-          })
-          .select('id')
-          .single();
-        
-        if (createError) {
-          console.error('[DELETE Document] Failed to auto-create student record:', createError);
-        } else {
-          console.log('[DELETE Document] Created student record:', newStudent?.id);
-          // Re-check ownership with the new student record
-          isOwner = newStudent?.id === appData.student_id;
-        }
-      } else {
-        isOwner = studentRecord.id === appData.student_id;
-      }
+      isOwner = studentRecord?.id === docRecord.student_id;
     } else if (authUser.role === 'partner') {
-      // Use proper partner access control
-      const partnerAuthResult = await verifyPartnerAuth(request);
-      if ('error' in partnerAuthResult) {
-        return partnerAuthResult.error;
+      // Check if partner referred this student
+      const { data: studentRec } = await supabase
+        .from('students')
+        .select('user_id')
+        .eq('id', docRecord.student_id)
+        .maybeSingle();
+      
+      if (studentRec?.user_id) {
+        const { data: userRec } = await supabase
+          .from('users')
+          .select('referred_by_partner_id')
+          .eq('id', studentRec.user_id)
+          .maybeSingle();
+        isOwner = userRec?.referred_by_partner_id === authUser.id;
       }
-      isOwner = await canPartnerAccessApplication(
-        partnerAuthResult.user,
-        appData.student_id,
-        appData.partner_id,
-        supabase
-      );
     }
 
     console.log('[DELETE Document] Final check:', {
@@ -605,7 +623,7 @@ export async function DELETE(request: NextRequest) {
           userRole: authUser.role,
           isOwner,
           reason: authUser.role === 'student' 
-            ? 'Student record not found or does not match application owner'
+            ? 'Document does not belong to you'
             : 'Access denied'
         }
       }, { status: 403 });
@@ -623,7 +641,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete from database
     const { error } = await supabase
-      .from('application_documents')
+      .from('documents')
       .delete()
       .eq('id', documentId);
 
