@@ -60,36 +60,44 @@ export async function PUT(
     // Only allow fields that exist in the external database
     const allowedFields = [
       // Basic Info
-      'name_en', 'name_cn', 'short_name', 'slug', 'established_year',
-      'website_url', 'logo_url', 'cover_image_url', 'og_image', 'image_url',
+      'name_en', 'name_cn', 'short_name', 'slug', 'established_year', 'founded_year',
+      'website_url', 'website', 'logo_url', 'cover_image_url', 'og_image', 'image_url',
       // Location
-      'province', 'city', 'country', 'location',
+      'province', 'city', 'country', 'location', 'address', 'address_en', 'address_cn',
+      'latitude', 'longitude',
       // Classification
       'type', 'category', 'tier',
       // Rankings
-      'ranking_national', 'ranking_world',
+      'ranking_national', 'ranking_world', 'ranking_international',
       // Stats
-      'is_active',
+      'is_active', 'student_count', 'international_student_count', 'faculty_count',
       // Description
-      'description',
+      'description', 'description_en', 'description_cn',
       // Facilities
-      'facilities',
+      'facilities', 'facilities_en', 'facilities_cn',
       // Accommodation
-      'accommodation_available',
+      'accommodation_available', 'accommodation_info', 'accommodation_info_en', 'accommodation_info_cn',
       // Scholarship
       'scholarship_available', 'scholarship_percentage', 'scholarship_by_degree',
+      'scholarship_info', 'scholarship_info_cn',
       // Tuition
       'tuition_min', 'tuition_max', 'tuition_currency',
       'default_tuition_per_year', 'default_tuition_currency', 'use_default_tuition', 'tuition_by_degree',
       // Application
       'has_application_fee', 'application_deadline', 'intake_months',
       'csca_required', 'acceptance_flexibility',
+      // Teaching Languages
+      'teaching_languages',
+      // Contact
+      'contact_email', 'contact_phone',
       // Media
       'images', 'video_urls',
       // SEO
       'meta_title', 'meta_description', 'meta_keywords',
       // Tags
       'tags',
+      // View count
+      'view_count',
     ];
 
     for (const field of allowedFields) {

@@ -169,6 +169,14 @@ const navData = {
         />
       ),
     },
+    {
+      title: "Internal Apps",
+      url: "/admin/v2/internal-apps",
+      icon: (
+        <IconFolder
+        />
+      ),
+    },
   ],
   navClouds: [],
   navSecondary: [

@@ -1,9 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 export function FloatingAssessmentButton() {
+  const pathname = usePathname();
+  const [showButton, setShowButton] = useState(true);
+
+  useEffect(() => {
+    // Hide button on authenticated dashboard pages
+    const isDashboardPage = 
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/student') ||
+      pathname.startsWith('/partner') ||
+      pathname.startsWith('/dashboard');
+    
+    setShowButton(!isDashboardPage);
+  }, [pathname]);
+
+  if (!showButton) {
+    return null;
+  }
+
   return (
     <Link
       href="/assessment"
