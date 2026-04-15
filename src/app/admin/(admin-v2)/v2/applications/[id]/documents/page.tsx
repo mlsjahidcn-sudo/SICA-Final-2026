@@ -27,27 +27,13 @@ import {
   IconCircleCheck,
   IconCircleX
 } from "@tabler/icons-react"
-import { DocumentUpload } from "@/components/document-upload"
+import { DocumentUpload, type Document } from "@/components/document-upload"
 import { 
   DOCUMENT_TYPES, 
   getDocumentTypeLabel, 
   getDocumentTypeDescription,
   getAllowedMimeTypes 
 } from "@/lib/document-types"
-
-interface Document {
-  id: string
-  document_type: string
-  file_key: string
-  file_name: string
-  file_size: number
-  content_type: string
-  status: string
-  rejection_reason: string | null
-  uploaded_at: string
-  created_at: string
-  url?: string
-}
 
 interface ApplicationInfo {
   id: string
@@ -413,9 +399,9 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
   return (
     <SidebarProvider>
       <TooltipProvider>
-        <AppSidebar user={user} />
+        <AppSidebar />
         <SidebarInset>
-          <SiteHeader user={user} />
+          <SiteHeader />
           <main className="flex-1 overflow-auto">
             <DocumentsContent applicationId={resolvedParams.id} />
           </main>
