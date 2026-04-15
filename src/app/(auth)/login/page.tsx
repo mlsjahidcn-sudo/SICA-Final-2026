@@ -24,12 +24,12 @@ import { useAuth } from '@/contexts/auth-context';
 const features = [
   {
     icon: Globe,
-    title: '500+ Universities',
+    title: '200+ Universities',
     description: 'Access top Chinese universities from 985 to Double First-Class institutions.',
   },
   {
     icon: GraduationCap,
-    title: '10,000+ Programs',
+    title: '2,000+ Programs',
     description: 'Find the perfect program in Engineering, Medicine, Business, and more.',
   },
   {

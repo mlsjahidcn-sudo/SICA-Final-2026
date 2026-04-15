@@ -15,7 +15,7 @@ export const metadata = {
 };
 
 const stats = [
-  { value: '50,000+', label: 'Students Placed' },
+  { value: '10,000+', label: 'Students Placed' },
   { value: '500+', label: 'Partner Universities' },
   { value: '100+', label: 'Countries Served' },
   { value: '95%', label: 'Success Rate' },

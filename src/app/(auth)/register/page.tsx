@@ -27,12 +27,12 @@ import { useAuth } from '@/contexts/auth-context';
 const features = [
   {
     icon: Globe,
-    title: '500+ Universities',
+    title: '200+ Universities',
     description: 'Access top Chinese universities from 985 to Double First-Class institutions.',
   },
   {
     icon: GraduationCap,
-    title: '10,000+ Programs',
+    title: '2,000+ Programs',
     description: 'Find the perfect program in Engineering, Medicine, Business, and more.',
   },
   {
@@ -250,7 +250,7 @@ export default function RegisterPage() {
           <div className="mt-12 pt-8 border-t border-white/20">
             <div className="grid grid-cols-3 gap-6">
               <div>
-                <div className="text-3xl font-bold text-white">50K+</div>
+                <div className="text-3xl font-bold text-white">10K+</div>
                 <div className="text-sm text-white/60">Students Placed</div>
               </div>
               <div>

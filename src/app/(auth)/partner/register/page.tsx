@@ -240,7 +240,7 @@ export default function PartnerRegisterPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold text-lg">Global Reach</h3>
-                <p className="text-white/70 text-sm">Access 500+ universities across China</p>
+                <p className="text-white/70 text-sm">Access 200+ universities across China</p>
               </div>
             </div>
 

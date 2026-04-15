@@ -62,7 +62,7 @@ interface FeaturedUniversity {
 const bentoFeatures = [
   {
     icon: Building2,
-    title: '500+ Universities',
+    title: '200+ Universities',
     description: 'Access China\'s top institutions',
     bullets: ['985 & 211 Universities', 'Double First-Class', 'All provinces covered'],
     cta: { text: 'Browse Universities', href: '/universities' },
@@ -71,7 +71,7 @@ const bentoFeatures = [
   },
   {
     icon: BookOpen,
-    title: '10,000+ Programs',
+    title: '2,000+ Programs',
     description: 'Find your perfect program',
     bullets: ['English-taught options', 'All degree levels', 'STEM, Business, Arts'],
     cta: { text: 'Explore Programs', href: '/programs' },
@@ -162,7 +162,7 @@ const universityTypes = [
 ];
 
 const heroStats = [
-  { value: '50K+', label: 'Students Placed' },
+  { value: '10K+', label: 'Students Placed' },
   { value: '500+', label: 'Partner Universities' },
   { value: '95%', label: 'Success Rate' },
   { value: '100+', label: 'Countries' },
@@ -635,7 +635,7 @@ export function HomePageContent() {
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-3 sm:space-y-4">
                     <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">50K+</div>
+                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">10K+</div>
                       <div className="text-xs sm:text-sm text-muted-foreground">Students Placed</div>
                     </div>
                     <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-muted border">
