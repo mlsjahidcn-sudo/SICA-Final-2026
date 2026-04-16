@@ -13,7 +13,7 @@ export default function TermsOfServicePage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-primary/5 via-background to-background py-16 md:py-24">
         <div className="container px-4">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-5xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Terms of Service</h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Terms and conditions for using our platform and services.
@@ -28,7 +28,7 @@ export default function TermsOfServicePage() {
       {/* Main Content */}
       <section className="py-16">
         <div className="container px-4">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <Card>
               <CardContent className="prose prose-slate max-w-none p-8">
               <section className="mb-8">
