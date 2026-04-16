@@ -41,6 +41,7 @@ import {
   LayoutDashboard,
   FileText,
   ChevronRight,
+  Send,
 } from 'lucide-react';
 import {
   IconSparkles,
@@ -89,12 +90,12 @@ export function Header() {
   // Navigation Menu ListItem component
   const ListItem = ({
     title,
-    description,
     href,
+    icon: Icon,
   }: {
     title: string;
-    description: string;
     href: string;
+    icon?: React.ComponentType<{ className?: string }>;
   }) => {
     return (
       <li>
@@ -102,16 +103,12 @@ export function Header() {
           <Link
             href={href}
             className={cn(
-              "block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-all",
-              "hover:bg-muted focus:bg-muted"
+              "flex items-center gap-2 select-none rounded-md px-3 py-2 text-sm font-medium leading-none no-underline outline-none transition-colors",
+              "hover:bg-muted hover:text-primary focus:bg-muted"
             )}
           >
-            <span className="text-sm font-medium leading-none">{title}</span>
-            {description && (
-              <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed mt-1">
-                {description}
-              </p>
-            )}
+            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+            <span>{title}</span>
           </Link>
         </NavigationMenuLink>
       </li>
@@ -120,34 +117,14 @@ export function Header() {
 
   // Program items data
   const degreePrograms = [
-    {
-      title: "Bachelor's Degrees",
-      href: "/programs?degree_type=bachelor",
-      description: "4-year undergraduate programs with diverse majors and scholarships",
-    },
-    {
-      title: "Master's Degrees",
-      href: "/programs?degree_type=master",
-      description: "Graduate programs with research opportunities and thesis tracks",
-    },
-    {
-      title: "PhD Programs",
-      href: "/programs?degree_type=phd",
-      description: "Doctoral research programs across various disciplines",
-    },
+    { title: "Bachelor's Degrees", href: "/programs?degree_type=bachelor" },
+    { title: "Master's Degrees", href: "/programs?degree_type=master" },
+    { title: "PhD Programs", href: "/programs?degree_type=phd" },
   ];
 
   const otherPrograms = [
-    {
-      title: "Language Programs",
-      href: "/programs?degree_type=language",
-      description: "Chinese language courses for international students",
-    },
-    {
-      title: "Short-term Programs",
-      href: "/programs?degree_type=short_term",
-      description: "Summer schools, exchange programs, and winter camps",
-    },
+    { title: "Language Programs", href: "/programs?degree_type=language" },
+    { title: "Short-term Programs", href: "/programs?degree_type=short_term" },
   ];
 
   // Mobile navigation items with icons
@@ -191,7 +168,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <NavigationMenu className="hidden lg:flex">
+        <NavigationMenu className="hidden lg:flex" viewport={false}>
           <NavigationMenuList>
             {/* Free Assessment - Highlighted */}
             <NavigationMenuItem>
@@ -216,51 +193,36 @@ export function Header() {
                 Programs
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="grid w-[600px] gap-1 p-2 md:grid-cols-2 lg:grid-cols-2">
-                  {/* Degree Programs Section */}
-                  <li className="col-span-2">
-                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Degree Programs
+                <ul className="w-56 p-2">
+                  {/* Degree Programs */}
+                  <li>
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Degree
                     </div>
                   </li>
                   {degreePrograms.map((program) => (
-                    <ListItem
-                      key={program.href}
-                      title={program.title}
-                      description={program.description}
-                      href={program.href}
-                    />
+                    <ListItem key={program.href} title={program.title} href={program.href} />
                   ))}
-                  
-                  {/* Other Programs Section */}
-                  <li className="col-span-2 mt-2">
-                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Other Programs
+
+                  {/* Other Programs */}
+                  <li className="mt-2 pt-2 border-t">
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Other
                     </div>
                   </li>
                   {otherPrograms.map((program) => (
-                    <ListItem
-                      key={program.href}
-                      title={program.title}
-                      description={program.description}
-                      href={program.href}
-                    />
+                    <ListItem key={program.href} title={program.title} href={program.href} />
                   ))}
-                  
+
                   {/* View All */}
-                  <li className="col-span-2 mt-2 pt-2 border-t">
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/programs"
-                        className={cn(
-                          "flex items-center gap-2 rounded-lg p-3 text-primary font-medium transition-all",
-                          "hover:bg-primary/5"
-                        )}
-                      >
-                        <IconChevronRight className="h-4 w-4" />
-                        View All Programs
-                      </Link>
-                    </NavigationMenuLink>
+                  <li className="mt-2 pt-2 border-t">
+                    <Link
+                      href="/programs"
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <IconChevronRight className="h-3.5 w-3.5" />
+                      View All Programs
+                    </Link>
                   </li>
                 </ul>
               </NavigationMenuContent>
@@ -283,17 +245,9 @@ export function Header() {
                 Resources
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="w-[280px] p-2">
-                  <ListItem
-                    title="Blog"
-                    description="Latest news, guides, and insights about studying in China"
-                    href="/blog"
-                  />
-                  <ListItem
-                    title="Success Cases"
-                    description="Real stories from students who achieved their dreams"
-                    href="/success-cases"
-                  />
+                <ul className="w-48 p-2">
+                  <ListItem title="Blog" href="/blog" icon={IconFileText} />
+                  <ListItem title="Success Cases" href="/success-cases" icon={IconAward} />
                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>
@@ -305,22 +259,10 @@ export function Header() {
                 About
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="w-[280px] p-2">
-                  <ListItem
-                    title="About Us"
-                    description="Learn about our mission and team"
-                    href="/about"
-                  />
-                  <ListItem
-                    title="Partners"
-                    description="Our university and institutional partners"
-                    href="/partners"
-                  />
-                  <ListItem
-                    title="Contact"
-                    description="Get in touch with our team"
-                    href="/contact"
-                  />
+                <ul className="w-48 p-2">
+                  <ListItem title="About Us" href="/about" icon={IconInfoCircle} />
+                  <ListItem title="Partners" href="/partners" icon={IconBuilding} />
+                  <ListItem title="Contact" href="/contact" icon={IconMail} />
                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>
