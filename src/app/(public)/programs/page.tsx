@@ -132,6 +132,34 @@ function ProgramsContent() {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const ITEMS_PER_PAGE = 12;
 
+  // Track URL param changes for navigation from header
+  const currentDegreeParam = searchParams.get('degree_type');
+  const currentUniversityParam = searchParams.get('university_id');
+  
+  useEffect(() => {
+    // Only update if we have a degree param that's different from current selection
+    if (currentDegreeParam && currentDegreeParam !== 'all') {
+      setSelectedDegrees(prev => {
+        if (!prev.includes(currentDegreeParam) && prev.includes('all')) {
+          setPage(1);
+          return [currentDegreeParam];
+        }
+        return prev;
+      });
+    }
+    
+    // Only update if we have a university param that's different from current selection
+    if (currentUniversityParam && currentUniversityParam !== 'all') {
+      setSelectedUniversity(prev => {
+        if (prev !== currentUniversityParam) {
+          setPage(1);
+          return currentUniversityParam;
+        }
+        return prev;
+      });
+    }
+  }, [currentDegreeParam, currentUniversityParam]);
+
   // Debounce search query for auto-filtering
   const debouncedSearch = useDebounce(searchQuery, 400);
 

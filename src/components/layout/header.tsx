@@ -117,14 +117,14 @@ export function Header() {
 
   // Program items data
   const degreePrograms = [
-    { title: "Bachelor's Degrees", href: "/programs?degree_type=bachelor" },
-    { title: "Master's Degrees", href: "/programs?degree_type=master" },
-    { title: "PhD Programs", href: "/programs?degree_type=phd" },
+    { title: "Bachelor's Degrees", href: "/programs?degree_type=Bachelor" },
+    { title: "Master's Degrees", href: "/programs?degree_type=Master" },
+    { title: "PhD Programs", href: "/programs?degree_type=PhD" },
   ];
 
   const otherPrograms = [
-    { title: "Language Programs", href: "/programs?degree_type=language" },
-    { title: "Short-term Programs", href: "/programs?degree_type=short_term" },
+    { title: "Language Programs", href: "/programs?degree_type=Chinese Language" },
+    { title: "Short-term Programs", href: "/programs?degree_type=Diploma" },
   ];
 
   // Mobile navigation items with icons
@@ -145,11 +145,11 @@ export function Header() {
   ];
 
   const programItems = [
-    { label: "Bachelor's Degrees", href: '/programs?degree_type=bachelor' },
-    { label: "Master's Degrees", href: '/programs?degree_type=master' },
-    { label: 'PhD Programs', href: '/programs?degree_type=phd' },
-    { label: 'Language Programs', href: '/programs?degree_type=language' },
-    { label: 'Short-term Programs', href: '/programs?degree_type=short_term' },
+    { label: "Bachelor's Degrees", href: '/programs?degree_type=Bachelor' },
+    { label: "Master's Degrees", href: '/programs?degree_type=Master' },
+    { label: 'PhD Programs', href: '/programs?degree_type=PhD' },
+    { label: 'Language Programs', href: '/programs?degree_type=Chinese Language' },
+    { label: 'Short-term Programs', href: '/programs?degree_type=Diploma' },
   ];
 
   return (
