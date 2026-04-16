@@ -6,7 +6,8 @@ import {
   DOCUMENT_TYPES, 
   getAllowedMimeTypes, 
   getDocumentTypeLabel,
-  normalizeDocumentType 
+  normalizeDocumentType,
+  denormalizeDocumentType 
 } from '@/lib/document-types';
 
 /**
@@ -258,9 +259,12 @@ export async function GET(request: NextRequest) {
           }
         }
         // Map field names to match expected format
+        // Use denormalized type for backward compatibility with frontend
+        const legacyType = denormalizeDocumentType(doc.type);
         return {
           ...doc,
-          document_type: doc.type,
+          document_type: legacyType,
+          original_type: doc.type, // Keep original type for reference
           content_type: doc.mime_type,
           url
         };
@@ -474,10 +478,12 @@ export async function POST(request: NextRequest) {
       application_id: applicationId || null, // Optional link to application
       type: normalizedDocType, // Use 'type' field
       file_key: filePath,
+      file_path: filePath, // Required field for database constraint
+      file_url: publicUrl, // Store the signed/public URL
       file_name: file.name,
       file_size: file.size,
       mime_type: file.type, // Use 'mime_type' field
-      status: 'pending',
+      status: 'verified', // Auto-approve all uploaded documents
       uploaded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       uploaded_by: authUser.id, // Track who uploaded the document

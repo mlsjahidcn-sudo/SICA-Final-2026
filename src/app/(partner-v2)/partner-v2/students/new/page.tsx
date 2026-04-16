@@ -208,14 +208,45 @@ export default function PartnerV2AddStudentPage() {
       } else {
         let errorMsg = 'Failed to create student';
         try {
-          const errData = await response.json();
-          errorMsg = errData.error || `HTTP ${response.status}: ${response.statusText}`;
-        } catch {
+          // First, get the response as text to check if it's empty
+          const responseText = await response.text();
+          console.error('Student creation response:', responseText);
+          
+          if (!responseText || responseText.trim() === '') {
+            errorMsg = `Server returned empty response (HTTP ${response.status}: ${response.statusText})`;
+          } else {
+            try {
+              const errData = JSON.parse(responseText);
+              console.error('Student creation error data:', errData);
+              
+              // Handle validation errors
+              if (errData.details && errData.details.fieldErrors) {
+                const fieldErrors = Object.entries(errData.details.fieldErrors)
+                  .map(([field, errors]) => `${field}: ${(errors as string[]).join(', ')}`)
+                  .join('; ');
+                errorMsg = `Validation failed: ${fieldErrors}`;
+              } else if (errData.details) {
+                errorMsg = `Validation failed: ${JSON.stringify(errData.details)}`;
+              } else if (errData.error) {
+                errorMsg = errData.error;
+                if (errData.details) errorMsg += ` - ${errData.details}`;
+              } else if (errData.message) {
+                errorMsg = errData.message;
+              } else {
+                errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+              }
+            } catch {
+              errorMsg = `Server returned non-JSON response: ${responseText.substring(0, 100)}`;
+            }
+          }
+        } catch (parseErr) {
+          console.error('Failed to parse response:', parseErr);
           errorMsg = `HTTP ${response.status}: ${response.statusText}`;
         }
         toast.error(errorMsg);
       }
     } catch (error) {
+      console.error('Student creation exception:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to create student');
     } finally {
       setIsSubmitting(false);
@@ -223,14 +254,14 @@ export default function PartnerV2AddStudentPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <IconArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold">Add New Student</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Add New Student</h1>
           <p className="text-muted-foreground text-sm">Add a student record. They can claim their account later using their email.</p>
         </div>
       </div>

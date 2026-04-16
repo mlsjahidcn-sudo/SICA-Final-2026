@@ -167,13 +167,27 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
       return;
     }
 
+    if (!application?.students?.id) {
+      toast.error('Application data not loaded. Please refresh the page.');
+      return;
+    }
+
     setIsUploading(true);
     try {
       const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const formData = new FormData();
+      formData.append('student_id', application.students.id);
       formData.append('application_id', resolvedParams.id);
       formData.append('document_type', selectedDocType);
       formData.append('file', selectedFile);
+
+      console.log('[Document Upload] Uploading document:', {
+        student_id: application.students.id,
+        application_id: resolvedParams.id,
+        document_type: selectedDocType,
+        file_name: selectedFile.name,
+        file_size: selectedFile.size
+      });
 
       const response = await fetch('/api/documents', {
         method: 'POST',
@@ -189,8 +203,20 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
         setSelectedFile(null);
         await fetchApplicationAndDocuments();
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to upload document');
+        const responseText = await response.text();
+        console.error('[Document Upload] Error response:', responseText);
+        
+        let errorMsg = 'Failed to upload document';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMsg = errorData.error || errorData.message || errorMsg;
+          if (errorData.details) {
+            errorMsg += `: ${errorData.details}`;
+          }
+        } catch {
+          errorMsg = `Server error (${response.status}): ${responseText.substring(0, 100)}`;
+        }
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error uploading document:', error);

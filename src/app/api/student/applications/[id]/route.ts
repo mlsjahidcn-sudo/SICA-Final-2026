@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
+import { denormalizeDocumentType } from '@/lib/document-types';
 
 // GET /api/student/applications/[id] - Get application details
 export async function GET(
@@ -30,6 +31,25 @@ export async function GET(
     if (!studentRecord) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
+
+    // Get documents from the 'documents' table (new unified table)
+    // Documents belong to student, can be linked to applications
+    const { data: documents } = await supabase
+      .from('documents')
+      .select('id, type, file_name, status, rejection_reason, created_at, file_key')
+      .eq('student_id', studentRecord.id)
+      .order('created_at', { ascending: false });
+
+    // Map document types for backward compatibility
+    const mappedDocuments = (documents || []).map(doc => ({
+      id: doc.id,
+      document_type: denormalizeDocumentType(doc.type),
+      status: doc.status,
+      file_key: doc.file_key,
+      file_name: doc.file_name,
+      rejection_reason: doc.rejection_reason,
+      created_at: doc.created_at
+    }));
 
     const { data: application, error } = await supabase
       .from('applications')
@@ -61,15 +81,6 @@ export async function GET(
             logo_url,
             website_url
           )
-        ),
-        application_documents (
-          id,
-          document_type,
-          status,
-          file_key,
-          file_name,
-          rejection_reason,
-          created_at
         )
       `)
       .eq('id', id)
@@ -96,7 +107,8 @@ export async function GET(
         personal_statement: snapshot.personal_statement || '',
         study_plan: snapshot.study_plan || '',
         intake: snapshot.intake || '',
-        timeline: timeline || []
+        timeline: timeline || [],
+        application_documents: mappedDocuments
       }
     });
 

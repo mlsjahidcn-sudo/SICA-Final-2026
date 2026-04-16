@@ -3,6 +3,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { requireStudent } from '@/lib/auth-utils';
 import { createRateLimitMiddleware, rateLimitPresets } from '@/lib/rate-limit';
 import { errors } from '@/lib/api-response';
+import { denormalizeDocumentType } from '@/lib/document-types';
 
 const uploadRateLimit = createRateLimitMiddleware(rateLimitPresets.upload);
 
@@ -90,9 +91,12 @@ export async function GET(request: NextRequest) {
           }
         }
         // Map field names for compatibility
+        // Use denormalized type for backward compatibility with frontend
+        const legacyType = denormalizeDocumentType(doc.type);
         return {
           ...doc,
-          document_type: doc.type,
+          document_type: legacyType,
+          original_type: doc.type, // Keep original type for reference
           content_type: doc.mime_type,
           url
         };

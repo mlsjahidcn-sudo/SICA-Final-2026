@@ -318,3 +318,44 @@ export const LEGACY_TYPE_MAPPING: Record<string, string> = {
 export function normalizeDocumentType(type: string): string {
   return LEGACY_TYPE_MAPPING[type] || type
 }
+
+/**
+ * Reverse mapping: new unified types -> legacy types
+ * Used for backward compatibility with frontend
+ */
+export const REVERSE_TYPE_MAPPING: Record<string, string> = {
+  'passport_copy': 'passport',
+  'passport_photo': 'photo',
+  'high_school_diploma': 'diploma',
+  'high_school_transcript': 'transcript',
+  'bachelor_diploma': 'diploma',
+  'bachelor_transcript': 'transcript',
+  'master_diploma': 'diploma',
+  'master_transcript': 'transcript',
+  'cv_resume': 'cv',
+  // Keep these as-is since they match
+  'language_certificate': 'language_certificate',
+  'recommendation_letter_1': 'recommendation',
+  'recommendation_letter_2': 'recommendation',
+  'recommendation': 'recommendation',
+  'study_plan': 'study_plan',
+  'personal_statement_doc': 'personal_statement',
+  'financial_proof': 'financial_proof',
+  'bank_statement': 'financial_proof',
+  'sponsor_letter': 'financial_proof',
+  'health_exam': 'medical_exam',
+  'medical_exam': 'medical_exam',
+  'non_criminal_record': 'police_clearance',
+  'police_clearance': 'police_clearance',
+  'hsk_certificate': 'language_certificate',
+  'ielts_toefl_report': 'language_certificate',
+  'research_proposal': 'study_plan',
+  'other': 'other',
+}
+
+/**
+ * Convert new unified document type to legacy type for display
+ */
+export function denormalizeDocumentType(type: string): string {
+  return REVERSE_TYPE_MAPPING[type] || type
+}

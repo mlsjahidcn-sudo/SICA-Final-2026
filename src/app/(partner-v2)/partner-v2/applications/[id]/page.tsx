@@ -29,6 +29,7 @@ import {
   IconEdit,
   IconSend,
   IconTrash,
+  IconDownload,
 } from '@tabler/icons-react';
 import {
   AlertDialog,
@@ -110,6 +111,7 @@ interface TimelineEvent {
 interface Document {
   id: string;
   document_type: string;
+  file_key?: string;
   file_name: string;
   file_size: number;
   content_type: string;
@@ -255,6 +257,39 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       toast.error('Failed to delete application');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    if (!doc.file_key) {
+      toast.error('Document file not available');
+      return;
+    }
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch(`/api/documents/${doc.id}/url`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const url = data.url;
+        if (url) {
+          // Create a temporary link to trigger download
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = doc.file_name;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } else {
+        toast.error('Failed to get download URL');
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Failed to download document');
     }
   };
 
@@ -697,6 +732,14 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            onClick={() => handleDownload(doc)}
+                            title="Download document"
+                          >
+                            <IconDownload className="h-4 w-4" />
+                          </Button>
                           <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
                             ${doc.status === 'verified'
                               ? 'bg-green-100 text-green-800'

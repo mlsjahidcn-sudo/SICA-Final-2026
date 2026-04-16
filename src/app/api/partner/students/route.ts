@@ -265,18 +265,28 @@ export async function GET(request: NextRequest) {
 
 // POST /api/partner/students - Create a new student
 export async function POST(request: NextRequest) {
+  let requestBody: unknown;
+  
   try {
+    // Parse request body first
+    requestBody = await request.json();
+    console.log('[Partner Students API] Creating student with data:', JSON.stringify(requestBody, null, 2));
+    
+    // Verify authentication
     const authResult = await verifyPartnerAuth(request);
-    if ('error' in authResult) return authResult.error;
+    if ('error' in authResult) {
+      console.error('[Partner Students API] Auth failed');
+      return authResult.error;
+    }
     const partnerUser = authResult.user;
 
-    const body = await request.json();
-    
     // Validate input with Zod
-    const validationResult = createStudentSchema.safeParse(body);
+    const validationResult = createStudentSchema.safeParse(requestBody);
     if (!validationResult.success) {
+      const errorDetails = validationResult.error.flatten();
+      console.error('[Partner Students API] Validation failed:', JSON.stringify(errorDetails, null, 2));
       return NextResponse.json(
-        { error: 'Validation failed', details: validationResult.error.flatten() },
+        { error: 'Validation failed', details: errorDetails },
         { status: 400 }
       );
     }
@@ -336,6 +346,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!email || !full_name) {
+      console.error('[Partner Students API] Missing required fields: email or full_name');
       return NextResponse.json(
         { error: 'Email and full name are required' },
         { status: 400 }
@@ -425,10 +436,10 @@ export async function POST(request: NextRequest) {
       graduation_date: graduation_date || null,
       gpa: gpa || null,
       // Language test scores
-      hsk_level: hsk_level ?? null,
-      hsk_score: hsk_score ?? null,
+      hsk_level: hsk_level !== undefined && hsk_level !== '' ? Number(hsk_level) : null,
+      hsk_score: hsk_score !== undefined && hsk_score !== '' ? Number(hsk_score) : null,
       ielts_score: ielts_score || null,
-      toefl_score: toefl_score ?? null,
+      toefl_score: toefl_score !== undefined && toefl_score !== '' ? Number(toefl_score) : null,
       // Family information
       family_members: Array.isArray(family_members) ? family_members : null,
       // Additional information
@@ -511,7 +522,25 @@ export async function POST(request: NextRequest) {
       } 
     }, { status: 201 });
   } catch (error) {
-    console.error('Error in partner students POST:', error);
-    return NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 });
+    console.error('[Partner Students API] Unhandled error:', error);
+    
+    // Provide detailed error message
+    let errorMessage = 'Internal server error';
+    let errorDetails = '';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+      errorDetails = error;
+    } else {
+      errorDetails = JSON.stringify(error);
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage, details: errorDetails },
+      { status: 500 }
+    );
   }
 }

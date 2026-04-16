@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { denormalizeDocumentType } from '@/lib/document-types';
 
 /**
  * Check if a partner user can access a specific application.
@@ -55,6 +56,46 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const supabase = getSupabaseClient();
 
     // Fetch the application first
+    // Get documents from the 'documents' table (new unified table)
+    // Documents belong to student, can be linked to applications
+    const { data: applicationBasic } = await supabase
+      .from('applications')
+      .select('id, student_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    let mappedDocuments: Array<{
+      id: string;
+      document_type: string;
+      file_name: string;
+      file_size: number;
+      content_type: string;
+      status: string;
+      rejection_reason?: string;
+      created_at: string;
+    }> = [];
+
+    if (applicationBasic?.student_id) {
+      const { data: documents } = await supabase
+        .from('documents')
+        .select('id, type, file_key, file_name, file_size, mime_type, status, rejection_reason, created_at')
+        .eq('student_id', applicationBasic.student_id)
+        .order('created_at', { ascending: false });
+
+      // Map document types for backward compatibility
+      mappedDocuments = (documents || []).map(doc => ({
+        id: doc.id,
+        document_type: denormalizeDocumentType(doc.type),
+        file_key: doc.file_key,
+        file_name: doc.file_name,
+        file_size: doc.file_size || 0,
+        content_type: doc.mime_type || '',
+        status: doc.status,
+        rejection_reason: doc.rejection_reason,
+        created_at: doc.created_at
+      }));
+    }
+
     const { data: application, error } = await supabase
       .from('applications')
       .select(`
@@ -114,16 +155,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             email,
             referred_by_partner_id
           )
-        ),
-        application_documents (
-          id,
-          document_type,
-          file_name,
-          file_size,
-          content_type,
-          status,
-          rejection_reason,
-          created_at
         )
       `)
       .eq('id', id)
@@ -180,7 +211,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       intake: snapshot.intake || null,
       programs: Array.isArray(application.programs) ? application.programs[0] : application.programs,
       students: Array.isArray(application.students) ? application.students[0] : application.students,
-      application_documents: Array.isArray(application.application_documents) ? application.application_documents : [],
+      application_documents: mappedDocuments,
     };
 
     return NextResponse.json({ application: normalizedApplication });

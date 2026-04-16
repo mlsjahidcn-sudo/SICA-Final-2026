@@ -164,9 +164,17 @@ export function GroupedStudentRow({ group, onDelete }: GroupedStudentRowProps) {
           </div>
         </TableCell>
         <TableCell className="text-right">
-          <Button variant="ghost" size="sm">
-            {isOpen ? 'Collapse' : 'Expand'}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/admin/v2/internal-apps/student/${group.passport || 'null'}`}>
+                <IconEye className="mr-1 h-4 w-4" />
+                View All
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm">
+              {isOpen ? 'Collapse' : 'Expand'}
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
 

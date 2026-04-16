@@ -137,129 +137,9 @@ export default function PartnerRegisterPage() {
   // Success State
   if (success) {
     return (
-      <div className="min-h-screen flex">
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-600/90 to-blue-600/80 relative overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-          </div>
-
-          <div className="relative z-10 flex flex-col justify-center items-center px-12 w-full">
-            <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-10 w-10 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-white mb-4">Application Submitted!</h1>
-              <p className="text-lg text-white/80 max-w-md">
-                We&apos;ve received your partner application. Our team will review it and get back to you within 2-3 business days.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-background">
-          <div className="w-full max-w-md text-center">
-            <div className="lg:hidden mb-8">
-              <Image
-                src="/logo.png"
-                alt="SICA"
-                width={140}
-                height={56}
-                className="h-12 w-auto mx-auto"
-              />
-            </div>
-
-            <div className="lg:hidden w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-8 w-8 text-blue-600" />
-            </div>
-
-            <h2 className="text-2xl font-bold mb-2">Application Received!</h2>
-            <p className="text-muted-foreground mb-8">
-              Check your email at <strong>{formData.email}</strong> for verification.
-            </p>
-
-            <div className="space-y-4">
-              <Link href="/login">
-                <Button className="w-full h-12">
-                  Continue to Sign In
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-600/90 to-blue-600/80 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
-        </div>
-
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          <div className="mb-12">
-            <Image
-              src="/logo.png"
-              alt="SICA"
-              width={180}
-              height={72}
-              className="h-14 w-auto brightness-0 invert"
-              priority
-            />
-          </div>
-
-          <div className="mb-12">
-            <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
-              Partner With<br />
-              <span className="text-white/90">SICA</span>
-            </h1>
-            <p className="text-lg text-white/80 max-w-md">
-              Join our network of educational agencies and help students achieve their dreams of studying in China.
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold text-lg">Agency Dashboard</h3>
-                <p className="text-white/70 text-sm">Manage student applications and track progress in real-time</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-                <Globe className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold text-lg">Global Reach</h3>
-                <p className="text-white/70 text-sm">Access 200+ universities across China</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold text-lg">Expert Support</h3>
-                <p className="text-white/70 text-sm">Dedicated partner support and resources</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-background overflow-y-auto">
-        <div className="w-full max-w-md py-4">
-          <div className="lg:hidden text-center mb-8">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <div className="w-full max-w-lg text-center">
+          <div className="mb-8">
             <Link href="/">
               <Image
                 src="/logo.png"
@@ -267,182 +147,220 @@ export default function PartnerRegisterPage() {
                 width={140}
                 height={56}
                 className="h-12 w-auto mx-auto"
-                priority
               />
             </Link>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-3xl font-bold text-foreground mb-2">Partner Registration</h2>
-            <p className="text-muted-foreground">
-              Register your educational agency with SICA
-            </p>
+          <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="h-10 w-10 text-blue-600" />
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <h2 className="text-2xl font-bold mb-2">Application Received!</h2>
+          <p className="text-muted-foreground mb-8">
+            Check your email at <strong>{formData.email}</strong> for verification.
+          </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Personal Information */}
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-sm font-medium">Full Name *</Label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  placeholder="Your full name"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="pl-12 h-12 text-base"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
+          <div className="space-y-4">
+            <Link href="/login">
+              <Button className="w-full h-12">
+                Continue to Sign In
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Email address"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="pl-12 h-12 text-base"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 sm:p-10 bg-background">
+      <div className="w-full max-w-xl">
+        <div className="text-center mb-6">
+          <Link href="/">
+            <Image
+              src="/logo.png"
+              alt="SICA"
+              width={140}
+              height={56}
+              className="h-12 w-auto mx-auto"
+              priority
+            />
+          </Link>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Phone</Label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="pl-12 h-12 text-base"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-            </div>
+        <div className="mb-5">
+          <h2 className="text-2xl font-bold text-foreground mb-1">Partner Registration</h2>
+          <p className="text-muted-foreground text-sm">
+            Register your educational agency with SICA
+          </p>
+        </div>
 
-            {/* Agency Information */}
-            <div className="pt-2">
-              <h3 className="text-sm font-semibold mb-3">Agency Information</h3>
-            </div>
+        {error && (
+          <Alert variant="destructive" className="mb-5">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            <div className="space-y-2">
-              <Label htmlFor="agencyName" className="text-sm font-medium">Agency Name *</Label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="agencyName"
-                  name="agencyName"
-                  type="text"
-                  placeholder="Your agency name"
-                  value={formData.agencyName}
-                  onChange={handleChange}
-                  className="pl-12 h-12 text-base"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="country" className="text-sm font-medium">Country *</Label>
-                <Input
-                  id="country"
-                  name="country"
-                  type="text"
-                  placeholder="Country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  className="h-12 text-base"
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-sm font-medium">City</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  type="text"
-                  placeholder="City"
-                  value={formData.city}
-                  onChange={handleChange}
-                  className="h-12 text-base"
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website" className="text-sm font-medium">Website</Label>
-              <div className="relative">
-                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="website"
-                  name="website"
-                  type="url"
-                  placeholder="https://your-agency.com"
-                  value={formData.website}
-                  onChange={handleChange}
-                  className="pl-12 h-12 text-base"
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium">Agency Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Tell us about your agency and experience in student placement..."
-                value={formData.description}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Personal Information */}
+          <div className="space-y-1.5">
+            <Label htmlFor="fullName" className="text-sm font-medium">Full Name *</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="fullName"
+                name="fullName"
+                type="text"
+                placeholder="Your full name"
+                value={formData.fullName}
                 onChange={handleChange}
-                className="min-h-[80px] text-base"
+                className="pl-10 h-11 text-sm"
+                required
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Email address"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="pl-10 h-11 text-sm"
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-sm font-medium">Phone</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="Phone number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="pl-10 h-11 text-sm"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Agency Information */}
+          <div className="pt-1">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Agency Information</h3>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="agencyName" className="text-sm font-medium">Agency Name *</Label>
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="agencyName"
+                name="agencyName"
+                type="text"
+                placeholder="Your agency name"
+                value={formData.agencyName}
+                onChange={handleChange}
+                className="pl-10 h-11 text-sm"
+                required
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="country" className="text-sm font-medium">Country *</Label>
+              <Input
+                id="country"
+                name="country"
+                type="text"
+                placeholder="Country"
+                value={formData.country}
+                onChange={handleChange}
+                className="h-11 text-sm"
+                required
                 disabled={loading}
               />
             </div>
 
-            {/* Password */}
-            <div className="pt-2">
-              <h3 className="text-sm font-semibold mb-3">Account Security</h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="city" className="text-sm font-medium">City</Label>
+              <Input
+                id="city"
+                name="city"
+                type="text"
+                placeholder="City"
+                value={formData.city}
+                onChange={handleChange}
+                className="h-11 text-sm"
+                disabled={loading}
+              />
             </div>
+          </div>
 
-            <div className="space-y-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="website" className="text-sm font-medium">Website</Label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="website"
+                name="website"
+                type="url"
+                placeholder="https://your-agency.com"
+                value={formData.website}
+                onChange={handleChange}
+                className="pl-10 h-11 text-sm"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="text-sm font-medium">Agency Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="Tell us about your agency and experience in student placement..."
+              value={formData.description}
+              onChange={handleChange}
+              className="min-h-[70px] text-sm"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Password */}
+          <div className="pt-1">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Account Security</h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-medium">Password *</Label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a password"
+                  placeholder="Create password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-12 pr-12 h-12 text-base"
+                  className="pl-10 pr-10 h-11 text-sm"
                   required
                   disabled={loading}
                   minLength={8}
@@ -450,83 +368,80 @@ export default function PartnerRegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password *</Label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="pl-12 pr-12 h-12 text-base"
+                  className="pl-10 pr-10 h-11 text-sm"
                   required
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-start gap-3 pt-2">
-              <Checkbox
-                id="terms"
-                checked={acceptTerms}
-                onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                disabled={loading}
-                className="mt-0.5"
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I agree to the terms and conditions
-              </label>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-medium"
+          <div className="flex items-start gap-2.5 pt-1">
+            <Checkbox
+              id="terms"
+              checked={acceptTerms}
+              onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
               disabled={loading}
+              className="mt-0.5"
+            />
+            <label
+              htmlFor="terms"
+              className="text-sm leading-relaxed cursor-pointer"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Submitting application...
-                </>
-              ) : (
-                <>
-                  Submit Application
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-          </form>
+              I agree to the terms and conditions
+            </label>
+          </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline font-semibold">
-              Sign in
-            </Link>
-          </p>
-        </div>
+          <Button
+            type="submit"
+            className="w-full h-11 text-sm font-medium mt-2"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting application...
+              </>
+            ) : (
+              <>
+                Submit Application
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </form>
+
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link href="/login" className="text-primary hover:underline font-semibold">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ const jsonArray = <T extends z.ZodTypeAny>(schema: T) => z.array(schema).optiona
 
 export const createStudentSchema = z.object({
   // Required fields when creating user account
-  email: z.string().email('Invalid email address').optional(),
+  email: z.string().email('Invalid email address'),
   full_name: z.string().min(1, 'Full name is required').max(100),
   password: z.string().min(8, 'Password must be at least 8 characters').optional(),
   
@@ -25,13 +25,21 @@ export const createStudentSchema = z.object({
   
   // Personal information
   nationality: optionalString,
-  date_of_birth: dateString,
-  gender: z.enum(['male', 'female', 'other']).optional(),
+  date_of_birth: z.string().optional().refine((val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: 'Invalid date format (YYYY-MM-DD)',
+  }),
+  gender: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : val,
+    z.enum(['male', 'female', 'other']).optional()
+  ),
   current_address: optionalString,
   permanent_address: optionalString,
   postal_code: optionalString,
   chinese_name: optionalString,
-  marital_status: z.enum(['single', 'married', 'divorced', 'widowed']).optional(),
+  marital_status: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : val,
+    z.enum(['single', 'married', 'divorced', 'widowed']).optional()
+  ),
   religion: optionalString,
   
   // Emergency contact
@@ -41,7 +49,9 @@ export const createStudentSchema = z.object({
   
   // Passport information
   passport_number: optionalString,
-  passport_expiry_date: dateString,
+  passport_expiry_date: z.string().optional().refine((val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: 'Invalid date format (YYYY-MM-DD)',
+  }),
   passport_issuing_country: optionalString,
   
   // Academic history (JSONB array)
@@ -52,6 +62,8 @@ export const createStudentSchema = z.object({
     start_date: z.string(),
     end_date: z.string().optional(),
     gpa: z.string().optional(),
+    city: z.string().optional(),
+    country: z.string().optional(),
   })),
   
   // Work experience (JSONB array)
@@ -60,60 +72,86 @@ export const createStudentSchema = z.object({
     position: z.string(),
     start_date: z.string(),
     end_date: z.string().optional(),
-    responsibilities: z.string().optional(),
+    description: z.string().optional(),
   })),
   
   // Legacy single-education fields (for backward compatibility)
   highest_education: optionalString,
   institution_name: optionalString,
   field_of_study: optionalString,
-  graduation_date: dateString,
+  graduation_date: z.string().optional().refine((val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: 'Invalid date format (YYYY-MM-DD)',
+  }),
   gpa: optionalString,
   
-  // Language scores
-  hsk_level: z.number().int().min(1).max(6).optional(),
-  hsk_score: z.number().int().positive().optional(),
-  ielts_score: z.string().optional(),
-  toefl_score: z.number().int().positive().optional(),
+  // Language scores - allow empty strings
+  hsk_level: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : Number(val),
+    z.number().int().min(1).max(6).optional()
+  ),
+  hsk_score: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : Number(val),
+    z.number().int().positive().optional()
+  ),
+  ielts_score: optionalString,
+  toefl_score: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : Number(val),
+    z.number().int().positive().optional()
+  ),
   
   // Family members (JSONB array)
   family_members: jsonArray(z.object({
     name: z.string(),
     relationship: z.string(),
     occupation: z.string().optional(),
-    contact: z.string().optional(),
+    phone: z.string().optional(),
+    email: z.string().optional(),
+    address: z.string().optional(),
   })),
   
   // Additional activities (JSONB arrays)
   extracurricular_activities: jsonArray(z.object({
     activity: z.string(),
     role: z.string().optional(),
-    duration: z.string().optional(),
+    organization: z.string().optional(),
+    start_date: z.string(),
+    end_date: z.string().optional(),
+    description: z.string().optional(),
   })),
   
   awards: jsonArray(z.object({
     title: z.string(),
-    organization: z.string().optional(),
+    issuing_organization: z.string().optional(),
     date: z.string().optional(),
+    description: z.string().optional(),
   })),
   
   publications: jsonArray(z.object({
     title: z.string(),
     publisher: z.string().optional(),
-    date: z.string().optional(),
-    url: z.string().url().optional(),
+    publication_date: z.string().optional(),
+    url: z.string().optional(),
+    description: z.string().optional(),
   })),
   
   research_experience: jsonArray(z.object({
     topic: z.string(),
-    role: z.string().optional(),
-    duration: z.string().optional(),
+    institution: z.string().optional(),
+    supervisor: z.string().optional(),
+    start_date: z.string(),
+    end_date: z.string().optional(),
     description: z.string().optional(),
   })),
   
   // Preferences
-  study_mode: z.enum(['full-time', 'part-time', 'online']).optional(),
-  funding_source: z.enum(['self-funded', 'scholarship', 'loan', 'other']).optional(),
+  study_mode: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : val,
+    z.enum(['full-time', 'part-time', 'online', 'full_time', 'part_time']).optional()
+  ),
+  funding_source: z.preprocess(
+    (val) => val === '' || val === undefined ? undefined : val,
+    z.enum(['self-funded', 'scholarship', 'loan', 'other', 'self_funded', 'csc_scholarship', 'university_scholarship', 'government_scholarship']).optional()
+  ),
   scholarship_application: z.record(z.string(), z.unknown()).optional(),
   financial_guarantee: z.record(z.string(), z.unknown()).optional(),
   
