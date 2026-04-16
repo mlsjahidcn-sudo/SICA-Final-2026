@@ -733,9 +733,9 @@ n              <Badge variant="secondary" className="mb-3 sm:mb-4">
                   university: 'Tsinghua University',
                   program: 'MBA Program',
                   year: '2025',
-                  image: '/images/success-1.jpg',
                   quote: 'SICA made my dream of studying at Tsinghua a reality. Their support throughout the application process was incredible.',
                   achievement: 'Full Scholarship Recipient',
+                  initials: 'SJ',
                 },
                 {
                   name: 'Ahmed Hassan',
@@ -743,9 +743,9 @@ n              <Badge variant="secondary" className="mb-3 sm:mb-4">
                   university: 'Peking University',
                   program: 'Computer Science',
                   year: '2025',
-                  image: '/images/success-2.jpg',
                   quote: 'The team guided me every step of the way. From document preparation to visa support, everything was seamless.',
                   achievement: 'CSC Scholarship Awardee',
+                  initials: 'AH',
                 },
                 {
                   name: 'Maria Garcia',
@@ -753,9 +753,9 @@ n              <Badge variant="secondary" className="mb-3 sm:mb-4">
                   university: 'Fudan University',
                   program: 'International Relations',
                   year: '2024',
-                  image: '/images/success-3.jpg',
                   quote: 'I got accepted to my dream university with a full scholarship. SICA\'s expertise in Chinese universities is unmatched.',
                   achievement: 'Full Tuition Waiver',
+                  initials: 'MG',
                 },
               ].map((student, index) => (
                 <div key={index} className="bg-card border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
@@ -782,10 +782,22 @@ n                      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 r
 
                     {/* Student Info */}
                     <div className="flex items-center justify-between pt-4 border-t">
-                      <div>
-                        <h5 className="font-semibold text-sm sm:text-base">{student.name}</h5>
-                        <p className="text-xs text-muted-foreground">{student.country} • {student.year}</p>
+                      <div className="flex items-center gap-3">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-sm sm:text-base">
+                          {student.initials}
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm sm:text-base">{student.name}</h5>
+                          <p className="text-xs text-muted-foreground">{student.country} • {student.year}</p>
+                        </div>
                       </div>
+                      <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+                        {student.achievement}
+                      </Badge>
+                    </div>
+                    {/* Achievement Badge - Mobile */}
+                    <div className="sm:hidden mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {student.achievement}
                       </Badge>
