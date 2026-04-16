@@ -4,14 +4,12 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { ChatWidget } from '@/components/chat-widget';
 import { FloatingAssessmentButton } from '@/components/floating-assessment-button';
-import { Ubuntu } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const ubuntu = Ubuntu({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
-  variable: '--font-sans'
-});
+// Use system font stack to avoid Google Fonts network dependency
+const fontConfig = {
+  variable: '--font-sans',
+};
 
 // Get base URL from environment
 const baseUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://studyinchina.academy';
@@ -102,7 +100,7 @@ export default function RootLayout({
   const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
 
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", ubuntu.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", fontConfig.variable)}>
       <body className={`antialiased min-h-screen`} suppressHydrationWarning>
         <Providers>
           {isDev && <Inspector />}

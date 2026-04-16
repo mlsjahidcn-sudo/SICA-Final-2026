@@ -47,13 +47,13 @@ export async function GET(request: NextRequest) {
       if (data.session) {
         // Determine redirect based on auth type
         let redirectTo = '/login';
+        const userRole = data.user?.user_metadata?.role || 'student';
 
         // For password recovery, redirect to reset-password page
         if (type === 'recovery') {
           redirectTo = '/reset-password';
         } else {
           // For other flows — determine redirect based on user role
-          const userRole = data.user?.user_metadata?.role || 'student';
           const approvalStatus = data.user?.user_metadata?.approval_status || 'approved';
           
           // For invite flow — the user just confirmed their email and got a session
