@@ -223,7 +223,7 @@ function CopyInternalAppContent() {
               <br />
               The following fields will be reset for the new application:
               <ul className="mt-2 list-disc list-inside text-sm">
-                <li>Status (will be set to "Pending")</li>
+                <li>Status (will be set to &quot;Pending&quot;)</li>
                 <li>Application date (will be empty)</li>
                 <li>Follow-up date (will be empty)</li>
                 <li>Remarks for university (will be empty)</li>

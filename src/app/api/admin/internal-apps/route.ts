@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const university = searchParams.get('university') || '';
     const partner = searchParams.get('partner') || '';
+    const passport = searchParams.get('passport') || '';
+    const grouped = searchParams.get('grouped') === 'true';
     
     const offset = (page - 1) * limit;
 
@@ -38,6 +40,10 @@ export async function GET(request: NextRequest) {
       query = query.ilike('partner', `%${partner}%`);
     }
 
+    if (passport) {
+      query = query.eq('passport', passport);
+    }
+
     if (search) {
       query = query.or(`student_name.ilike.%${search}%,passport.ilike.%${search}%,email.ilike.%${search}%`);
     }
@@ -51,6 +57,55 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching internal applications:', error);
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
+    }
+
+    // If grouped=true, group applications by passport
+    if (grouped && applications) {
+      const groupedMap = new Map<string, any>();
+      
+      applications.forEach(app => {
+        const key = app.passport || `no-passport-${app.id}`;
+        
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, {
+            passport: app.passport,
+            student_name: app.student_name,
+            nationality: app.nationality,
+            applications: [],
+            stats: {
+              total: 0,
+              pending: 0,
+              processing: 0,
+              accepted: 0,
+              rejected: 0,
+              submitted: 0,
+              withdrawn: 0,
+              follow_up: 0
+            },
+            universities: []
+          });
+        }
+        
+        const group = groupedMap.get(key);
+        group.applications.push(app);
+        group.stats.total++;
+        group.stats[app.status as keyof typeof group.stats]++;
+        if (app.university_choice && !group.universities.includes(app.university_choice)) {
+          group.universities.push(app.university_choice);
+        }
+      });
+      
+      const groupedApplications = Array.from(groupedMap.values());
+      
+      return NextResponse.json({
+        data: groupedApplications,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit)
+        }
+      });
     }
 
     return NextResponse.json({
@@ -93,6 +148,8 @@ export async function POST(request: NextRequest) {
       user_id,
       email,
       portal_link,
+      portal_username,
+      portal_password,
       partner,
       note,
       application_date,
@@ -120,6 +177,8 @@ export async function POST(request: NextRequest) {
         user_id: user_id || null,
         email: email || null,
         portal_link: portal_link || null,
+        portal_username: portal_username || null,
+        portal_password: portal_password || null,
         partner: partner || null,
         note: note || null,
         application_date: application_date || null,

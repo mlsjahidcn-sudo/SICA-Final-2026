@@ -40,6 +40,8 @@ interface InternalApplication {
   user_id: string | null
   email: string | null
   portal_link: string | null
+  portal_username: string | null
+  portal_password: string | null
   partner: string | null
   note: string | null
   application_date: string | null
@@ -280,17 +282,31 @@ function InternalAppDetailContent() {
               </div>
             </div>
             {application.portal_link && (
-              <div>
-                <p className="text-sm text-muted-foreground">Portal Link</p>
-                <a 
-                  href={application.portal_link} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  {application.portal_link}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Portal Link</p>
+                  <a 
+                    href={application.portal_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    {application.portal_link}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                {application.portal_username && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Portal Username</p>
+                    <p className="font-mono">{application.portal_username}</p>
+                  </div>
+                )}
+                {application.portal_password && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Portal Password</p>
+                    <p className="font-mono">••••••••</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

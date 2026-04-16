@@ -62,6 +62,8 @@ export async function PUT(
       user_id,
       email,
       portal_link,
+      portal_username,
+      portal_password,
       partner,
       note,
       application_date,
@@ -86,6 +88,8 @@ export async function PUT(
     if (user_id !== undefined) updateData.user_id = user_id;
     if (email !== undefined) updateData.email = email;
     if (portal_link !== undefined) updateData.portal_link = portal_link;
+    if (portal_username !== undefined) updateData.portal_username = portal_username;
+    if (portal_password !== undefined) updateData.portal_password = portal_password;
     if (partner !== undefined) updateData.partner = partner;
     if (note !== undefined) updateData.note = note;
     if (application_date !== undefined) updateData.application_date = application_date || null;

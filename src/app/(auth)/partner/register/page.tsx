@@ -497,14 +497,7 @@ export default function PartnerRegisterPage() {
                 htmlFor="terms"
                 className="text-sm leading-relaxed cursor-pointer"
               >
-                I agree to the{' '}
-                <Link href="/terms" className="text-primary hover:underline font-medium">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-primary hover:underline font-medium">
-                  Privacy Policy
-                </Link>
+                I agree to the terms and conditions
               </label>
             </div>
 

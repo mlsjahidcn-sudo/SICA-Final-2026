@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
 
 /**
  * GET /api/success-cases
@@ -20,7 +21,19 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12');
     const featured = searchParams.get('featured') === 'true';
     const year = searchParams.get('year');
+    const minimal = searchParams.get('minimal') === 'true'; // Skip unused URLs for performance
     const offset = (page - 1) * limit;
+
+    // Generate cache key for this query
+    const cacheKey = `success-cases:${featured}:${year || 'all'}:${page}:${limit}:${minimal}`;
+    
+    // Check cache first (only for featured cases on first page)
+    if (featured && page === 1) {
+      const cached = apiCache.get(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    }
 
     // Build query - only fetch published cases
     let query = supabase
@@ -40,7 +53,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('admission_year', parseInt(year));
     }
 
-    const { data: cases, error, count } = await query;
+    const { data: cases, error, count } = await withTimeout(
+      query,
+      5000,
+      'Success cases query timed out'
+    );
 
     if (error) {
       console.error('Error fetching success cases:', error);
@@ -56,34 +73,52 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate signed URLs for documents (1 hour expiry)
+    // Optimize by batch generating all URLs at once, skip unused if minimal=true
     const casesWithUrls = await Promise.all(
       (cases || []).map(async (caseItem) => {
+        // Collect all paths that need signed URLs
+        const pathsToSign: string[] = [];
+        const pathMapping: { [key: string]: string } = {};
+        
+        // Always include admission_notice_url
+        if (caseItem.admission_notice_url) {
+          pathsToSign.push(caseItem.admission_notice_url);
+          pathMapping[caseItem.admission_notice_url] = 'admission_notice';
+        }
+        
+        // Only include other URLs if not in minimal mode
+        if (!minimal) {
+          if (caseItem.jw202_url) {
+            pathsToSign.push(caseItem.jw202_url);
+            pathMapping[caseItem.jw202_url] = 'jw202';
+          }
+          if (caseItem.student_photo_url) {
+            pathsToSign.push(caseItem.student_photo_url);
+            pathMapping[caseItem.student_photo_url] = 'student_photo';
+          }
+        }
+
+        // Batch generate signed URLs (single API call for all paths)
         let admission_notice_signed_url = null;
         let jw202_signed_url = null;
         let student_photo_signed_url = null;
 
-        // Generate signed URL for admission notice
-        if (caseItem.admission_notice_url) {
-          const { data } = await supabase.storage
+        if (pathsToSign.length > 0) {
+          const { data: signedUrls } = await supabase.storage
             .from('success-cases')
-            .createSignedUrl(caseItem.admission_notice_url, 3600);
-          admission_notice_signed_url = data?.signedUrl || null;
-        }
+            .createSignedUrls(pathsToSign, 3600);
 
-        // Generate signed URL for JW202
-        if (caseItem.jw202_url) {
-          const { data } = await supabase.storage
-            .from('success-cases')
-            .createSignedUrl(caseItem.jw202_url, 3600);
-          jw202_signed_url = data?.signedUrl || null;
-        }
-
-        // Generate signed URL for student photo
-        if (caseItem.student_photo_url) {
-          const { data } = await supabase.storage
-            .from('success-cases')
-            .createSignedUrl(caseItem.student_photo_url, 3600);
-          student_photo_signed_url = data?.signedUrl || null;
+          if (signedUrls) {
+            signedUrls.forEach((item, index) => {
+              const path = pathsToSign[index];
+              const type = pathMapping[path];
+              if (item.signedUrl) {
+                if (type === 'admission_notice') admission_notice_signed_url = item.signedUrl;
+                else if (type === 'jw202') jw202_signed_url = item.signedUrl;
+                else if (type === 'student_photo') student_photo_signed_url = item.signedUrl;
+              }
+            });
+          }
         }
 
         return {
@@ -98,7 +133,7 @@ export async function GET(request: NextRequest) {
     // Calculate pagination info
     const totalPages = Math.ceil((count || 0) / limit);
 
-    return NextResponse.json({
+    const response = {
       success_cases: casesWithUrls,
       pagination: {
         page,
@@ -108,7 +143,14 @@ export async function GET(request: NextRequest) {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
-    });
+    };
+
+    // Cache the response for featured cases on first page (5 minutes)
+    if (featured && page === 1) {
+      apiCache.set(cacheKey, response, CACHE_TTL.LONG);
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in success-cases GET:', error);
     return NextResponse.json(

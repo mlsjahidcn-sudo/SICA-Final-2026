@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { AppSidebar } from "@/components/dashboard-v2-sidebar"
 import { SiteHeader } from "@/components/dashboard-v2-header"
@@ -10,16 +10,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -46,26 +38,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { GroupedStudentRow } from "@/components/admin-v2/grouped-student-row"
 import { 
-  IconSearch, 
-  IconFileText,
-  IconClock,
-  IconCircleCheck,
-  IconAlertCircle,
   IconEye,
-  IconChevronLeft,
-  IconChevronRight,
-  IconDotsVertical,
-  IconPlus,
   IconEdit,
   IconCopy,
   IconTrash,
-  IconUsers,
+  IconArrowLeft,
+  IconDotsVertical,
   IconBuilding,
-  IconCalendar,
-  IconList,
-  IconLayoutList
+  IconUsers,
+  IconCalendar
 } from "@tabler/icons-react"
 
 interface InternalApplication {
@@ -92,31 +74,6 @@ interface InternalApplication {
   updated_at: string
 }
 
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
-interface GroupedApplication {
-  passport: string | null
-  student_name: string
-  nationality: string | null
-  applications: InternalApplication[]
-  stats: {
-    total: number
-    pending: number
-    processing: number
-    accepted: number
-    rejected: number
-    submitted: number
-    withdrawn: number
-    follow_up: number
-  }
-  universities: string[]
-}
-
 const STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: string }> = {
   pending: { color: 'text-yellow-700', bgColor: 'bg-yellow-100', label: 'Pending' },
   processing: { color: 'text-blue-700', bgColor: 'bg-blue-100', label: 'Processing' },
@@ -127,24 +84,13 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; label: str
   follow_up: { color: 'text-orange-700', bgColor: 'bg-orange-100', label: 'Follow Up' },
 }
 
-const ITEMS_PER_PAGE = 20
-
-function InternalAppsListContent() {
+function StudentDetailContent() {
   const router = useRouter()
+  const params = useParams()
+  const passport = params.passport as string
 
   const [applications, setApplications] = useState<InternalApplication[]>([])
-  const [groupedApplications, setGroupedApplications] = useState<GroupedApplication[]>([])
-  const [viewMode, setViewMode] = useState<'individual' | 'grouped'>('grouped')
   const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: ITEMS_PER_PAGE,
-    total: 0,
-    totalPages: 0,
-  })
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const fetchApplications = useCallback(async () => {
@@ -154,11 +100,7 @@ function InternalAppsListContent() {
       const token = await getValidToken()
       
       const params = new URLSearchParams()
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-      if (searchQuery) params.append('search', searchQuery)
-      params.append('page', currentPage.toString())
-      params.append('limit', ITEMS_PER_PAGE.toString())
-      if (viewMode === 'grouped') params.append('grouped', 'true')
+      params.append('passport', passport)
 
       const response = await fetch(`/api/admin/internal-apps?${params}`, {
         headers: {
@@ -168,12 +110,7 @@ function InternalAppsListContent() {
 
       if (response.ok) {
         const data = await response.json()
-        if (viewMode === 'grouped') {
-          setGroupedApplications(data.data || [])
-        } else {
-          setApplications(data.data || [])
-        }
-        setPagination(data.pagination)
+        setApplications(data.data || [])
       } else {
         toast.error('Failed to load applications')
       }
@@ -183,7 +120,7 @@ function InternalAppsListContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [statusFilter, searchQuery, currentPage, viewMode])
+  }, [passport])
 
   useEffect(() => {
     fetchApplications()
@@ -224,50 +161,41 @@ function InternalAppsListContent() {
     })
   }
 
-  // Calculate stats from current data
   const stats = {
-    total: pagination.total,
+    total: applications.length,
     pending: applications.filter(a => a.status === 'pending').length,
     processing: applications.filter(a => a.status === 'processing').length,
     accepted: applications.filter(a => a.status === 'accepted').length,
+    rejected: applications.filter(a => a.status === 'rejected').length,
+    submitted: applications.filter(a => a.status === 'submitted').length,
   }
+
+  const studentInfo = applications[0]
 
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Internal Applications</h1>
-          <p className="text-muted-foreground">Manage internal application tracking data</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 border rounded-lg p-1">
-            <Button
-              variant={viewMode === 'grouped' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grouped')}
-              className="gap-2"
-            >
-              <IconLayoutList className="h-4 w-4" />
-              Grouped
-            </Button>
-            <Button
-              variant={viewMode === 'individual' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('individual')}
-              className="gap-2"
-            >
-              <IconList className="h-4 w-4" />
-              Individual
-            </Button>
-          </div>
-          <Button asChild>
-            <Link href="/admin/v2/internal-apps/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              Add Application
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin/v2/internal-apps">
+              <IconArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {studentInfo?.student_name || 'Student Details'}
+            </h1>
+            <p className="text-muted-foreground">
+              Passport: {passport === 'null' ? 'No passport' : passport}
+            </p>
+          </div>
         </div>
+        <Button asChild>
+          <Link href={`/admin/v2/internal-apps/new?passport=${passport}`}>
+            Add Application
+          </Link>
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -275,27 +203,27 @@ function InternalAppsListContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-            <IconFileText className="h-4 w-4 text-muted-foreground" />
+            <IconUsers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">All records</p>
+            <p className="text-xs text-muted-foreground">Universities applied</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <IconClock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Accepted</CardTitle>
+            <IconBuilding className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">Awaiting action</p>
+            <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
+            <p className="text-xs text-muted-foreground">Successfully placed</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Processing</CardTitle>
-            <IconUsers className="h-4 w-4 text-muted-foreground" />
+            <IconCalendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{stats.processing}</div>
@@ -304,120 +232,84 @@ function InternalAppsListContent() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-            <IconCircleCheck className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <IconCalendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-            <p className="text-xs text-muted-foreground">Successfully placed</p>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">Awaiting action</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, passport, or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+      {/* Student Info Card */}
+      {studentInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Student Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Nationality</p>
+                <p className="font-medium">{studentInfo.nationality || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{studentInfo.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Partner</p>
+                <p className="font-medium">{studentInfo.partner || '-'}</p>
+              </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="withdrawn">Withdrawn</SelectItem>
-                <SelectItem value="follow_up">Follow Up</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Table */}
+      {/* Applications Table */}
       <Card>
+        <CardHeader>
+          <CardTitle>Applications ({applications.length})</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Passport</TableHead>
-                  <TableHead>Nationality</TableHead>
-                  {viewMode === 'grouped' ? (
-                    <>
-                      <TableHead>Applications</TableHead>
-                      <TableHead>Universities</TableHead>
-                      <TableHead>Status Summary</TableHead>
-                    </>
-                  ) : (
-                    <>
-                      <TableHead>Degree / Major</TableHead>
-                      <TableHead>University</TableHead>
-                      <TableHead>Partner</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Application Date</TableHead>
-                    </>
-                  )}
+                  <TableHead>University</TableHead>
+                  <TableHead>Degree / Major</TableHead>
+                  <TableHead>Partner</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Application Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={viewMode === 'grouped' ? 7 : 9} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                ) : viewMode === 'grouped' ? (
-                  groupedApplications.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No applications found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    groupedApplications.map((group) => (
-                      <GroupedStudentRow
-                        key={group.passport || `no-passport-${group.applications[0]?.id}`}
-                        group={group}
-                        onDelete={(id) => setDeleteId(id)}
-                      />
-                    ))
-                  )
                 ) : applications.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No applications found
                     </TableCell>
                   </TableRow>
                 ) : (
                   applications.map((app) => (
                     <TableRow key={app.id}>
-                      <TableCell className="font-medium">{app.student_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{app.passport || '-'}</TableCell>
-                      <TableCell>{app.nationality || '-'}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="max-w-[200px] truncate" title={app.university_choice || ''}>
+                          {app.university_choice || '-'}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="max-w-[200px]">
                           <div className="font-medium">{app.degree || '-'}</div>
                           <div className="text-sm text-muted-foreground">{app.major || '-'}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[200px] truncate" title={app.university_choice || ''}>
-                          {app.university_choice || '-'}
                         </div>
                       </TableCell>
                       <TableCell>{app.partner || '-'}</TableCell>
@@ -473,35 +365,6 @@ function InternalAppsListContent() {
               </TableBody>
             </Table>
           </div>
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, pagination.total)} of {pagination.total} entries
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  disabled={currentPage === 1 || isLoading}
-                >
-                  <IconChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  disabled={currentPage === pagination.totalPages || isLoading}
-                >
-                  Next
-                  <IconChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -529,7 +392,7 @@ function InternalAppsListContent() {
   )
 }
 
-export default function InternalAppsPage() {
+export default function StudentDetailPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
@@ -559,13 +422,13 @@ export default function InternalAppsPage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader title="Internal Applications" />
+          <SiteHeader title="Student Details" />
           <Suspense fallback={
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           }>
-            <InternalAppsListContent />
+            <StudentDetailContent />
           </Suspense>
         </SidebarInset>
       </SidebarProvider>

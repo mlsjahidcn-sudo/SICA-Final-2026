@@ -136,7 +136,6 @@ export function Footer() {
                 { name: 'Free Assessment', href: '/assessment' },
                 { name: 'Study Guide', href: '/blog?category=guide' },
                 { name: 'Blog', href: '/blog' },
-                { name: 'FAQ', href: '/faq' },
               ].map((link) => (
                 <li key={link.name}>
                   <Link
@@ -236,18 +235,6 @@ export function Footer() {
             © {new Date().getFullYear()} Study in China Academy. All rights reserved.
           </p>
           <div className="flex items-center gap-8">
-            <Link
-              href="/privacy"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              href="/terms"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Terms of Service
-            </Link>
             <Link
               href="/contact"
               className="text-sm text-muted-foreground hover:text-primary transition-colors"

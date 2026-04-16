@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const scholarship = searchParams.get('scholarship');
     const english = searchParams.get('english');
+    const featured = searchParams.get('featured') === 'true';
 
     // Generate cache key for this query
-    const cacheKey = `universities:${limit}:${page}:${search || 'none'}:${province || 'all'}:${type || 'all'}:${category || 'all'}:${scholarship || 'all'}:${english || 'all'}`;
+    const cacheKey = `universities:${limit}:${page}:${search || 'none'}:${province || 'all'}:${type || 'all'}:${category || 'all'}:${scholarship || 'all'}:${english || 'all'}:${featured || 'false'}`;
     
     // Check cache first
     const cached = apiCache.get(cacheKey);
@@ -25,6 +26,64 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseClient();
+
+    // For featured universities, get top-ranked universities
+    if (featured) {
+      let featuredQuery = supabase
+        .from('universities')
+        .select(`
+          id,
+          name_en,
+          name_cn,
+          slug,
+          city,
+          province,
+          logo_url,
+          image_url,
+          cover_image_url,
+          images,
+          type,
+          category,
+          ranking_national,
+          ranking_world,
+          scholarship_available,
+          accommodation_available,
+          description,
+          tuition_min,
+          tuition_max,
+          tuition_currency,
+          application_deadline,
+          intake_months,
+          tags
+        `)
+        .not('ranking_national', 'is', null)
+        .order('ranking_national', { ascending: true })
+        .limit(limit);
+
+      const { data: universities, error } = await withTimeout(
+        featuredQuery,
+        5000,
+        'Featured universities query timed out'
+      );
+
+      if (error) {
+        console.error('Error fetching featured universities:', error);
+        return NextResponse.json({ error: 'Failed to fetch featured universities' }, { status: 500 });
+      }
+
+      const response = {
+        universities: universities || [],
+        total: universities?.length || 0,
+        page: 1,
+        limit,
+        totalPages: 1
+      };
+
+      // Cache the response for 2 minutes
+      apiCache.set(cacheKey, response, CACHE_TTL.MEDIUM);
+
+      return NextResponse.json(response);
+    }
 
     // Build base query for counting
     let countQuery = supabase

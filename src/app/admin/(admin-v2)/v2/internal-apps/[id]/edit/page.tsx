@@ -64,6 +64,8 @@ function EditInternalAppContent() {
     user_id: '',
     email: '',
     portal_link: '',
+    portal_username: '',
+    portal_password: '',
     partner: '',
     note: '',
     application_date: '',
@@ -101,6 +103,8 @@ function EditInternalAppContent() {
             user_id: app.user_id || '',
             email: app.email || '',
             portal_link: app.portal_link || '',
+            portal_username: app.portal_username || '',
+            portal_password: app.portal_password || '',
             partner: app.partner || '',
             note: app.note || '',
             application_date: app.application_date || '',
@@ -415,6 +419,25 @@ function EditInternalAppContent() {
                   value={formData.portal_link}
                   onChange={(e) => setFormData({ ...formData, portal_link: e.target.value })}
                   placeholder="https://..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portal_username">Portal Username</Label>
+                <Input
+                  id="portal_username"
+                  value={formData.portal_username}
+                  onChange={(e) => setFormData({ ...formData, portal_username: e.target.value })}
+                  placeholder="Enter portal username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portal_password">Portal Password</Label>
+                <Input
+                  id="portal_password"
+                  type="password"
+                  value={formData.portal_password}
+                  onChange={(e) => setFormData({ ...formData, portal_password: e.target.value })}
+                  placeholder="Enter portal password"
                 />
               </div>
             </div>

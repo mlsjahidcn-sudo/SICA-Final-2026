@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -49,6 +50,7 @@ import {
   Quote,
   Trophy,
 } from 'lucide-react';
+import { IconStar, IconCalendar, IconSchool, IconMapPin, IconFileTypePdf } from '@tabler/icons-react';
 import { SchemaOrg } from '@/components/schema-org';
 import { TestimonialsSection } from '@/components/testimonials-section';
 import { PartnersSection } from '@/components/partners-section';
@@ -65,6 +67,23 @@ interface FeaturedUniversity {
   type: string[] | null;
   ranking_national: number | null;
   scholarship_available: boolean;
+}
+
+interface SuccessCase {
+  id: string;
+  student_name_en: string;
+  student_name_cn: string | null;
+  student_photo_signed_url: string | null;
+  admission_notice_signed_url: string | null;
+  university_name_en: string | null;
+  university_name_cn: string | null;
+  program_name_en: string | null;
+  program_name_cn: string | null;
+  admission_year: number | null;
+  intake: string | null;
+  is_featured: boolean;
+  description_en: string | null;
+  description_cn: string | null;
 }
 
 // Bento Grid Features - Each with icon, title, bullet points, and CTA
@@ -173,9 +192,12 @@ const universityTypes = [
 export function HomePageContent() {
   const [featuredUniversities, setFeaturedUniversities] = useState<FeaturedUniversity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [successCases, setSuccessCases] = useState<SuccessCase[]>([]);
+  const [successLoading, setSuccessLoading] = useState(true);
 
   useEffect(() => {
     fetchFeaturedUniversities();
+    fetchSuccessCases();
   }, []);
 
   const fetchFeaturedUniversities = async () => {
@@ -187,6 +209,18 @@ export function HomePageContent() {
       console.error('Error fetching featured universities:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSuccessCases = async () => {
+    try {
+      const response = await fetch('/api/success-cases?featured=true&limit=3&minimal=true');
+      const data = await response.json();
+      setSuccessCases(data.success_cases || []);
+    } catch (error) {
+      console.error('Error fetching success cases:', error);
+    } finally {
+      setSuccessLoading(false);
     }
   };
 
@@ -725,82 +759,96 @@ export function HomePageContent() {
             </div>
 
             {/* Success Cases Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-              {[
-                {
-                  name: 'Sarah Johnson',
-                  nameZh: '莎拉·约翰逊',
-                  university: 'Tsinghua University',
-                  program: 'MBA',
-                  year: '2025',
-                  description: 'Full Scholarship • Computer Science',
-                  initials: 'SJ',
-                  bgColor: 'bg-blue-500',
-                },
-                {
-                  name: 'Ahmed Hassan',
-                  nameZh: '艾哈迈德·哈桑',
-                  university: 'Peking University',
-                  program: 'CS',
-                  year: '2025',
-                  description: 'CSC Scholarship • Engineering',
-                  initials: 'AH',
-                  bgColor: 'bg-purple-500',
-                },
-                {
-                  name: 'Maria Garcia',
-                  nameZh: '玛丽亚·加西亚',
-                  university: 'Fudan University',
-                  program: 'IR',
-                  year: '2024',
-                  description: 'Full Tuition Waiver • Business',
-                  initials: 'MG',
-                  bgColor: 'bg-green-500',
-                },
-              ].map((student, index) => (
-                <div key={index} className="bg-card border rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                  {/* Student Avatar and Name */}
-                  <div className="flex items-start gap-4 mb-4">
-                    {/* Avatar */}
-                    <div className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 ${student.bgColor} rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl`}>
-                      {student.initials}
-                    </div>
-
-                    {/* Name and University */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-bold">{student.name}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{student.nameZh}</p>
-                    </div>
-                  </div>
-
-                  {/* University with Icon */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span className="text-sm font-medium truncate">{student.university}</span>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge variant="outline" className="text-xs">
-                      {student.year}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {student.program}
-                    </Badge>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    {student.description}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {successLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : successCases.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No success cases available yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {successCases.map((caseItem) => (
+                  <Link key={caseItem.id} href={`/success-cases/${caseItem.id}`}>
+                    <Card className="group h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                      <div className="relative h-48 sm:h-56 bg-muted">
+                        {caseItem.admission_notice_signed_url ? (
+                          caseItem.admission_notice_signed_url.toLowerCase().includes('.pdf') ? (
+                            <div className="w-full h-full flex items-center justify-center bg-red-50 dark:bg-red-950/20">
+                              <IconFileTypePdf className="h-14 w-14 text-red-500" />
+                            </div>
+                          ) : (
+                            <Image
+                              src={caseItem.admission_notice_signed_url}
+                              alt={`${caseItem.student_name_en}'s admission notice`}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
+                          )
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                            <IconSchool className="h-14 w-14 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        {caseItem.is_featured && (
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">
+                              <IconStar className="h-3 w-3 mr-1 fill-current" />
+                              Featured
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="space-y-2.5">
+                          <div>
+                            <h3 className="font-semibold text-base sm:text-lg mb-0.5 line-clamp-1">
+                              {caseItem.student_name_en}
+                              {caseItem.student_name_cn && (
+                                <span className="text-muted-foreground ml-1.5 text-sm">
+                                  {caseItem.student_name_cn}
+                                </span>
+                              )}
+                            </h3>
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <IconMapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="line-clamp-1">
+                                {caseItem.university_name_en || 'University'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {caseItem.admission_year && (
+                              <Badge variant="outline" className="text-xs">
+                                <IconCalendar className="h-3 w-3 mr-1" />
+                                {caseItem.admission_year}
+                              </Badge>
+                            )}
+                            {caseItem.program_name_en && (
+                              <Badge variant="secondary" className="text-xs line-clamp-1">
+                                {caseItem.program_name_en}
+                              </Badge>
+                            )}
+                          </div>
+                          {caseItem.description_en && (
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                              {caseItem.description_en}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* View More */}
             <div className="text-center mt-8 sm:mt-10">
               <Button asChild variant="outline" size="lg">
-                <Link href="/testimonials">
+                <Link href="/success-cases">
                   View All Success Stories
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

@@ -283,16 +283,7 @@ export default function ContactPage() {
                   </p>
                 </div>
 
-                {/* FAQ Link */}
-                <div className="pt-6 border-t">
-                  <h3 className="font-medium mb-2">Need Quick Answers?</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Check out our FAQ section for answers to common questions.
-                  </p>
-                  <Button variant="outline" asChild className="w-full">
-                    <Link href="/faq">View FAQ</Link>
-                  </Button>
-                </div>
+
               </div>
             </div>
           </div>
