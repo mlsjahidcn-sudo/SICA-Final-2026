@@ -40,6 +40,9 @@ import {
   Heart,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
+  Calendar,
+  TrendingUp,
 } from 'lucide-react';
 import { SchemaOrg } from '@/components/schema-org';
 import { TestimonialsSection } from '@/components/testimonials-section';
@@ -162,13 +165,6 @@ const universityTypes = [
   },
 ];
 
-const heroStats = [
-  { value: '10K+', label: 'Students Placed' },
-  { value: '500+', label: 'Partner Universities' },
-  { value: '95%', label: 'Success Rate' },
-  { value: '100+', label: 'Countries' },
-];
-
 export function HomePageContent() {
   const [featuredUniversities, setFeaturedUniversities] = useState<FeaturedUniversity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,14 +248,41 @@ export function HomePageContent() {
                   </Button>
                 </div>
 
-                {/* Stats - Mobile optimized */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 border-t">
-                  {heroStats.map((stat, index) => (
-                    <div key={index} className="flex flex-col p-2 sm:p-0">
-                      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">{stat.value}</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
+                {/* Announcement Card */}
+                <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/3 to-background p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                     </div>
-                  ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="default" className="text-xs sm:text-sm bg-primary text-primary-foreground">
+                          Now Open
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">Limited Seats</span>
+                      </div>
+                      <h3 className="text-base sm:text-lg font-bold mb-1">
+                        September 2026 Intake Applications Open
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Apply early to secure your spot at top Chinese universities. Scholarships available for qualified students.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 text-primary font-medium">
+                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>Sept 2026</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-500 font-medium">
+                          <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>Seats Filling Fast</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-chart-4 font-medium">
+                          <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>95% Success Rate</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
