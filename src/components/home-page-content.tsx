@@ -43,6 +43,9 @@ import {
   AlertCircle,
   Calendar,
   TrendingUp,
+  ClipboardCheck,
+  Send,
+  CircleDot,
 } from 'lucide-react';
 import { SchemaOrg } from '@/components/schema-org';
 import { TestimonialsSection } from '@/components/testimonials-section';
@@ -617,75 +620,87 @@ export function HomePageContent() {
           </div>
         </section>
 
-        {/* Why Trust Us Section */}
+        {/* How It Works Section */}
         <section className="py-12 sm:py-16 md:py-24 bg-card">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
-              {/* Left - Content */}
-              <div className="space-y-6 sm:space-y-8">
-                <div>
-                  <Badge variant="secondary" className="mb-3 sm:mb-4">
-                    <Shield className="h-3.5 w-3.5 mr-1.5" />
-                    Why Trust Us
-                  </Badge>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
-                    Your Success is Our Mission
-                  </h2>
-                  <p className="text-muted-foreground text-base sm:text-lg">
-                    We&apos;ve helped thousands of international students achieve their dreams of studying in China. Our comprehensive support ensures a smooth journey from application to enrollment.
-                  </p>
-                </div>
+            {/* Section Header */}
+            <div className="text-center mb-10 sm:mb-12">
+              <Badge variant="secondary" className="mb-3 sm:mb-4">
+                Simple Process
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
+                How It Works
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg">
+                Your journey to studying in China is just 4 simple steps away. We guide you through each stage.
+              </p>
+            </div>
 
-                {/* Trust Points */}
-                <div className="space-y-3 sm:space-y-4">
-                  {[
-                    { icon: Clock, title: 'Quick Response', desc: 'Get answers within 24 hours' },
-                    { icon: Heart, title: 'Personal Support', desc: 'Dedicated consultant for your journey' },
-                    { icon: Shield, title: 'Secure Process', desc: 'Your data is safe with us' },
-                    { icon: GraduationCap, title: 'High Success Rate', desc: '95% of our students get accepted' },
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
-                      <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            {/* Steps Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {[
+                {
+                  step: '01',
+                  icon: Search,
+                  title: 'Explore Programs',
+                  description: 'Browse 200+ universities and 2,000+ programs. Filter by location, degree, language, and scholarships.',
+                  color: 'text-blue-600 bg-blue-100 dark:bg-blue-950/30',
+                },
+                {
+                  step: '02',
+                  icon: ClipboardCheck,
+                  title: 'Submit Application',
+                  description: 'Complete our simple application form. Upload required documents and choose your preferred programs.',
+                  color: 'text-purple-600 bg-purple-100 dark:bg-purple-950/30',
+                },
+                {
+                  step: '03',
+                  icon: FileText,
+                  title: 'Document Review',
+                  description: 'Our experts review your application, prepare documents, and coordinate with universities on your behalf.',
+                  color: 'text-orange-600 bg-orange-100 dark:bg-orange-950/30',
+                },
+                {
+                  step: '04',
+                  icon: CheckCircle2,
+                  title: 'Get Accepted',
+                  description: 'Receive your admission letter, visa support, and prepare for your exciting journey to China!',
+                  color: 'text-green-600 bg-green-100 dark:bg-green-950/30',
+                },
+              ].map((item, index) => (
+                <div key={index} className="relative">
+                  {/* Connector Line */}
+                  {index < 3 && (
+                    <div className="hidden lg:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-border to-transparent z-0" />
+                  )}
+                  
+                  <div className="relative bg-background border rounded-2xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                    {/* Step Number */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${item.color} flex items-center justify-center`}>
+                        <item.icon className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-sm sm:text-base">{item.title}</h4>
-                        <p className="text-xs sm:text-sm text-muted-foreground">{item.desc}</p>
-                      </div>
+                      <span className="text-4xl font-bold text-muted-foreground/20">
+                        {item.step}
+                      </span>
                     </div>
-                  ))}
+                    
+                    {/* Content */}
+                    <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
 
-              {/* Right - Visual Stats */}
-              <div className="relative">
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">10K+</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">Students Placed</div>
-                    </div>
-                    <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-muted border">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">95%</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">Success Rate</div>
-                    </div>
-                  </div>
-                  <div className="space-y-3 sm:space-y-4 mt-4 sm:mt-8">
-                    <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-muted border">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">500+</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">Partner Universities</div>
-                    </div>
-                    <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border">
-                      <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">100+</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">Countries</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Decorative */}
-                <div className="hidden sm:block absolute -top-4 -right-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl -z-10" />
-                <div className="hidden sm:block absolute -bottom-4 -left-4 w-32 h-32 bg-primary/5 rounded-full blur-2xl -z-10" />
-              </div>
+            {/* CTA */}
+            <div className="text-center mt-10 sm:mt-12">
+              <Button asChild size="lg" className="text-base">
+                <Link href="/apply">
+                  Start Your Journey
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
