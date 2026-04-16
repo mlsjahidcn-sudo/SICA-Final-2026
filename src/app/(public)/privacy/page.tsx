@@ -9,20 +9,28 @@ export const metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="flex flex-col min-h-screen py-12">
-      <div className="container px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
-            <p className="text-muted-foreground">
+    <div className="flex flex-col min-h-screen">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-b from-primary/5 via-background to-background py-16 md:py-24">
+        <div className="container px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">Privacy Policy</h1>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Learn how we collect, use, and protect your personal information.
+            </p>
+            <p className="text-sm text-muted-foreground mt-4">
               Last updated: January 1, 2024
             </p>
           </div>
+        </div>
+      </section>
 
-          {/* Content */}
-          <Card>
-            <CardContent className="prose prose-slate max-w-none p-8">
+      {/* Main Content */}
+      <section className="py-16">
+        <div className="container px-4">
+          <div className="max-w-4xl mx-auto">
+            <Card>
+              <CardContent className="prose prose-slate max-w-none p-8">
               <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">Introduction</h2>
                 <p>
@@ -193,7 +201,7 @@ export default function PrivacyPolicyPage() {
           </Card>
 
           {/* Back Link */}
-          <div className="mt-8">
+          <div className="mt-8 text-center">
             <Button variant="outline" asChild>
               <Link href="/">
                 ← Back to Home
@@ -202,6 +210,7 @@ export default function PrivacyPolicyPage() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
+  </div>
   );
 }
