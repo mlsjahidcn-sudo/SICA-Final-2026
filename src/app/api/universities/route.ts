@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
         id,
         name_en,
         name_cn,
+        slug,
         city,
         province,
         logo_url,
