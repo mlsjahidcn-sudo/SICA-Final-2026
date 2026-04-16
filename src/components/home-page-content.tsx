@@ -708,11 +708,11 @@ export function HomePageContent() {
         </section>
 
         {/* Success Cases Section */}
-        <section className="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-muted/30 to-background">
+        <section className="py-12 sm:py-16 md:py-24 bg-muted/30">
           <div className="max-w-7xl mx-auto px-4">
             {/* Section Header */}
             <div className="text-center mb-10 sm:mb-12">
-n              <Badge variant="secondary" className="mb-3 sm:mb-4">
+              <Badge variant="secondary" className="mb-3 sm:mb-4">
                 <Trophy className="h-3.5 w-3.5 mr-1.5" />
                 Success Stories
               </Badge>
@@ -729,80 +729,70 @@ n              <Badge variant="secondary" className="mb-3 sm:mb-4">
               {[
                 {
                   name: 'Sarah Johnson',
-                  country: 'United States',
+                  nameZh: '莎拉·约翰逊',
                   university: 'Tsinghua University',
-                  program: 'MBA Program',
+                  program: 'MBA',
                   year: '2025',
-                  quote: 'SICA made my dream of studying at Tsinghua a reality. Their support throughout the application process was incredible.',
-                  achievement: 'Full Scholarship Recipient',
+                  description: 'Full Scholarship • Computer Science',
                   initials: 'SJ',
+                  bgColor: 'bg-blue-500',
                 },
                 {
                   name: 'Ahmed Hassan',
-                  country: 'Egypt',
+                  nameZh: '艾哈迈德·哈桑',
                   university: 'Peking University',
-                  program: 'Computer Science',
+                  program: 'CS',
                   year: '2025',
-                  quote: 'The team guided me every step of the way. From document preparation to visa support, everything was seamless.',
-                  achievement: 'CSC Scholarship Awardee',
+                  description: 'CSC Scholarship • Engineering',
                   initials: 'AH',
+                  bgColor: 'bg-purple-500',
                 },
                 {
                   name: 'Maria Garcia',
-                  country: 'Spain',
+                  nameZh: '玛丽亚·加西亚',
                   university: 'Fudan University',
-                  program: 'International Relations',
+                  program: 'IR',
                   year: '2024',
-                  quote: 'I got accepted to my dream university with a full scholarship. SICA\'s expertise in Chinese universities is unmatched.',
-                  achievement: 'Full Tuition Waiver',
+                  description: 'Full Tuition Waiver • Business',
                   initials: 'MG',
+                  bgColor: 'bg-green-500',
                 },
               ].map((student, index) => (
-                <div key={index} className="bg-card border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
-                  {/* Header with University Badge */}
-                  <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5 border-b">
-                    <div className="flex items-center gap-3">
-n                      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                        <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-sm sm:text-base">{student.university}</h4>
-                        <p className="text-xs sm:text-sm text-muted-foreground">{student.program}</p>
-                      </div>
+                <div key={index} className="bg-card border rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  {/* Student Avatar and Name */}
+                  <div className="flex items-start gap-4 mb-4">
+                    {/* Avatar */}
+                    <div className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 ${student.bgColor} rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl`}>
+                      {student.initials}
+                    </div>
+
+                    {/* Name and University */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold">{student.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{student.nameZh}</p>
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="p-4 sm:p-5">
-                    {/* Quote */}
-                    <div className="mb-4">
-                      <Quote className="h-4 w-4 text-primary/30 mb-2" />
-                      <p className="text-sm text-muted-foreground italic">"{student.quote}"</p>
-                    </div>
-
-                    {/* Student Info */}
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <div className="flex items-center gap-3">
-                        {/* Avatar */}
-                        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-sm sm:text-base">
-                          {student.initials}
-                        </div>
-                        <div>
-                          <h5 className="font-semibold text-sm sm:text-base">{student.name}</h5>
-                          <p className="text-xs text-muted-foreground">{student.country} • {student.year}</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-                        {student.achievement}
-                      </Badge>
-                    </div>
-                    {/* Achievement Badge - Mobile */}
-                    <div className="sm:hidden mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {student.achievement}
-                      </Badge>
-                    </div>
+                  {/* University with Icon */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">{student.university}</span>
                   </div>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <Badge variant="outline" className="text-xs">
+                      {student.year}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {student.program}
+                    </Badge>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {student.description}
+                  </p>
                 </div>
               ))}
             </div>
