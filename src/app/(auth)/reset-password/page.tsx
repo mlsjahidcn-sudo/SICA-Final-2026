@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,19 +13,13 @@ import {
   Loader2,
   ArrowRight,
   ArrowLeft,
-  Globe,
-  GraduationCap,
-  Award,
   CheckCircle2,
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user } = useAuth();
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,22 +28,80 @@ function ResetPasswordContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [tokenMissing, setTokenMissing] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [invalidLink, setInvalidLink] = useState(false);
 
   useEffect(() => {
-    // Check if we have the necessary parameters from Supabase
-    const hasToken = searchParams.has('token');
-    const hasType = searchParams.has('type');
-    
-    if (!hasToken || !hasType) {
-      setTokenMissing(true);
-    }
-    
-    // Redirect if already logged in
-    if (user) {
-      router.replace('/student-v2');
-    }
-  }, [searchParams, user, router]);
+    // Handle session recovery from URL hash (direct Supabase redirect)
+    // or from auth callback cookies
+    const initSession = async () => {
+      try {
+        const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+        const supabase = getSupabaseClient();
+        
+        if (!supabase) {
+          setInvalidLink(true);
+          return;
+        }
+
+        // First, try to get existing session (from cookies set by auth callback)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          setSessionReady(true);
+          return;
+        }
+
+        // If no session, try to recover from URL hash (direct redirect from Supabase)
+        // The hash contains access_token, refresh_token, type, etc.
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+
+        if (accessToken && type === 'recovery') {
+          // Set the session from the hash tokens
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+
+          if (sessionError) {
+            console.error('Session setup error:', sessionError);
+            setInvalidLink(true);
+          } else {
+            setSessionReady(true);
+            // Clear the hash from URL for security
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } else {
+          // Check if we came from auth callback with valid cookies
+          // by checking for sb-access-token cookie
+          const cookies = document.cookie.split(';');
+          const hasAccessToken = cookies.some(c => c.trim().startsWith('sb-access-token='));
+          
+          if (!hasAccessToken) {
+            setInvalidLink(true);
+          } else {
+            // Wait a bit for cookies to be processed
+            setTimeout(async () => {
+              const { data: { session: retrySession } } = await supabase.auth.getSession();
+              if (retrySession) {
+                setSessionReady(true);
+              } else {
+                setInvalidLink(true);
+              }
+            }, 1000);
+          }
+        }
+      } catch (err) {
+        console.error('Session init error:', err);
+        setInvalidLink(true);
+      }
+    };
+
+    initSession();
+  }, []);
 
   const validatePassword = (pwd: string) => {
     if (pwd.length < 8) {
@@ -107,6 +159,9 @@ function ResetPasswordContent() {
         return;
       }
 
+      // Sign out after password reset so user must log in with new password
+      await supabase.auth.signOut();
+      
       setSuccess(true);
     } catch (err) {
       console.error('Reset password error:', err);
@@ -116,7 +171,17 @@ function ResetPasswordContent() {
     }
   };
 
-  if (tokenMissing) {
+  // Show loading state while session initializes
+  if (!sessionReady && !invalidLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show error if invalid link
+  if (invalidLink) {
     return (
       <div className="min-h-screen flex">
         {/* Left Side - Brand Section */}

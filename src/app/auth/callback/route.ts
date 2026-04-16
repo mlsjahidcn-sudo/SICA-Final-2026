@@ -45,24 +45,30 @@ export async function GET(request: NextRequest) {
       }
 
       if (data.session) {
-        // Determine redirect based on user role
-        const userRole = data.user?.user_metadata?.role || 'student';
-        const approvalStatus = data.user?.user_metadata?.approval_status || 'approved';
-        
+        // Determine redirect based on auth type
         let redirectTo = '/login';
 
-        // For invite flow — the user just confirmed their email and got a session
-        // Redirect them to the appropriate portal
-        if (userRole === 'partner') {
-          if (approvalStatus === 'approved') {
-            redirectTo = '/partner-v2';
-          } else {
-            redirectTo = '/login'; // They'll see the approval pending screen after login
-          }
-        } else if (userRole === 'admin') {
-          redirectTo = '/admin/v2';
+        // For password recovery, redirect to reset-password page
+        if (type === 'recovery') {
+          redirectTo = '/reset-password';
         } else {
-          redirectTo = '/student-v2';
+          // For other flows — determine redirect based on user role
+          const userRole = data.user?.user_metadata?.role || 'student';
+          const approvalStatus = data.user?.user_metadata?.approval_status || 'approved';
+          
+          // For invite flow — the user just confirmed their email and got a session
+          // Redirect them to the appropriate portal
+          if (userRole === 'partner') {
+            if (approvalStatus === 'approved') {
+              redirectTo = '/partner-v2';
+            } else {
+              redirectTo = '/login'; // They'll see the approval pending screen after login
+            }
+          } else if (userRole === 'admin') {
+            redirectTo = '/admin/v2';
+          } else {
+            redirectTo = '/student-v2';
+          }
         }
 
         const redirectUrl = new URL(redirectTo, requestUrl.origin);
