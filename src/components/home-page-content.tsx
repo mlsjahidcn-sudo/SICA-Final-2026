@@ -46,6 +46,8 @@ import {
   ClipboardCheck,
   Send,
   CircleDot,
+  Quote,
+  Trophy,
 } from 'lucide-react';
 import { SchemaOrg } from '@/components/schema-org';
 import { TestimonialsSection } from '@/components/testimonials-section';
@@ -668,13 +670,13 @@ export function HomePageContent() {
                   color: 'text-green-600 bg-green-100 dark:bg-green-950/30',
                 },
               ].map((item, index) => (
-                <div key={index} className="relative">
+                <div key={index} className="relative h-full">
                   {/* Connector Line */}
                   {index < 3 && (
                     <div className="hidden lg:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-border to-transparent z-0" />
                   )}
                   
-                  <div className="relative bg-background border rounded-2xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className="relative bg-background border rounded-2xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
                     {/* Step Number */}
                     <div className="flex items-center justify-between mb-4">
                       <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${item.color} flex items-center justify-center`}>
@@ -687,7 +689,7 @@ export function HomePageContent() {
                     
                     {/* Content */}
                     <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                    <p className="text-sm text-muted-foreground flex-1">{item.description}</p>
                   </div>
                 </div>
               ))}
@@ -698,6 +700,106 @@ export function HomePageContent() {
               <Button asChild size="lg" className="text-base">
                 <Link href="/apply">
                   Start Your Journey
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Success Cases Section */}
+        <section className="py-12 sm:py-16 md:py-24 bg-gradient-to-b from-muted/30 to-background">
+          <div className="max-w-7xl mx-auto px-4">
+            {/* Section Header */}
+            <div className="text-center mb-10 sm:mb-12">
+n              <Badge variant="secondary" className="mb-3 sm:mb-4">
+                <Trophy className="h-3.5 w-3.5 mr-1.5" />
+                Success Stories
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
+                Dreams Turned Into Reality
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg">
+                Meet students who achieved their dreams of studying in China through SICA
+              </p>
+            </div>
+
+            {/* Success Cases Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {[
+                {
+                  name: 'Sarah Johnson',
+                  country: 'United States',
+                  university: 'Tsinghua University',
+                  program: 'MBA Program',
+                  year: '2025',
+                  image: '/images/success-1.jpg',
+                  quote: 'SICA made my dream of studying at Tsinghua a reality. Their support throughout the application process was incredible.',
+                  achievement: 'Full Scholarship Recipient',
+                },
+                {
+                  name: 'Ahmed Hassan',
+                  country: 'Egypt',
+                  university: 'Peking University',
+                  program: 'Computer Science',
+                  year: '2025',
+                  image: '/images/success-2.jpg',
+                  quote: 'The team guided me every step of the way. From document preparation to visa support, everything was seamless.',
+                  achievement: 'CSC Scholarship Awardee',
+                },
+                {
+                  name: 'Maria Garcia',
+                  country: 'Spain',
+                  university: 'Fudan University',
+                  program: 'International Relations',
+                  year: '2024',
+                  image: '/images/success-3.jpg',
+                  quote: 'I got accepted to my dream university with a full scholarship. SICA\'s expertise in Chinese universities is unmatched.',
+                  achievement: 'Full Tuition Waiver',
+                },
+              ].map((student, index) => (
+                <div key={index} className="bg-card border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
+                  {/* Header with University Badge */}
+                  <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5 border-b">
+                    <div className="flex items-center gap-3">
+n                      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm sm:text-base">{student.university}</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{student.program}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4 sm:p-5">
+                    {/* Quote */}
+                    <div className="mb-4">
+                      <Quote className="h-4 w-4 text-primary/30 mb-2" />
+                      <p className="text-sm text-muted-foreground italic">"{student.quote}"</p>
+                    </div>
+
+                    {/* Student Info */}
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div>
+                        <h5 className="font-semibold text-sm sm:text-base">{student.name}</h5>
+                        <p className="text-xs text-muted-foreground">{student.country} • {student.year}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {student.achievement}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* View More */}
+            <div className="text-center mt-8 sm:mt-10">
+              <Button asChild variant="outline" size="lg">
+                <Link href="/testimonials">
+                  View All Success Stories
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
