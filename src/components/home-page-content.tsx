@@ -175,7 +175,7 @@ export function HomePageContent() {
 
   const fetchFeaturedUniversities = async () => {
     try {
-      const response = await fetch('/api/universities?limit=3&featured=true');
+      const response = await fetch('/api/universities?limit=4&featured=true');
       const data = await response.json();
       setFeaturedUniversities(data.universities || []);
     } catch (error) {
