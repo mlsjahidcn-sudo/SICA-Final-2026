@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/auth-context';
@@ -47,8 +48,12 @@ import {
   IconBrandWechat,
   IconEdit,
   IconTrash,
+  IconFile,
+  IconUpload,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
+import { CompletionBadge } from '../components/completion-badge';
+import { ActivityLog } from '@/components/partner-v2/activity-log';
 import type {
   EducationHistoryEntry,
   WorkExperienceEntry,
@@ -60,6 +65,21 @@ import type {
   ScholarshipApplicationData,
   FinancialGuaranteeData,
 } from '@/lib/student-api';
+
+const ALLOWED_DOCUMENT_TYPES: Record<string, string> = {
+  passport: 'Passport',
+  diploma: 'Diploma',
+  transcript: 'Academic Transcript',
+  language_certificate: 'Language Certificate',
+  photo: 'Passport Photo',
+  recommendation: 'Recommendation Letter',
+  cv: 'CV/Resume',
+  study_plan: 'Study Plan',
+  financial_proof: 'Financial Proof',
+  medical_exam: 'Medical Exam Report',
+  police_clearance: 'Police Clearance',
+  other: 'Other Document',
+};
 
 interface StudentProfile {
   // Personal
@@ -124,6 +144,20 @@ interface Student {
     accepted: number;
     rejected: number;
     pending: number;
+  };
+  documents?: Array<{
+    id: string;
+    type: string;
+    file_name: string;
+    file_size: number;
+    status: string;
+    created_at: string;
+  }>;
+  documentStats?: {
+    total: number;
+    verified: number;
+    pending: number;
+    rejected: number;
   };
 }
 
@@ -223,7 +257,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         }
         toast.error(errorMsg);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete student');
     } finally {
       setIsDeleting(false);
@@ -298,10 +332,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold">
-              {student.full_name}
-              {p.chinese_name && <span className="text-lg ml-2 text-muted-foreground">({p.chinese_name})</span>}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold">
+                {student.full_name}
+                {p.chinese_name && <span className="text-lg ml-2 text-muted-foreground">({p.chinese_name})</span>}
+              </h1>
+              <CompletionBadge profile={student.profile} showDetails />
+            </div>
             <div className="flex items-center gap-3 text-muted-foreground text-sm mt-1">
               <span>{student.email}</span>
               {student.nationality && <><span>•</span><span>{student.nationality}</span></>}
@@ -364,6 +401,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <TabsTrigger value="family">Family</TabsTrigger>
             <TabsTrigger value="additional">Additional</TabsTrigger>
             <TabsTrigger value="applications">Applications</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
 
@@ -453,7 +492,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               title="Education History"
               icon={<IconSchool className="h-4 w-4" />}
               items={p.education_history}
-              render={(edu, idx) => (
+              render={(edu) => (
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <InfoItem label="Institution" value={edu.institution} />
                   <InfoItem label="Degree" value={edu.degree} />
@@ -661,9 +700,113 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </Card>
           </TabsContent>
 
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <IconFile className="h-4 w-4" />
+                      Documents
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Manage student documents and certificates
+                    </CardDescription>
+                  </div>
+                  <Button asChild>
+                    <Link href={`/partner-v2/students/${student.id}/documents`}>
+                      <IconUpload className="h-4 w-4 mr-2" />
+                      Manage Documents
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {student.documentStats && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{student.documentStats.total}</div>
+                      <p className="text-xs text-muted-foreground">Total</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{student.documentStats.verified}</div>
+                      <p className="text-xs text-muted-foreground">Verified</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-amber-600">{student.documentStats.pending}</div>
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{student.documentStats.rejected}</div>
+                      <p className="text-xs text-muted-foreground">Rejected</p>
+                    </div>
+                  </div>
+                )}
+                
+                {student.documents && student.documents.length > 0 ? (
+                  <div className="space-y-3">
+                    {student.documents.slice(0, 5).map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <IconFileText className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="font-medium text-sm">
+                              {ALLOWED_DOCUMENT_TYPES[doc.type] || doc.type}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {doc.file_name} • {doc.file_size / 1024 / 1024 < 1 
+                                ? `${(doc.file_size / 1024).toFixed(1)} KB` 
+                                : `${(doc.file_size / 1024 / 1024).toFixed(1)} MB`
+                              } • {new Date(doc.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={`
+                          ${doc.status === 'verified' ? 'bg-green-100 text-green-800' : 
+                            doc.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                            'bg-yellow-100 text-yellow-800'}
+                        `}>
+                          {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                        </Badge>
+                      </div>
+                    ))}
+                    {student.documents.length > 5 && (
+                      <div className="text-center pt-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/partner-v2/students/${student.id}/documents`}>
+                            View all {student.documents.length} documents
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <IconFile className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Click &quot;Manage Documents&quot; to upload documents
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Notes Tab */}
           <TabsContent value="notes">
             <PartnerNotes studentId={student.id} currentUserId={user?.id} />
+          </TabsContent>
+
+          {/* Activity Tab */}
+          <TabsContent value="activity">
+            <ActivityLog
+              entityType="student"
+              entityId={student.id}
+              title="Student Activity"
+              limit={20}
+            />
           </TabsContent>
         </Tabs>
       </div>

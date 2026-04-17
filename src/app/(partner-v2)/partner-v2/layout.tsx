@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { PartnerProvider } from '@/contexts/partner-context';
+import { PartnerRealtimeProvider } from '@/components/partner-v2/partner-realtime-provider';
 import { IconLoader2, IconClock, IconX } from '@tabler/icons-react';
 import { PartnerSidebar } from '@/components/partner-v2/partner-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -134,24 +136,28 @@ export default function PartnerV2Layout({
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <PartnerSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            {children}
-          </div>
-        </div>
-      </SidebarInset>
-      <PartnerCommandPalette />
-    </SidebarProvider>
+    <PartnerProvider>
+      <PartnerRealtimeProvider>
+        <SidebarProvider
+          style={
+            {
+              "--sidebar-width": "calc(var(--spacing) * 72)",
+              "--header-height": "calc(var(--spacing) * 12)",
+            } as React.CSSProperties
+          }
+        >
+          <PartnerSidebar variant="inset" />
+          <SidebarInset>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col">
+              <div className="@container/main flex flex-1 flex-col gap-2">
+                {children}
+              </div>
+            </div>
+          </SidebarInset>
+          <PartnerCommandPalette />
+        </SidebarProvider>
+      </PartnerRealtimeProvider>
+    </PartnerProvider>
   );
 }

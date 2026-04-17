@@ -110,6 +110,21 @@ export async function GET(
       pending: allApplications?.filter(a => ['submitted', 'under_review', 'document_request', 'interview_scheduled'].includes(a.status)).length || 0,
     };
 
+    // Get documents for this student
+    const { data: documents } = await supabase
+      .from('documents')
+      .select('id, type, file_name, file_size, mime_type, status, created_at')
+      .eq('student_id', student?.id)
+      .order('created_at', { ascending: false });
+
+    // Calculate document stats
+    const documentStats = {
+      total: documents?.length || 0,
+      verified: documents?.filter(d => d.status === 'verified').length || 0,
+      pending: documents?.filter(d => d.status === 'pending').length || 0,
+      rejected: documents?.filter(d => d.status === 'rejected').length || 0,
+    };
+
     // Get last sign in
     const { data: authUser } = await supabase.auth.admin.getUserById(id);
 
@@ -120,6 +135,8 @@ export async function GET(
         last_sign_in_at: authUser?.user?.last_sign_in_at || null,
         applications: applications || [],
         stats,
+        documents: documents || [],
+        documentStats,
       },
     });
   } catch (error) {
@@ -164,7 +181,7 @@ export async function PUT(
       }
     }
 
-    // Update student info
+    // Update student info - check for student_profile wrapper or flat fields
     const studentFields = [
       'nationality', 'date_of_birth', 'gender', 'current_address', 'postal_code',
       'permanent_address', 'chinese_name', 'marital_status', 'religion',
@@ -178,10 +195,12 @@ export async function PUT(
       'study_mode', 'funding_source', 'wechat_id',
     ];
 
+    // Handle both nested student_profile and flat field formats
+    const studentProfileData = body.student_profile || body;
     const studentUpdateData: Record<string, unknown> = {};
     for (const field of studentFields) {
-      if (body[field] !== undefined) {
-        studentUpdateData[field] = body[field];
+      if (studentProfileData[field] !== undefined) {
+        studentUpdateData[field] = studentProfileData[field];
       }
     }
 

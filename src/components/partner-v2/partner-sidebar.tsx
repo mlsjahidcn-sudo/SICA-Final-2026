@@ -4,6 +4,8 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { usePartner } from "@/contexts/partner-context"
+import { isPartnerAdmin } from "@/lib/partner/roles"
 import {
   Avatar,
   AvatarFallback,
@@ -47,7 +49,8 @@ import {
   IconUsersGroup,
   IconClipboardList,
   IconArrowsDiff,
-  IconInnerShadowTop
+  IconInnerShadowTop,
+  IconFiles
 } from "@tabler/icons-react"
 
 const navItems = [
@@ -70,6 +73,11 @@ const navItems = [
     title: "Students",
     url: "/partner-v2/students",
     icon: <IconUsers />,
+  },
+  {
+    title: "Documents",
+    url: "/partner-v2/documents",
+    icon: <IconFiles />,
   },
   {
     title: "Team",
@@ -205,7 +213,7 @@ function NavUser({ user, isPartnerAdmin }: { user: { full_name: string; email: s
 export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user } = useAuth()
-  const isPartnerAdmin = !(user as unknown as Record<string, unknown>)?.partner_role || (user as unknown as Record<string, unknown>)?.partner_role === 'partner_admin'
+  const { isPartnerAdmin: isAdmin, partnerUser } = usePartner()
   const [unreadCount, setUnreadCount] = React.useState(0)
 
   // Fetch unread notification count
@@ -278,7 +286,7 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems
-                .filter(item => !item.adminOnly || isPartnerAdmin)
+                .filter(item => !item.adminOnly || isAdmin)
                 .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
@@ -317,7 +325,7 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} isPartnerAdmin={isPartnerAdmin} />
+        <NavUser user={partnerUser || user} isPartnerAdmin={isAdmin} />
       </SidebarFooter>
     </Sidebar>
   )

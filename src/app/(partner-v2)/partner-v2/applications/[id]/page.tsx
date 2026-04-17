@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { ApplicationStatusBadge } from '@/components/partner-v2/application-status-badge';
 import { ApplicationTimeline } from '@/components/partner-v2/application-timeline';
 import { PartnerNotes } from '@/components/partner-v2/partner-notes';
+import { ActivityLog } from '@/components/partner-v2/activity-log';
 import {
   IconArrowLeft,
   IconExternalLink,
@@ -416,6 +417,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -773,10 +775,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
 
           {/* Notes Tab */}
           <TabsContent value="notes">
-            <PartnerNotes 
+            <PartnerNotes
               applicationId={application.id}
               currentUserId={user?.id}
             />
+          </TabsContent>
+
+          {/* Activity Tab */}
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Activity Log</CardTitle>
+                <CardDescription>
+                  Track all actions and changes made to this application
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ActivityLog
+                  entityType="application"
+                  entityId={application.id}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

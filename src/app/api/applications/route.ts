@@ -25,13 +25,19 @@ export async function GET(request: NextRequest) {
     
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const status = searchParams.get('status') || '';
-    const degreeType = searchParams.get('degreeType') || '';
+    const statusParam = searchParams.get('status') || '';
+    const statusesParam = searchParams.get('statuses') || '';
+    const degreeTypeParam = searchParams.get('degreeType') || '';
+    const degreeTypesParam = searchParams.get('degreeTypes') || '';
     const search = searchParams.get('search') || '';
     const sort = searchParams.get('sort') || 'submitted_desc';
     const universityId = searchParams.get('universityId') || '';
     const dateFrom = searchParams.get('dateFrom') || '';
     const dateTo = searchParams.get('dateTo') || '';
+
+    // Parse comma-separated values for multi-select filters
+    const statuses = statusesParam ? statusesParam.split(',').filter(Boolean) : (statusParam && statusParam !== 'all' ? [statusParam] : []);
+    const degreeTypes = degreeTypesParam ? degreeTypesParam.split(',').filter(Boolean) : (degreeTypeParam && degreeTypeParam !== 'all' ? [degreeTypeParam] : []);
     
     const offset = (page - 1) * pageSize;
 
@@ -140,15 +146,15 @@ export async function GET(request: NextRequest) {
       // Admin sees all applications — no filter
     }
 
-    // Status filter
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
+    // Status filter (support multiple)
+    if (statuses.length > 0) {
+      query = query.in('status', statuses);
     }
 
-    // Degree level filter (normalize)
-    if (degreeType && degreeType !== 'all') {
-      const normalizedDegree = degreeType.charAt(0).toUpperCase() + degreeType.slice(1);
-      query = query.eq('programs.degree_level', normalizedDegree);
+    // Degree level filter (support multiple, normalize)
+    if (degreeTypes.length > 0) {
+      const normalizedDegrees = degreeTypes.map(d => d.charAt(0).toUpperCase() + d.slice(1));
+      query = query.in('programs.degree_level', normalizedDegrees);
     }
 
     // Search filter

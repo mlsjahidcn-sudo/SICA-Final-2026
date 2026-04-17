@@ -35,13 +35,36 @@ import {
   IconMapPin,
   IconSchool,
   IconExternalLink,
+  IconColumns,
+  IconDotsVertical,
+  IconEye,
+  IconEdit,
+  IconTrash,
+  IconChevronUp,
+  IconChevronDown,
 } from '@tabler/icons-react';
+import { BulkActionsBar } from '@/components/partner-v2/bulk-actions-bar';
+import { MultiSelectFilter } from '@/components/partner-v2/multi-select-filter';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface University {
   id: string;
@@ -119,6 +142,25 @@ const SORT_OPTIONS = [
   { value: 'name_desc', label: 'Name (Z-A)' },
 ];
 
+interface ColumnConfig {
+  id: string;
+  label: string;
+  visible: boolean;
+  sortable?: boolean;
+  width?: string;
+}
+
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: 'student', label: 'Student', visible: true, sortable: true },
+  { id: 'university', label: 'University', visible: true, sortable: true },
+  { id: 'program', label: 'Program', visible: true },
+  { id: 'status', label: 'Status', visible: true, sortable: true },
+  { id: 'degree', label: 'Degree', visible: true },
+  { id: 'nationality', label: 'Nationality', visible: false },
+  { id: 'submitted', label: 'Submitted', visible: true, sortable: true },
+  { id: 'actions', label: 'Actions', visible: true, width: 'w-[80px]' },
+];
+
 function UniversityLogo({ university, size = 'md' }: { university: University; size?: 'sm' | 'md' | 'lg' }) {
   const sizeClasses = { sm: 'h-8 w-8', md: 'h-10 w-10', lg: 'h-12 w-12' };
   const iconSizes = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-6 w-6' };
@@ -174,8 +216,8 @@ export default function PartnerV2ApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [degreeFilter, setDegreeFilter] = useState('all');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [degreeFilters, setDegreeFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('submitted_desc');
   const [universityFilter, setUniversityFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -185,6 +227,13 @@ export default function PartnerV2ApplicationsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
+  const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  const [tableSort, setTableSort] = useState<{ column: string; direction: 'asc' | 'desc' }>({
+    column: 'submitted',
+    direction: 'desc',
+  });
 
   // Fetch universities for filter dropdown
   useEffect(() => {
@@ -212,8 +261,8 @@ export default function PartnerV2ApplicationsPage() {
       const params = new URLSearchParams();
       params.append('page', pageNum.toString());
       params.append('pageSize', '20');
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (degreeFilter !== 'all') params.append('degreeType', degreeFilter);
+      if (statusFilters.length > 0) params.append('statuses', statusFilters.join(','));
+      if (degreeFilters.length > 0) params.append('degreeTypes', degreeFilters.join(','));
       if (searchQuery) params.append('search', searchQuery);
       if (sortBy) params.append('sort', sortBy);
       if (universityFilter !== 'all') params.append('universityId', universityFilter);
@@ -243,14 +292,14 @@ export default function PartnerV2ApplicationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, degreeFilter, searchQuery, sortBy, universityFilter, dateFrom, dateTo]);
+  }, [statusFilters, degreeFilters, searchQuery, sortBy, universityFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     if (user?.role === 'partner') {
       setPage(1);
       fetchApplications(1, false);
     }
-  }, [user, statusFilter, degreeFilter, sortBy, universityFilter, dateFrom, dateTo]);
+  }, [user, statusFilters, degreeFilters, sortBy, universityFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -274,8 +323,8 @@ export default function PartnerV2ApplicationsPage() {
       const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken();
       const params = new URLSearchParams();
       params.append('format', format);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (degreeFilter !== 'all') params.append('degreeType', degreeFilter);
+      if (statusFilters.length > 0) params.append('statuses', statusFilters.join(','));
+      if (degreeFilters.length > 0) params.append('degreeTypes', degreeFilters.join(','));
       if (searchQuery) params.append('search', searchQuery);
       if (universityFilter !== 'all') params.append('universityId', universityFilter);
 
@@ -306,8 +355,8 @@ export default function PartnerV2ApplicationsPage() {
   };
 
   const clearFilters = () => {
-    setStatusFilter('all');
-    setDegreeFilter('all');
+    setStatusFilters([]);
+    setDegreeFilters([]);
     setUniversityFilter('all');
     setSearchQuery('');
     setDateFrom('');
@@ -315,7 +364,139 @@ export default function PartnerV2ApplicationsPage() {
     setSortBy('submitted_desc');
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || degreeFilter !== 'all' || universityFilter !== 'all' || dateFrom || dateTo;
+  const hasActiveFilters = statusFilters.length > 0 || degreeFilters.length > 0 || universityFilter !== 'all' || dateFrom || dateTo;
+
+  // Bulk selection handlers
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === applications.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(applications.map(app => app.id)));
+    }
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(applications.map(app => app.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Bulk actions
+  const handleBulkStatusChange = async (status: string) => {
+    if (selectedIds.size === 0) return;
+    setIsBulkLoading(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch('/api/partner/applications/bulk', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update_status',
+          applicationIds: Array.from(selectedIds),
+          data: { status },
+        }),
+      });
+      if (response.ok) {
+        toast.success(`Updated status for ${selectedIds.size} applications`);
+        clearSelection();
+        fetchApplications(1, false);
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to update applications');
+      }
+    } catch (error) {
+      toast.error('Failed to update applications');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} applications? This action cannot be undone.`)) return;
+    setIsBulkLoading(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch('/api/partner/applications/bulk', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          applicationIds: Array.from(selectedIds),
+        }),
+      });
+      if (response.ok) {
+        toast.success(`Deleted ${selectedIds.size} applications`);
+        clearSelection();
+        fetchApplications(1, false);
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to delete applications');
+      }
+    } catch (error) {
+      toast.error('Failed to delete applications');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
+  const handleBulkExport = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkLoading(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch('/api/partner/export', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          applicationIds: Array.from(selectedIds),
+          format: 'csv',
+        }),
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `applications-${selectedIds.size}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast.success(`Exported ${selectedIds.size} applications`);
+      } else {
+        toast.error('Failed to export applications');
+      }
+    } catch (error) {
+      toast.error('Failed to export applications');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
@@ -338,6 +519,112 @@ export default function PartnerV2ApplicationsPage() {
     return `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown';
   };
 
+  const getStudentEmail = (student: Student): string => {
+    const user = Array.isArray(student.users) ? student.users[0] : student.users;
+    return user?.email || student.email || '';
+  };
+
+  // Toggle column visibility
+  const toggleColumn = (columnId: string) => {
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.id === columnId ? { ...col, visible: !col.visible } : col
+      )
+    );
+  };
+
+  // Handle table sort
+  const handleTableSort = (column: string) => {
+    setTableSort((prev) => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  // Sort applications for table view
+  const sortedApplications = [...applications].sort((a, b) => {
+    const { column, direction } = tableSort;
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    switch (column) {
+      case 'student':
+        aVal = getStudentName(a.students).toLowerCase();
+        bVal = getStudentName(b.students).toLowerCase();
+        break;
+      case 'university':
+        aVal = getUniversityName(a.programs?.universities || { id: '', name: '', city: '' }).toLowerCase();
+        bVal = getUniversityName(b.programs?.universities || { id: '', name: '', city: '' }).toLowerCase();
+        break;
+      case 'status':
+        aVal = a.status;
+        bVal = b.status;
+        break;
+      case 'submitted':
+        aVal = new Date(a.submitted_at || a.created_at).getTime();
+        bVal = new Date(b.submitted_at || b.created_at).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Quick action handlers
+  const handleQuickView = (appId: string) => {
+    window.open(`/partner-v2/applications/${appId}`, '_blank');
+  };
+
+  const handleQuickEdit = (appId: string) => {
+    window.location.href = `/partner-v2/applications/${appId}/edit`;
+  };
+
+  const handleQuickDelete = async (appId: string) => {
+    if (!confirm('Are you sure you want to delete this application?')) return;
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch(`/api/applications/${appId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        toast.success('Application deleted');
+        fetchApplications(1, false);
+      } else {
+        toast.error('Failed to delete application');
+      }
+    } catch {
+      toast.error('Failed to delete application');
+    }
+  };
+
+  const handleQuickStatusChange = async (appId: string, status: string) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch(`/api/applications/${appId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (response.ok) {
+        toast.success(`Status updated to ${STATUS_CONFIG[status]?.label || status}`);
+        fetchApplications(1, false);
+      } else {
+        toast.error('Failed to update status');
+      }
+    } catch {
+      toast.error('Failed to update status');
+    }
+  };
+
   return (
     <>
       {/* Header */}
@@ -350,17 +637,42 @@ export default function PartnerV2ApplicationsPage() {
               {total > 0 && <span className="ml-1">({total} total)</span>}
             </p>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Column Visibility */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <IconColumns className="h-4 w-4 mr-2" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <ScrollArea className="h-[200px]">
+                  {columns.filter((col) => col.id !== 'actions').map((col) => (
+                    <DropdownMenuCheckboxItem
+                      key={col.id}
+                      checked={col.visible}
+                      onCheckedChange={() => toggleColumn(col.id)}
+                    >
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button asChild>
               <Link href="/partner-v2/applications/new">
                 <IconPlus className="h-4 w-4 mr-2" />
                 Add Application
               </Link>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => handleExport('csv')}
               disabled={isExporting || applications.length === 0}
@@ -372,8 +684,8 @@ export default function PartnerV2ApplicationsPage() {
               )}
               CSV
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => handleExport('json')}
               disabled={isExporting || applications.length === 0}
@@ -401,34 +713,31 @@ export default function PartnerV2ApplicationsPage() {
               />
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]">
-                <IconFilter className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
-                <SelectItem value="document_request">Document Request</SelectItem>
-                <SelectItem value="interview_scheduled">Interview</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              options={[
+                { value: 'submitted', label: 'Submitted' },
+                { value: 'under_review', label: 'Under Review' },
+                { value: 'document_request', label: 'Document Request' },
+                { value: 'interview_scheduled', label: 'Interview' },
+                { value: 'accepted', label: 'Accepted' },
+                { value: 'rejected', label: 'Rejected' },
+                { value: 'draft', label: 'Draft' },
+              ]}
+              selected={statusFilters}
+              onChange={setStatusFilters}
+              placeholder="Status"
+              label="Status"
+              className="w-[160px]"
+            />
             
-            <Select value={degreeFilter} onValueChange={setDegreeFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Degree" />
-              </SelectTrigger>
-              <SelectContent>
-                {DEGREE_TYPES.map((degree) => (
-                  <SelectItem key={degree.value} value={degree.value}>
-                    {degree.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              options={DEGREE_TYPES.filter(d => d.value !== 'all').map(d => ({ value: d.value, label: d.label }))}
+              selected={degreeFilters}
+              onChange={setDegreeFilters}
+              placeholder="Degree"
+              label="Degree"
+              className="w-[150px]"
+            />
             
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
@@ -548,80 +857,218 @@ export default function PartnerV2ApplicationsPage() {
               </div>
             ) : (
               <>
-                <div className="divide-y">
-                  {applications.map((app) => {
-                    const uni = app.programs?.universities;
-                    const studentName = getStudentName(app.students);
-                    const dateLabel = formatDate(app.submitted_at || app.created_at);
-
-                    return (
-                      <Link
-                        key={app.id}
-                        href={`/partner-v2/applications/${app.id}`}
-                        className="flex items-start gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
-                      >
-                        {/* University Logo */}
-                        <UniversityLogo university={uni || { id: '', name: '', city: '' }} size="lg" />
-
-                        {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Row 1: Student name + status */}
-                          <div className="flex items-center gap-3 mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <StudentAvatar student={app.students} />
-                              <span className="font-medium truncate">{studentName}</span>
-                            </div>
-                            {getStatusBadge(app.status)}
-                          </div>
-
-                          {/* Row 2: University + Program */}
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground mb-1.5">
-                            <span className="truncate max-w-[240px] font-medium text-foreground/80">
-                              {uni ? getUniversityName(uni) : 'Unknown University'}
-                            </span>
-                            <span className="text-muted-foreground/50">·</span>
-                            <span className="flex items-center gap-1">
-                              <IconSchool className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate max-w-[180px]">{app.programs?.name || 'Unknown Program'}</span>
-                            </span>
-                          </div>
-
-                          {/* Row 3: Meta info */}
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                            {uni?.city && (
-                              <span className="flex items-center gap-1">
-                                <IconMapPin className="h-3 w-3" />
-                                {uni.city}{uni.province ? `, ${uni.province}` : ''}
-                              </span>
-                            )}
-                            {app.students.nationality && (
-                              <span>{app.students.nationality}</span>
-                            )}
-                            {app.programs?.degree_level && (
-                              <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px] uppercase tracking-wide font-medium">
-                                {app.programs.degree_level}
-                              </span>
-                            )}
-                            {dateLabel && (
-                              <span className="flex items-center gap-1">
-                                <IconCalendar className="h-3 w-3" />
-                                {dateLabel}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 shrink-0 self-center">
-                          <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <IconExternalLink className="h-4 w-4 text-muted-foreground" />
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                {/* Select All Header */}
+                <div className="flex items-center gap-3 px-4 py-2 border-b bg-muted/30">
+                  <Checkbox
+                    checked={selectedIds.size === sortedApplications.length && sortedApplications.length > 0}
+                    onCheckedChange={() => {
+                      if (selectedIds.size === sortedApplications.length) {
+                        setSelectedIds(new Set());
+                      } else {
+                        setSelectedIds(new Set(sortedApplications.map(a => a.id)));
+                      }
+                    }}
+                    aria-label="Select all"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
+                  </span>
                 </div>
-                
+
+                {/* Table View */}
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="w-[40px] px-4 py-3">
+                            <Checkbox
+                              checked={selectedIds.size === sortedApplications.length && sortedApplications.length > 0}
+                              onCheckedChange={() => {
+                                if (selectedIds.size === sortedApplications.length) {
+                                  setSelectedIds(new Set());
+                                } else {
+                                  setSelectedIds(new Set(sortedApplications.map(a => a.id)));
+                                }
+                              }}
+                              aria-label="Select all"
+                            />
+                          </th>
+                          {columns.filter(c => c.visible).map((col) => (
+                            <th
+                              key={col.id}
+                              className={`px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-foreground' : ''} ${col.width || ''}`}
+                              onClick={() => col.sortable && handleTableSort(col.id)}
+                            >
+                              <div className="flex items-center gap-1">
+                                {col.label}
+                                {col.sortable && tableSort.column === col.id && (
+                                  tableSort.direction === 'asc' ? (
+                                    <IconChevronUp className="h-3 w-3" />
+                                  ) : (
+                                    <IconChevronDown className="h-3 w-3" />
+                                  )
+                                )}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {sortedApplications.map((app) => {
+                          const uni = app.programs?.universities;
+                          const studentName = getStudentName(app.students);
+                          const studentEmail = getStudentEmail(app.students);
+                          const dateLabel = formatDate(app.submitted_at || app.created_at);
+                          const isSelected = selectedIds.has(app.id);
+                          const visibleCols = columns.filter(c => c.visible);
+
+                          return (
+                            <tr
+                              key={app.id}
+                              className={`hover:bg-muted/50 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
+                            >
+                              <td className="px-4 py-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleSelection(app.id)}
+                                  aria-label={`Select ${studentName}`}
+                                />
+                              </td>
+
+                              {visibleCols.map((col) => {
+                                if (col.id === 'student') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      <div className="flex items-center gap-2 min-w-[150px]">
+                                        <StudentAvatar student={app.students} size="md" />
+                                        <div className="min-w-0">
+                                          <div className="font-medium truncate">{studentName}</div>
+                                          <div className="text-xs text-muted-foreground truncate">{studentEmail}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'university') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      <div className="flex items-center gap-2 min-w-[120px]">
+                                        <UniversityLogo university={uni || { id: '', name: '', city: '' }} size="sm" />
+                                        <span className="truncate">{uni ? getUniversityName(uni) : 'Unknown'}</span>
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'program') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      <div className="flex items-center gap-1 min-w-[150px]">
+                                        <IconSchool className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <span className="truncate">{app.programs?.name || 'Unknown'}</span>
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'status') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      {getStatusBadge(app.status)}
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'degree') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      {app.programs?.degree_level && (
+                                        <span className="px-2 py-1 rounded bg-muted text-xs font-medium">
+                                          {app.programs.degree_level}
+                                        </span>
+                                      )}
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'nationality') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3 text-sm">
+                                      {app.students.nationality || '-'}
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'submitted') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <IconCalendar className="h-3 w-3" />
+                                        {dateLabel || '-'}
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
+                                if (col.id === 'actions') {
+                                  return (
+                                    <td key={col.id} className="px-4 py-3">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                            <IconDotsVertical className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48">
+                                          <DropdownMenuItem onClick={() => handleQuickView(app.id)}>
+                                            <IconEye className="h-4 w-4 mr-2" />
+                                            View Details
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleQuickEdit(app.id)}>
+                                            <IconEdit className="h-4 w-4 mr-2" />
+                                            Edit
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger>
+                                              <IconClock className="h-4 w-4 mr-2" />
+                                              Change Status
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent>
+                                              {Object.entries(STATUS_CONFIG).map(([status, config]) => (
+                                                <DropdownMenuItem
+                                                  key={status}
+                                                  onClick={() => handleQuickStatusChange(app.id, status)}
+                                                >
+                                                  <config.icon className="h-4 w-4 mr-2" />
+                                                  {config.label}
+                                                </DropdownMenuItem>
+                                              ))}
+                                            </DropdownMenuSubContent>
+                                          </DropdownMenuSub>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            className="text-red-600 focus:text-red-600"
+                                            onClick={() => handleQuickDelete(app.id)}
+                                          >
+                                            <IconTrash className="h-4 w-4 mr-2" />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </td>
+                                  );
+                                }
+
+                                return <td key={col.id} className="px-4 py-3">-</td>;
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
                 {/* Load More */}
                 {hasMore && (
                   <div className="p-4 border-t text-center">
@@ -642,6 +1089,26 @@ export default function PartnerV2ApplicationsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        totalCount={applications.length}
+        onSelectAll={selectAll}
+        onClearSelection={clearSelection}
+        onDelete={handleBulkDelete}
+        onStatusChange={handleBulkStatusChange}
+        onExport={handleBulkExport}
+        isLoading={isBulkLoading}
+        entityType="applications"
+        statusOptions={[
+          { value: 'submitted', label: 'Submitted' },
+          { value: 'under_review', label: 'Under Review' },
+          { value: 'document_request', label: 'Document Request' },
+          { value: 'accepted', label: 'Accepted' },
+          { value: 'rejected', label: 'Rejected' },
+        ]}
+      />
     </>
   );
 }

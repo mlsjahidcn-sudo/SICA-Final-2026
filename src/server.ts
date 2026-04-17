@@ -37,9 +37,13 @@ function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {
 
 // ─── Import and Setup WebSocket Handlers ──────────────────────────────────────
 import { setupNotificationsHandler } from './ws-handlers/notifications';
+import { setupPartnerHandler } from './ws-handlers/partner';
 
 // Register notification endpoint
 setupNotificationsHandler(registerWsEndpoint('/ws/notifications'));
+
+// Register partner realtime endpoint
+setupPartnerHandler(registerWsEndpoint('/ws/partner'));
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.prepare().then(() => {
@@ -68,7 +72,7 @@ app.prepare().then(() => {
         dev ? 'development' : process.env.COZE_PROJECT_ENV
       }`,
     );
-    console.log(`> WebSocket endpoints: /ws/notifications`);
+    console.log(`> WebSocket endpoints: /ws/notifications, /ws/partner`);
   });
 });
 

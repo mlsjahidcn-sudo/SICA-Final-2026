@@ -1,36 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId, isPartnerAdmin } from '@/lib/partner/roles';
+import { getVisibleReferrerIds, getPartnerOrganizationId } from '@/lib/partner/visibility';
 import { checkEmailExists } from '@/lib/student-validation';
 import { createStudentSchema } from '@/lib/validations/student';
 import crypto from 'node:crypto';
 
 /**
- * Get the list of user IDs whose students the current partner user can see.
- * - Admin: sees students referred by themselves + all team members
- * - Member: sees only students referred by themselves
+ * NOTE: getVisibleReferrerIds moved to lib/partner/visibility.ts
+ * This function is now imported from the visibility utilities
  */
-async function getVisibleReferrerIds(user: { id: string; partner_role: string | null; partner_id: string | null }): Promise<string[]> {
-  const supabase = getSupabaseClient();
-  const isAdmin = !user.partner_role || user.partner_role === 'partner_admin';
-  
-  if (isAdmin) {
-    // Admin sees students referred by themselves and all their team members
-    const { data: teamMembers } = await supabase
-      .from('users')
-      .select('id')
-      .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
-      .eq('role', 'partner');
-    
-    const ids = (teamMembers || []).map(m => m.id);
-    // Ensure admin's own ID is included (in case team query misses it)
-    if (!ids.includes(user.id)) ids.push(user.id);
-    return ids;
-  } else {
-    // Member sees only students they personally referred
-    return [user.id];
-  }
-}
 
 // GET /api/partner/students - Get students list for partner
 export async function GET(request: NextRequest) {
@@ -48,6 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Get the list of referrer IDs this user can see
     const referrerIds = await getVisibleReferrerIds(partnerUser);
+    const isAdmin = isPartnerAdmin(partnerUser);
 
     // Get students referred by any of these partner users
     const { data: referredUsers, error: referredError } = await supabase
@@ -64,7 +44,23 @@ export async function GET(request: NextRequest) {
           id,
           nationality,
           date_of_birth,
-          gender
+          gender,
+          current_address,
+          chinese_name,
+          passport_number,
+          passport_expiry_date,
+          passport_issuing_country,
+          highest_education,
+          gpa,
+          hsk_level,
+          hsk_score,
+          ielts_score,
+          toefl_score,
+          emergency_contact_name,
+          emergency_contact_phone,
+          emergency_contact_relationship,
+          education_history,
+          work_experience
         )
       `)
       .in('referred_by_partner_id', referrerIds)
@@ -93,6 +89,7 @@ export async function GET(request: NextRequest) {
         created_at: userData.created_at,
         referred_by_partner_id: userData.referred_by_partner_id,
         application_count: 0,
+        profile: studentRecord || undefined,
       });
     }
 
@@ -141,7 +138,6 @@ export async function GET(request: NextRequest) {
               } else {
                 // Only add if this partner user can see this student
                 // (student might be referred by a different partner)
-                const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
                 if (isAdmin) {
                   studentsMap.set(userData.id, {
                     id: userData.id,
@@ -192,7 +188,6 @@ export async function GET(request: NextRequest) {
     const studentIds = Array.from(studentIdByUserId.values());
 
     // Get app stats for admin (all partner apps), or member (only their referred students' apps)
-    const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
     let appStatsQuery = supabase
       .from('applications')
       .select('student_id, status')

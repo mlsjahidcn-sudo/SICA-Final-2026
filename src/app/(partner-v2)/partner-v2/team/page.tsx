@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
+import { usePartner } from '@/contexts/partner-context';
 import {
   IconSearch,
   IconUsers,
@@ -106,6 +107,7 @@ interface ActivityResponse {
 
 export default function PartnerV2TeamPage() {
   const { user } = useAuth();
+  const { isPartnerAdmin } = usePartner();
   const [activeTab, setActiveTab] = useState('members');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [activities, setActivities] = useState<TeamActivity[]>([]);
@@ -377,9 +379,6 @@ export default function PartnerV2TeamPage() {
     member.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const currentUserMember = teamMembers.find(m => m.id === user?.id);
-  const isCurrentUserAdmin = !currentUserMember?.partner_role || currentUserMember?.partner_role === 'partner_admin';
-
   return (
     <>
       {/* Header */}
@@ -391,9 +390,9 @@ export default function PartnerV2TeamPage() {
               Manage your team members and view activity
             </p>
           </div>
-          {isCurrentUserAdmin && (
+          {isPartnerAdmin && (
             <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-              {isCurrentUserAdmin && (
+              {isPartnerAdmin && (
                 <DialogTrigger asChild>
                   <Button>
                     <IconPlus className="h-4 w-4 mr-2" />
@@ -513,7 +512,7 @@ export default function PartnerV2TeamPage() {
                 <Badge variant="secondary" className="ml-2">{teamMembers.length}</Badge>
               )}
             </TabsTrigger>
-            {isCurrentUserAdmin && (
+            {isPartnerAdmin && (
               <TabsTrigger value="activity">
                 <IconHistory className="h-4 w-4 mr-2" />
                 Activity Log
@@ -593,7 +592,7 @@ export default function PartnerV2TeamPage() {
                             </div>
                           </div>
                         </div>
-                        {isCurrentUserAdmin && member.id !== user?.id && (
+                        {isPartnerAdmin && member.id !== user?.id && (
                           <div className="flex items-center gap-2 shrink-0">
                             <Dialog open={isEditDialogOpen && editingMember?.id === member.id} onOpenChange={(open) => {
                               setIsEditDialogOpen(open);
@@ -704,7 +703,7 @@ export default function PartnerV2TeamPage() {
           </TabsContent>
 
           {/* Activity Log Tab */}
-          {isCurrentUserAdmin && (
+          {isPartnerAdmin && (
             <TabsContent value="activity" className="space-y-4 pt-4">
               {isLoadingActivity && activities.length === 0 ? (
                 <div className="space-y-4">

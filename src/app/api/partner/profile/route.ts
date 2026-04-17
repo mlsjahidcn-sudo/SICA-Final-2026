@@ -12,6 +12,10 @@ interface ProfileResponse {
   position: string | null;
   address: string | null;
   website: string | null;
+  // Partner role info needed by PartnerContext
+  role: string;
+  partner_role: 'partner_admin' | 'member' | null;
+  partner_id: string | null;
 }
 
 // Helper to convert empty string to null
@@ -41,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Get user basic info from users table
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, full_name, email, phone, avatar_url')
+      .select('id, full_name, email, phone, avatar_url, role, partner_role, partner_id')
       .eq('id', user.id)
       .maybeSingle();
     
@@ -77,6 +81,10 @@ export async function GET(request: NextRequest) {
       position: partnerProfile?.contact_person || null,
       address: partnerProfile?.company_address || null,
       website: partnerProfile?.website || null,
+      // Partner role info
+      role: userData.role,
+      partner_role: userData.partner_role,
+      partner_id: userData.partner_id,
     };
     
     return addNoCacheHeaders(NextResponse.json({ profile }));

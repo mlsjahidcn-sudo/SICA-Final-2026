@@ -28,8 +28,16 @@ import {
   IconPlus,
   IconTrash,
   IconEdit,
+  IconX as IconClear,
+  IconDownload,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { BulkActionsBar } from '@/components/partner-v2/bulk-actions-bar';
+import { MultiSelectFilter } from '@/components/partner-v2/multi-select-filter';
+import { CompletionBadge } from './components/completion-badge';
+import { StudentListSkeleton, EmptyStudentList } from './components/student-list-skeleton';
+import type { StudentProfile } from './lib/types';
 
 interface Student {
   id: string;
@@ -45,6 +53,8 @@ interface Student {
     accepted: number;
     pending: number;
   };
+  profile?: StudentProfile;
+  completion_percentage?: number;
 }
 
 interface StudentsResponse {
@@ -66,6 +76,57 @@ export default function PartnerV2StudentsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
+  const [nationalityFilters, setNationalityFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [availableNationalities, setAvailableNationalities] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Extract unique nationalities from students
+  useEffect(() => {
+    if (students.length > 0) {
+      const nationalities = [...new Set(students.map(s => s.nationality).filter(Boolean))] as string[];
+      setAvailableNationalities(nationalities.sort());
+    }
+  }, [students]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      if (!token) {
+        toast.error('Please sign in first');
+        return;
+      }
+
+      const response = await fetch('/api/partner/students/export', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        toast.error('Failed to export students');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `students_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Students exported successfully');
+    } catch {
+      toast.error('Failed to export students');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -96,11 +157,63 @@ export default function PartnerV2StudentsPage() {
         }
         toast.error(errorMsg);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete student');
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
+    }
+  };
+
+  // Bulk selection handlers
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredStudents.map(s => s.id)));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} students? This action cannot be undone.`)) return;
+    setIsBulkLoading(true);
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+      const response = await fetch('/api/partner/students/bulk', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          studentIds: Array.from(selectedIds),
+        }),
+      });
+      if (response.ok) {
+        toast.success(`Deleted ${selectedIds.size} students`);
+        clearSelection();
+        fetchStudents(1, false);
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to delete students');
+      }
+    } catch (error) {
+      toast.error('Failed to delete students');
+    } finally {
+      setIsBulkLoading(false);
     }
   };
 
@@ -183,6 +296,34 @@ export default function PartnerV2StudentsPage() {
       .slice(0, 2);
   };
 
+  // Client-side filtering for nationality and status
+  const filteredStudents = students.filter((student) => {
+    // Nationality filter
+    if (nationalityFilters.length > 0 && !nationalityFilters.includes(student.nationality || '')) {
+      return false;
+    }
+    // Status filter
+    if (statusFilters.length > 0) {
+      const hasAccepted = student.stats.accepted > 0;
+      const hasPending = student.stats.pending > 0;
+      const hasNoApps = student.stats.total === 0;
+
+      if (statusFilters.includes('accepted') && !hasAccepted) return false;
+      if (statusFilters.includes('pending') && !hasPending) return false;
+      if (statusFilters.includes('no_applications') && !hasNoApps) return false;
+
+      // If status filter is active, student must match at least one
+      const matchesStatus = statusFilters.some((s) => {
+        if (s === 'accepted') return hasAccepted;
+        if (s === 'pending') return hasPending;
+        if (s === 'no_applications') return hasNoApps;
+        return false;
+      });
+      if (!matchesStatus) return false;
+    }
+    return true;
+  });
+
   return (
     <>
       {/* Header */}
@@ -195,24 +336,79 @@ export default function PartnerV2StudentsPage() {
               {total > 0 && <span className="ml-1">({total} total)</span>}
             </p>
           </div>
-          <Button asChild>
-            <Link href="/partner-v2/students/new">
-              <IconPlus className="h-4 w-4 mr-2" />
-              Add Student
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExport}
+              disabled={isExporting || students.length === 0}
+            >
+              {isExporting ? (
+                <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <IconDownload className="h-4 w-4 mr-2" />
+              )}
+              Export
+            </Button>
+            <Button asChild>
+              <Link href="/partner-v2/students/new">
+                <IconPlus className="h-4 w-4 mr-2" />
+                Add Student
+              </Link>
+            </Button>
+          </div>
         </div>
         
-        {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or nationality..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or nationality..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {availableNationalities.length > 0 && (
+              <MultiSelectFilter
+                options={availableNationalities.map(n => ({ value: n, label: n }))}
+                selected={nationalityFilters}
+                onChange={setNationalityFilters}
+                placeholder="Nationality"
+                label="Nationality"
+                className="w-[160px]"
+              />
+            )}
+
+            <MultiSelectFilter
+              options={[
+                { value: 'accepted', label: 'Accepted' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'no_applications', label: 'No Applications' },
+              ]}
+              selected={statusFilters}
+              onChange={setStatusFilters}
+              placeholder="App Status"
+              label="Status"
+              className="w-[150px]"
             />
+
+            {(nationalityFilters.length > 0 || statusFilters.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setNationalityFilters([]);
+                  setStatusFilters([]);
+                }}
+                className="gap-1 text-muted-foreground"
+              >
+                <IconClear className="h-3 w-3" />
+                Clear
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -220,52 +416,59 @@ export default function PartnerV2StudentsPage() {
       {/* Students List */}
       <div className="px-4 lg:px-6 pb-6">
         {isLoading && students.length === 0 ? (
-          <Card>
-            <div className="divide-y">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-4">
-                  <div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                    <div className="h-3 w-48 bg-muted animate-pulse rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        ) : students.length === 0 ? (
-          <Card>
-            <div className="py-12 text-center">
-              <IconUsers className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground">No students found</p>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery ? 'Try adjusting your search' : 'Click "Add Student" to create your first student'}
-              </p>
-            </div>
-          </Card>
+          <StudentListSkeleton />
+        ) : filteredStudents.length === 0 ? (
+          <EmptyStudentList
+            hasSearch={!!(searchQuery || nationalityFilters.length > 0 || statusFilters.length > 0)}
+          />
         ) : (
           <>
             <Card>
               {/* Table Header */}
-              <div className="hidden md:grid md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 border-b bg-muted/50 text-sm font-medium text-muted-foreground rounded-t-lg">
+              <div className="hidden md:grid md:grid-cols-[auto_2fr_1.5fr_1fr_0.8fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 border-b bg-muted/50 text-sm font-medium text-muted-foreground rounded-t-lg">
+                <Checkbox
+                  checked={selectedIds.size === filteredStudents.length && filteredStudents.length > 0}
+                  onCheckedChange={() => {
+                    if (selectedIds.size === filteredStudents.length) {
+                      setSelectedIds(new Set());
+                    } else {
+                      setSelectedIds(new Set(filteredStudents.map(s => s.id)));
+                    }
+                  }}
+                  aria-label="Select all"
+                />
                 <span>Student</span>
                 <span>Email</span>
                 <span>Nationality</span>
+                <span>Completion</span>
                 <span>Applications</span>
                 <span>Status</span>
                 <span className="w-[72px]">Actions</span>
               </div>
               {/* Rows */}
               <div className="divide-y">
-                {students.map((student) => (
+                {filteredStudents.map((student) => {
+                  const isSelected = selectedIds.has(student.id);
+                  return (
                   <div
                     key={student.id}
-                    className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] items-center gap-2 md:gap-4 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/partner-v2/students/${student.id}`)}
+                    className={`grid grid-cols-1 md:grid-cols-[auto_2fr_1.5fr_1fr_0.8fr_1fr_1fr_auto] items-center gap-2 md:gap-4 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('[data-checkbox]')) return;
+                      router.push(`/partner-v2/students/${student.id}`);
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && router.push(`/partner-v2/students/${student.id}`)}
                     role="button"
                     tabIndex={0}
                   >
+                    {/* Checkbox */}
+                    <div data-checkbox onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(student.id)}
+                        aria-label={`Select ${student.full_name}`}
+                      />
+                    </div>
                     {/* Student */}
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 shrink-0">
@@ -280,6 +483,10 @@ export default function PartnerV2StudentsPage() {
                     <span className="text-sm text-muted-foreground truncate">{student.email}</span>
                     {/* Nationality */}
                     <span className="text-sm text-muted-foreground truncate">{student.nationality || '—'}</span>
+                    {/* Completion */}
+                    <div className="flex items-center">
+                      <CompletionBadge profile={student.profile} />
+                    </div>
                     {/* Applications */}
                     <div className="flex items-center gap-1.5 text-sm">
                       <IconFileText className="h-4 w-4 text-muted-foreground" />
@@ -320,7 +527,8 @@ export default function PartnerV2StudentsPage() {
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
             
@@ -361,6 +569,17 @@ export default function PartnerV2StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        totalCount={students.length}
+        onSelectAll={selectAll}
+        onClearSelection={clearSelection}
+        onDelete={handleBulkDelete}
+        isLoading={isBulkLoading}
+        entityType="students"
+      />
     </>
   );
 }
