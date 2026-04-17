@@ -200,6 +200,9 @@ export async function PUT(request: NextRequest) {
       position: savedPartner?.contact_person || null,
       address: savedPartner?.company_address || null,
       website: savedPartner?.website || null,
+      role: user.role,
+      partner_role: (user.partner_role as "partner_admin" | "member" | null) || 'member',
+      partner_id: user.partner_id || '',
     };
     
     return addNoCacheHeaders(NextResponse.json({ success: true, profile: updatedProfile }));

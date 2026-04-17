@@ -41,7 +41,7 @@ export function PartnerRealtimeProvider({ children }: PartnerRealtimeProviderPro
       
       // Only process messages for our team
       if (!partnerUser) return;
-      const teamId = isPartnerAdmin ? partnerUser.id : partnerUser.partner_id;
+      const teamId = (isPartnerAdmin ? partnerUser.id : partnerUser.partner_id) || '';
       if (message.teamId !== teamId) return;
 
       // Handle different message types
@@ -141,7 +141,7 @@ export function PartnerRealtimeProvider({ children }: PartnerRealtimeProviderPro
         setIsConnected(true);
 
         // Send authentication
-        const teamId = isPartnerAdmin ? partnerUser.id : partnerUser.partner_id;
+        const teamId = (isPartnerAdmin ? partnerUser.id : partnerUser.partner_id) || '';
         ws.send(JSON.stringify({
           type: 'auth',
           userId: user?.id,
@@ -196,7 +196,7 @@ export function PartnerRealtimeProvider({ children }: PartnerRealtimeProviderPro
   const broadcastUpdate = useCallback((type: PartnerRealtimeMessage['type'], payload: PartnerRealtimeMessage['payload']) => {
     if (!partnerUser || wsRef.current?.readyState !== WebSocket.OPEN) return;
 
-    const teamId = isPartnerAdmin ? partnerUser.id : partnerUser.partner_id;
+    const teamId = (isPartnerAdmin ? partnerUser.id : partnerUser.partner_id) || '';
     const message: PartnerRealtimeMessage = {
       type,
       payload: {

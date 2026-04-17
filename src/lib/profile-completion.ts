@@ -54,7 +54,7 @@ export type StudentCompletionField = typeof STUDENT_COMPLETION_FIELDS[number];
  * @param student - Student record from the students table
  * @returns Completion percentage (0-100)
  */
-export function calculateProfileCompletion(user: Record<string, any> | null, student: Record<string, any> | null): number {
+export function calculateProfileCompletion(user: Record<string, unknown> | { [key: string]: unknown } | null, student: Record<string, unknown> | { [key: string]: unknown } | null): number {
   let completed = 0;
   let total = 0;
 
@@ -102,7 +102,7 @@ export function calculateProfileCompletion(user: Record<string, any> | null, stu
  * Get list of incomplete profile fields
  * Useful for showing users what they still need to fill in
  */
-export function getIncompleteFields(user: Record<string, any> | null, student: Record<string, any> | null): string[] {
+export function getIncompleteFields(user: Record<string, unknown> | { [key: string]: unknown } | null, student: Record<string, unknown> | { [key: string]: unknown } | null): string[] {
   const incomplete: string[] = [];
 
   for (const field of USER_COMPLETION_FIELDS) {

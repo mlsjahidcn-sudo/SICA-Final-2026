@@ -325,7 +325,7 @@ export function PartnerSidebar({ ...props }: React.ComponentProps<typeof Sidebar
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={partnerUser || user} isPartnerAdmin={isAdmin} />
+        <NavUser user={(partnerUser as any) || user} isPartnerAdmin={isAdmin} />
       </SidebarFooter>
     </Sidebar>
   )

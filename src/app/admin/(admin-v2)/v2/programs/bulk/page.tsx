@@ -157,7 +157,7 @@ export default function BulkAddProgramsPage() {
 
   // Parse pasted data (TSV/CSV/Markdown)
   const parsePastedData = (text: string): ProgramRow[] => {
-    let lines = text.trim().split('\n').map(line => line.trim()).filter(line => line);
+    const lines = text.trim().split('\n').map(line => line.trim()).filter(line => line);
     if (lines.length === 0) return [];
 
     const firstLine = lines[0];

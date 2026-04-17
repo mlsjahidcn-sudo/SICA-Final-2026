@@ -106,17 +106,27 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     // Get student's documents
-    const { data: documents } = await supabaseAdmin
-      .from('application_documents')
-      .select(`
-        id,
-        document_type,
-        file_url,
-        uploaded_at,
-        verified,
-        application_id
-      `)
-      .eq('application_id', applications?.[0]?.id || '');
+    const studentRecordId = Array.isArray(student.students) ? student.students[0]?.id : student.students?.id;
+    let documents: any[] = [];
+    if (studentRecordId) {
+      const { data: docs } = await supabaseAdmin
+        .from('documents')
+        .select(`
+          id,
+          type as document_type,
+          file_key as file_url,
+          uploaded_at,
+          status,
+          application_id
+        `)
+        .eq('student_id', studentRecordId)
+        .order('uploaded_at', { ascending: false });
+        
+      documents = docs?.map(d => ({
+        ...d,
+        verified: d.status === 'verified'
+      })) || [];
+    }
 
     // Get student's meetings
     const { data: meetings } = await supabaseAdmin

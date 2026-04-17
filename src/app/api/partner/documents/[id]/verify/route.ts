@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth } from '@/lib/partner/roles';
 
 /**
  * PATCH /api/partner/documents/[id]/verify
@@ -71,7 +71,7 @@ export async function PATCH(
     
     let hasAccess = false;
     
-    const studentData = document.students && !Array.isArray(document.students) ? document.students : null;
+    const studentData: any = document.students && !Array.isArray(document.students) ? document.students : (Array.isArray(document.students) ? document.students[0] : null);
     
     if (studentData?.user_id) {
       // Check if partner referred this student or is admin with team access
@@ -146,8 +146,8 @@ export async function PATCH(
           document_type: document.type,
           file_name: document.file_name,
           student_id: document.student_id,
-          student_name: document.students ? 
-            `${document.students.first_name} ${document.students.last_name}` : null,
+          student_name: studentData ? 
+            `${studentData.first_name || ''} ${studentData.last_name || ''}`.trim() : null,
           rejection_reason: status === 'rejected' ? rejection_reason : null
         }
       });
@@ -159,11 +159,11 @@ export async function PATCH(
 
     // Create notification for student (if notification system is integrated)
     try {
-      if (document.students?.user_id) {
+      if (studentData?.user_id) {
         await supabase
           .from('document_notifications')
           .insert({
-            user_id: document.students.user_id,
+            user_id: studentData.user_id,
             type: status === 'verified' ? 'document_verified' : 'document_rejected',
             document_id: documentId,
             title: status === 'verified' 

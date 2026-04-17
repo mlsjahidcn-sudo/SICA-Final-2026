@@ -149,31 +149,31 @@ export function getPriorityBadgeClass(priority: RequestPriority): string {
 /**
  * Format document for display
  */
-export function formatDocumentForDisplay(doc: any) {
+export function formatDocumentForDisplay(doc: Record<string, unknown> | { [key: string]: unknown }) {
   return {
     ...doc,
-    document_type_label: getDocumentTypeLabel(doc.type || doc.document_type),
-    expiry_status: getExpiryStatus(doc.expires_at),
-    days_until_expiry: calculateDaysUntilExpiry(doc.expires_at),
+    document_type_label: getDocumentTypeLabel(String(doc.type || doc.document_type || '')),
+    expiry_status: getExpiryStatus(doc.expires_at ? String(doc.expires_at) : null),
+    days_until_expiry: calculateDaysUntilExpiry(doc.expires_at ? String(doc.expires_at) : null),
     student_name: doc.students 
-      ? `${doc.students.first_name} ${doc.students.last_name}`
-      : doc.student?.name || 'Unknown',
+      ? `${(doc.students as any).first_name || ''} ${(doc.students as any).last_name || ''}`.trim() || 'Unknown'
+      : (doc.student as any)?.name || 'Unknown',
   };
 }
 
 /**
  * Format document request for display
  */
-export function formatDocumentRequestForDisplay(req: any) {
-  const daysUntilDue = req.due_date ? calculateDaysUntilExpiry(req.due_date) : null;
+export function formatDocumentRequestForDisplay(req: Record<string, unknown> | { [key: string]: unknown }) {
+  const daysUntilDue = req.due_date ? calculateDaysUntilExpiry(String(req.due_date)) : null;
   
   return {
     ...req,
-    document_type_label: getDocumentTypeLabel(req.document_type),
-    is_overdue: daysUntilDue !== null && daysUntilDue < 0 && !['fulfilled', 'cancelled'].includes(req.status),
+    document_type_label: getDocumentTypeLabel(String(req.document_type || '')),
+    is_overdue: daysUntilDue !== null && daysUntilDue < 0 && !['fulfilled', 'cancelled'].includes(String(req.status)),
     student_name: req.students 
-      ? `${req.students.first_name} ${req.students.last_name}`
-      : req.student?.name || 'Unknown',
+      ? `${(req.students as any).first_name || ''} ${(req.students as any).last_name || ''}`.trim() || 'Unknown'
+      : (req.student as any)?.name || 'Unknown',
   };
 }
 

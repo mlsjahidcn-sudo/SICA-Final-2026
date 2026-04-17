@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth } from '@/lib/partner/roles';
 import { getDocumentTypeLabel } from '@/lib/document-types';
 
 /**
@@ -249,16 +249,18 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        const studentData: any = doc.students && !Array.isArray(doc.students) ? doc.students : (Array.isArray(doc.students) ? doc.students[0] : null);
+
         return {
           ...doc,
           document_type: doc.type,
           document_type_label: getDocumentTypeLabel(doc.type),
           url,
           expiry_status: expiryStatus,
-          student: doc.students && !Array.isArray(doc.students) ? {
-            id: doc.students.id,
-            name: `${doc.students.first_name} ${doc.students.last_name}`,
-            email: doc.students.email
+          student: studentData ? {
+            id: studentData.id,
+            name: `${studentData.first_name || ''} ${studentData.last_name || ''}`.trim() || 'Unknown Student',
+            email: studentData.email
           } : null
         };
       })

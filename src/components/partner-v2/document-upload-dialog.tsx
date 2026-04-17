@@ -73,8 +73,8 @@ export function DocumentUploadDialog({
       const data = await response.json();
       setStudents(
         (data.students || []).map((s: any) => ({
-          id: s.id,
-          name: `${s.first_name} ${s.last_name}`,
+          id: s.student_id || s.id,
+          name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Unknown Student',
           email: s.email,
         }))
       );
@@ -91,7 +91,7 @@ export function DocumentUploadDialog({
       student.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleFileSelect = (selectedFile: File) => {
+  const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
   };
 
@@ -212,17 +212,17 @@ export function DocumentUploadDialog({
           <div className="grid gap-2">
             <Label htmlFor="document-type">Document Type *</Label>
             <Select value={documentType} onValueChange={setDocumentType}>
-              <SelectTrigger id="document-type">
+              <SelectTrigger id="document-type" className="h-auto min-h-10 py-2 w-full">
                 <SelectValue placeholder="Select document type" />
               </SelectTrigger>
               <SelectContent>
                 {documentTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
-                    <div>
-                      <div className="font-medium">{type.label}</div>
-                      <div className="text-xs text-muted-foreground">
+                    <div className="flex flex-col text-left gap-0.5">
+                      <span className="font-medium leading-none">{type.label}</span>
+                      <span className="text-xs text-muted-foreground line-clamp-1">
                         {type.description}
-                      </div>
+                      </span>
                     </div>
                   </SelectItem>
                 ))}

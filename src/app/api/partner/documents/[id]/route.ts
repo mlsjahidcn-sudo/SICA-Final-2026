@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth } from '@/lib/partner/roles';
 
 /**
  * GET /api/partner/documents/[id]
@@ -9,7 +9,7 @@ import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const partnerAuth = await verifyPartnerAuth(request);
@@ -19,7 +19,7 @@ export async function GET(
 
     const { user: partnerUser } = partnerAuth;
     const supabase = getSupabaseClient();
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Fetch document
     const { data: document, error } = await supabase
@@ -105,7 +105,7 @@ export async function GET(
         url,
         student: {
           id: student.id,
-          name: `${student.first_name} ${student.last_name}`,
+          name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student',
           email: student.email,
         },
       },
@@ -127,7 +127,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const partnerAuth = await verifyPartnerAuth(request);
@@ -137,7 +137,7 @@ export async function PUT(
 
     const { user: partnerUser } = partnerAuth;
     const supabase = getSupabaseClient();
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     const body = await request.json();
     const { type, expires_at } = body;
@@ -217,7 +217,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const partnerAuth = await verifyPartnerAuth(request);
@@ -227,7 +227,7 @@ export async function DELETE(
 
     const { user: partnerUser } = partnerAuth;
     const supabase = getSupabaseClient();
-    const documentId = params.id;
+    const documentId = (await params).id;
 
     // Fetch document to verify access
     const { data: document, error: fetchError } = await supabase

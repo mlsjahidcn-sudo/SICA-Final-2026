@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
 };
 
 // In-memory settings storage (will reset on server restart)
-let platformSettings = { ...DEFAULT_SETTINGS };
+const platformSettings = { ...DEFAULT_SETTINGS };
 
 // GET /api/admin/settings - Get all platform settings
 export async function GET(request: NextRequest) {

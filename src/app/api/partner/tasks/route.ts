@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user info for all referenced users
-    let userMap: Record<string, { id: string; email: string; full_name: string }> = {};
+    const userMap: Record<string, { id: string; email: string; full_name: string }> = {};
     if (userIds.size > 0) {
       const { data: users, error: usersError } = await supabase
         .from('users')

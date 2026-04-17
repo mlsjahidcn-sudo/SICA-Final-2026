@@ -130,7 +130,7 @@ export function QuickActionsMenu({
              'actions' in item);
 
           return (
-            <React.Fragment key={'id' in item ? item.id : item.id}>
+            <React.Fragment key={item.id}>
               {needsSeparator && <DropdownMenuSeparator />}
               {renderItem(item)}
             </React.Fragment>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
-import { verifyPartnerAuth } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner/roles';
 import { denormalizeDocumentType } from '@/lib/document-types';
 
 /**
@@ -139,8 +139,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           nationality,
           date_of_birth,
           gender,
-          email,
-          phone,
           current_address,
           highest_education,
           institution_name,
@@ -153,6 +151,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             id,
             full_name,
             email,
+            phone,
             referred_by_partner_id
           )
         )

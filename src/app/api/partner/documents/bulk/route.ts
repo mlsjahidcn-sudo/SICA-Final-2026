@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const accessibleDocumentIds: string[] = [];
 
     for (const doc of documents) {
-      const studentData = doc.students && !Array.isArray(doc.students) ? doc.students : null;
+      const studentData: any = doc.students && !Array.isArray(doc.students) ? doc.students : (Array.isArray(doc.students) ? doc.students[0] : null);
       if (studentData?.user_id) {
         const { data: studentUser } = await supabase
           .from('users')
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     const affectedStudents = new Map<string, { userId: string; count: number }>();
     
     documents?.forEach(doc => {
-      const studentData = doc.students && !Array.isArray(doc.students) ? doc.students : null;
+      const studentData: any = doc.students && !Array.isArray(doc.students) ? doc.students : (Array.isArray(doc.students) ? doc.students[0] : null);
       if (accessibleDocumentIds.includes(doc.id) && studentData?.user_id) {
         const userId = studentData.user_id;
         if (!affectedStudents.has(userId)) {

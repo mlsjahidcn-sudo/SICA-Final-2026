@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const lastPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
     
     // Fetch all applications with related data, filtered by partner_id
-    let appsQuery = supabase
+    const appsQuery = supabase
       .from('applications')
       .select(`
         id,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
-import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner-auth-utils';
+import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner/roles';
 
 interface User {
   id: string;
@@ -72,11 +72,11 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           nationality,
-          email,
           users (
             id,
             full_name,
             email,
+            phone,
             referred_by_partner_id
           )
         )
@@ -125,23 +125,40 @@ export async function GET(request: NextRequest) {
 
       const referredUserIds = (referredStudents || []).map(s => s.id);
 
-      if (referredUserIds.length === 0) {
-        return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
-      }
-
       // Get student record IDs for these users
-      const { data: studentRecs } = await supabase
-        .from('students')
-        .select('id')
-        .in('user_id', referredUserIds);
+      let studentIds: string[] = [];
+      if (referredUserIds.length > 0) {
+        const { data: studentRecs } = await supabase
+          .from('students')
+          .select('id')
+          .in('user_id', referredUserIds);
+        studentIds = (studentRecs || []).map(s => s.id);
+      }
 
-      const studentIds = (studentRecs || []).map(s => s.id);
+      // Now, also get applications where partner_id matches the partner user's organization
+      let orgPartnerId = '';
+      if (isAdmin && partnerUser.id) {
+        const { data: partnerRec } = await supabase
+          .from('partners')
+          .select('id')
+          .eq('user_id', partnerUser.id)
+          .maybeSingle();
+        if (partnerRec) {
+          orgPartnerId = partnerRec.id;
+        }
+      }
 
-      if (studentIds.length === 0) {
+      if (studentIds.length === 0 && !orgPartnerId) {
         return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
       }
 
-      query = query.in('student_id', studentIds);
+      if (orgPartnerId && studentIds.length > 0) {
+        query = query.or(`student_id.in.(${studentIds.join(',')}),partner_id.eq.${orgPartnerId}`);
+      } else if (orgPartnerId) {
+        query = query.eq('partner_id', orgPartnerId);
+      } else {
+        query = query.in('student_id', studentIds);
+      }
     } else if (user.role === 'admin') {
       // Admin sees all applications — no filter
     }
@@ -157,18 +174,17 @@ export async function GET(request: NextRequest) {
       query = query.in('programs.degree_level', normalizedDegrees);
     }
 
-    // Search filter
-    // Note: Cannot filter on nested relations like programs.universities.name_en in PostgREST
-    // University search is handled separately via universityId filter
-    if (search) {
-      query = query.or(`
-        students.first_name.ilike.%${search}%,
-        students.last_name.ilike.%${search}%,
-        students.email.ilike.%${search}%,
-        students.nationality.ilike.%${search}%,
-        programs.name.ilike.%${search}%
-      `);
-    }
+      // Search filter
+      // Note: PostgREST has limited support for deeply nested or statements.
+      // We will do basic search on the top-level tables we can
+      if (search) {
+        query = query.or(`
+          students.first_name.ilike.%${search}%,
+          students.last_name.ilike.%${search}%,
+          students.nationality.ilike.%${search}%,
+          programs.name.ilike.%${search}%
+        `);
+      }
 
     // University filter
     if (universityId) {
@@ -211,11 +227,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Fix relations (Supabase returns arrays for has-many)
-    const normalizedApplications = applications?.map(app => ({
-      ...app,
-      programs: Array.isArray(app.programs) ? app.programs[0] : app.programs,
-      students: Array.isArray(app.students) ? app.students[0] : app.students,
-    })) || [];
+    const normalizedApplications = applications?.map(app => {
+      const parsedSnapshot = app.profile_snapshot || {};
+      return {
+        ...app,
+        programs: Array.isArray(app.programs) ? app.programs[0] : app.programs,
+        students: Array.isArray(app.students) ? app.students[0] : app.students,
+        personal_statement: parsedSnapshot.personal_statement || '',
+        study_plan: parsedSnapshot.study_plan || '',
+        intake: parsedSnapshot.intake || ''
+      };
+    }) || [];
 
     const total = count || 0;
     const hasMore = offset + pageSize < total;

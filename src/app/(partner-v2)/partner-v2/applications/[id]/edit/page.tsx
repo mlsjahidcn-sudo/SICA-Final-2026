@@ -255,7 +255,7 @@ export default function EditApplicationPage() {
   const getStudentName = () => {
     if (!application) return '';
     const u = Array.isArray(application.students.users) ? application.students.users[0] : application.students.users;
-    return u?.full_name || `${application.students.first_name} ${application.students.last_name}`;
+    return u?.full_name || `${application.students.first_name || ''} ${application.students.last_name || ''}`.trim() || 'Unknown Student';
   };
 
   const getSelectedProgram = () => {

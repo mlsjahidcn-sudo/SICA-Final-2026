@@ -159,14 +159,14 @@ export async function GET(
 
     // Fetch documents for this application
     const { data: documents } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
-        document_type,
+        type as document_type,
         file_key,
         file_name,
         file_size,
-        content_type,
+        mime_type as content_type,
         status,
         rejection_reason,
         uploaded_at,

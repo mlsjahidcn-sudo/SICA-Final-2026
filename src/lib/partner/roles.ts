@@ -180,7 +180,7 @@ export async function logPartnerTeamActivity(
   partnerId: string,
   actorId: string,
   targetUserId: string | null,
-  action: 'invite' | 'update_role' | 'remove' | 'update_permissions' | 'add_student' | 'update_student',
+  action: string,
   actionDetails: Record<string, unknown> = {},
   request?: NextRequest
 ): Promise<void> {

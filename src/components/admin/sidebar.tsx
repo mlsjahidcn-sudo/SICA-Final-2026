@@ -46,6 +46,11 @@ const navigation = [
     icon: FileText,
   },
   {
+    name: 'Documents',
+    href: '/admin/v2/documents',
+    icon: FileText,
+  },
+  {
     name: 'Free Assessments',
     href: '/admin/assessments',
     icon: ClipboardCheck,

@@ -11,6 +11,15 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DocumentStatusBadge } from "@/components/ui/document-status-badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { IconDotsVertical, IconCheck, IconX } from "@tabler/icons-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
@@ -183,6 +192,39 @@ function DocumentsContent({ applicationId }: { applicationId: string }) {
     }
   }
 
+  const handleStatusChange = async (docId: string, newStatus: 'verified' | 'rejected', reason?: string) => {
+    if (newStatus === 'rejected' && !reason) {
+      const promptReason = window.prompt("Please provide a reason for rejection:");
+      if (promptReason === null) return; // User cancelled
+      reason = promptReason;
+    }
+
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      
+      const response = await fetch(`/api/admin/documents/${docId}/verify`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus, rejection_reason: reason })
+      })
+
+      if (response.ok) {
+        toast.success(`Document marked as ${newStatus}`)
+        fetchData()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || `Failed to mark document as ${newStatus}`)
+      }
+    } catch (error) {
+      console.error("Error updating document status:", error)
+      toast.error("An error occurred")
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -327,10 +369,7 @@ function DocumentsContent({ applicationId }: { applicationId: string }) {
                         <p className="font-medium text-sm truncate">
                           {getDocumentTypeLabel(doc.document_type)}
                         </p>
-                        <Badge className={`${docStatus.bgColor} ${docStatus.color} text-xs`}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {docStatus.label}
-                        </Badge>
+                        <DocumentStatusBadge status={doc.status} />
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {doc.file_name} · {formatFileSize(doc.file_size)}
@@ -358,6 +397,34 @@ function DocumentsContent({ applicationId }: { applicationId: string }) {
                       >
                         <IconDownload className="h-4 w-4" />
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <IconDotsVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {doc.status !== 'verified' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusChange(doc.id, 'verified')}
+                              className="text-green-600 focus:text-green-600"
+                            >
+                              <IconCheck className="mr-2 h-4 w-4" />
+                              Mark as Verified
+                            </DropdownMenuItem>
+                          )}
+                          {doc.status !== 'rejected' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusChange(doc.id, 'rejected')}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <IconX className="mr-2 h-4 w-4" />
+                              Reject Document
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 )

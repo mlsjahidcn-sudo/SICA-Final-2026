@@ -270,7 +270,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
       {/* Header */}
       <PageHeader
         title="Documents"
-        description={`${application.students.first_name} ${application.students.last_name} • ${application.programs.universities.name_en}`}
+        description={`${application.students.first_name || ''} ${application.students.last_name || ''}`.trim() + ` • ${application.programs.universities.name_en}`}
         backHref={`/partner-v2/applications/${application.id}`}
         backLabel="Back"
         actions={<ApplicationStatusBadge status={application.status} />}

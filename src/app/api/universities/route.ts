@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // For featured universities, get top-ranked universities
     if (featured) {
-      let featuredQuery = supabase
+      const featuredQuery = supabase
         .from('universities')
         .select(`
           id,

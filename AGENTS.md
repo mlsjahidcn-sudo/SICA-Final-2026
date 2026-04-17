@@ -2,7 +2,7 @@
 
 ## 🔴 CRITICAL: External Supabase Database Configuration
 
-**IMPORTANT**: This application MUST use the external Supabase database at all times. 
+**IMPORTANT**: This application MUST use the external Supabase database at all times.
 
 - **External Supabase URL**: `https://maqzxlcsgfpwnfyleoga.supabase.co`
 - **Project Ref**: `maqzxlcsgfpwnfyleoga`
@@ -13,6 +13,7 @@
   - `DATABASE_URL`
 
 **DO NOT**:
+
 - ❌ Use local SQLite, PostgreSQL, or any other database
 - ❌ Create mock databases or in-memory databases
 - ❌ Hardcode database credentials in code
@@ -20,6 +21,7 @@
 - ❌ Run SQL via local psql or any local database client
 
 **ALWAYS**:
+
 - ✅ Use the external Supabase database configured in `.env.local`
 - ✅ Ensure all database operations go through Supabase client
 - ✅ Use the service role key for admin operations
@@ -27,11 +29,11 @@
 - ✅ Check database connectivity before assuming local fallback
 - ✅ Use `exec_sql` tool with `env: "develop"` for all SQL operations on the external Supabase database
 
-### exec_sql Usage Rule
+### exec\_sql Usage Rule
 
 When running SQL queries against the external Supabase database, **always** use the `exec_sql` tool with `env: "develop"`. This ensures the SQL is executed against the external Supabase at `maqzxlcsgfpwnfyleoga.supabase.co`, NOT a local database.
 
-**⚠️ CRITICAL: exec_sql may return stale data!** The `exec_sql` tool may cache results or read from a replica. For critical data verification (role, partner_role, etc.), **ALWAYS verify via the Supabase REST API** using the service role key, NOT `exec_sql`:
+**⚠️ CRITICAL: exec\_sql may return stale data!** The `exec_sql` tool may cache results or read from a replica. For critical data verification (role, partner\_role, etc.), **ALWAYS verify via the Supabase REST API** using the service role key, NOT `exec_sql`:
 
 ```bash
 # ✅ CORRECT - Real-time verification via REST API
@@ -57,11 +59,13 @@ exec_shell(command: "PGPASSWORD=xxx psql -h localhost ...")
 ```
 
 **Why this matters**: The `exec_sql` tool with `env: "develop"` is configured to route to the correct external Supabase instance. Shell-based PostgreSQL commands may resolve to a local `psql` binary that defaults to a local socket or localhost connection, leading to:
+
 - Tables/columns created in the wrong database
 - Data inserted locally instead of externally
 - Schema mismatches between what PostgREST sees and what your code expects
 
-**Verifying connection**: After running DDL (CREATE/ALTER), verify the change via the PostgREST REST API (not information_schema via exec_sql, which may show stale or different results):
+**Verifying connection**: After running DDL (CREATE/ALTER), verify the change via the PostgREST REST API (not information\_schema via exec\_sql, which may show stale or different results):
+
 ```bash
 curl -s "https://maqzxlcsgfpwnfyleoga.supabase.co/rest/v1/{table}?select=*&limit=1" \
   -H "apikey: {SERVICE_ROLE_KEY}" \
@@ -80,9 +84,10 @@ The `users` table has RLS enabled but queries via the **anon key client** result
 
 **RLS Helper Functions**: `public.is_partner_admin()` and `public.get_partner_admin_id()` are `SECURITY DEFINER` functions used in RLS policies to avoid referencing `users` directly in policy expressions. When adding new RLS policies that need to check partner roles, always use these helper functions instead of querying `users` directly.
 
----
+***
 
 ## Admin Development Guidelines
+
 **IMPORTANT**: All future admin-related development, edits, and new features MUST use the admin-v2 interface located at `src/app/admin/(admin-v2)/v2/`. The old admin directory (`src/app/admin/(admin)/`) is deprecated and should only be used for reference.
 
 ### 版本技术栈
@@ -189,6 +194,7 @@ The `users` table has RLS enabled but queries via the **anon key client** result
 
 **仅允许使用 pnpm** 作为包管理器，**严禁使用 npm 或 yarn**。
 **常用命令**：
+
 - 安装依赖：`pnpm add <package>`
 - 安装开发依赖：`pnpm add -D <package>`
 - 安装所有依赖：`pnpm install`
@@ -198,7 +204,6 @@ The `users` table has RLS enabled but queries via the **anon key client** result
 
 - **项目理解加速**：初始可以依赖项目下`package.json`文件理解项目类型，如果没有或无法理解退化成阅读其他文件。
 - **Hydration 错误预防**：严禁在 JSX 渲染逻辑中直接使用 typeof window、Date.now()、Math.random() 等动态数据。必须使用 'use client' 并配合 useEffect + useState 确保动态内容仅在客户端挂载后渲染；同时严禁非法 HTML 嵌套（如 <p> 嵌套 <div>）。
-
 
 ## UI 设计与组件规范 (UI & Styling Standards)
 
@@ -234,39 +239,45 @@ The `users` table has RLS enabled but queries via the **anon key client** result
 申请系统支持完整的学生申请流程：
 
 **状态流转**：
+
 - `draft` → `submitted` → `under_review` → `accepted`/`rejected`
 - 其他状态：`document_request`（文档请求）、`interview_scheduled`（面试安排）、`withdrawn`（撤回）
 
 **用户角色**：
+
 - **学生**：创建、编辑、提交申请；查看申请状态
 - **合作伙伴**：查看申请列表和详情、编辑草稿申请（program、personal statement、study plan、notes、priority）
 - **管理员**：审核申请、更新状态、添加评论
 
-**🔴 CRITICAL: `profile_snapshot` JSONB Architecture**:
+**🔴 CRITICAL:** **`profile_snapshot`** **JSONB Architecture**:
 The `applications` table uses a `profile_snapshot` JSONB column to store flexible application content. Key fields stored inside `profile_snapshot`:
+
 - `personal_statement` - Personal statement text
 - `study_plan` - Study plan text
 - `intake` - Intake/semester selection
 - `university_id` - Target university ID
 - Other dynamic fields from the application form
 
-**Direct columns on `applications` table**: `id`, `student_id`, `program_id`, `partner_id`, `status`, `priority` (integer: 0=normal, 1=low, 2=high, 3=urgent), `notes`, `submitted_at`, `reviewed_at`, `reviewed_by`, `created_at`, `updated_at`, `profile_snapshot`
+**Direct columns on** **`applications`** **table**: `id`, `student_id`, `program_id`, `partner_id`, `status`, `priority` (integer: 0=normal, 1=low, 2=high, 3=urgent), `notes`, `submitted_at`, `reviewed_at`, `reviewed_by`, `created_at`, `updated_at`, `profile_snapshot`
 
 **API Response Convention**: All GET APIs extract `personal_statement`, `study_plan`, and `intake` from `profile_snapshot` and return them as top-level fields for frontend convenience. PUT APIs accept these as top-level body fields and merge them into `profile_snapshot` automatically.
 
 **⚠️ Database Schema Verification**: The `exec_sql` tool may return stale/different schema data compared to the actual Supabase database. ALWAYS verify column existence via the PostgREST REST API (`/rest/v1/applications?select=*&limit=1`), not `exec_sql` or `information_schema`.
 
 **Partner Access Control**:
+
 - Partner admin: Can access all applications from their partner organization + team members' referrals
 - Partner member: Can only access applications for students they referred
 - Uses `canPartnerAccessApplication()` function which checks `partners.id` (not `users.id`) for org-level access
 - A partner user may have multiple `partners` records (use `select` instead of `maybeSingle` when querying by `user_id`)
 
 **Edit Restrictions**:
+
 - Only `draft` applications can be edited (PUT returns 400 for non-draft)
 - Only `draft` applications can be submitted (POST returns 400 for non-draft)
 
 **API 端点**：
+
 - `POST /api/applications` - 创建申请
 - `GET /api/applications` - 获取申请列表
 - `GET /api/applications/[id]` - 获取申请详情
@@ -276,6 +287,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `PUT /api/admin/applications/[id]` - 管理员审核申请
 
 **数据表**：
+
 - `applications` - 申请主表
 - `application_documents` - 申请文档
 - `application_status_history` - 状态变更历史
@@ -285,6 +297,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 博客系统用于内容营销和SEO优化，支持中英文双语内容。
 
 **功能特性**：
+
 - 博客文章发布与管理
 - 分类和标签管理
 - 中英文双语支持
@@ -307,6 +320,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - **Quick Generate Panel**: One-click "Generate All Content" from a single topic
 
 **页面路由**：
+
 - `/blog` - 博客列表页
 - `/blog/[slug]` - 博客详情页
 - `/admin/v2/blog` - 管理员博客管理 (**Admin-v2: Use this for all future development**)
@@ -314,6 +328,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `/admin/v2/blog/[id]/edit` - 编辑文章 v2
 
 **API 端点**：
+
 - `GET /api/blog` - 获取已发布文章列表
 - `GET /api/blog/[slug]` - 获取文章详情
 - `GET /api/blog/categories` - 获取分类列表
@@ -327,12 +342,14 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `POST /api/admin/blog/ai/suggest-topics` - AI 主题建议
 
 **数据表**：
+
 - `blog_categories` - 博客分类表
 - `blog_tags` - 博客标签表
 - `blog_posts` - 博客文章表
 - `blog_post_tags` - 文章-标签关联表
 
 **文章状态**：
+
 - `draft` - 草稿
 - `published` - 已发布
 - `archived` - 已归档
@@ -342,6 +359,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 用户评价系统用于展示社交证明，提高网站转化率。
 
 **功能特性**：
+
 - 用户评价展示（支持视频和图片）
 - 中英文双语支持
 - 国家标志显示
@@ -351,10 +369,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 评价来源追踪
 
 **页面路由**：
+
 - `/` - 首页展示精选评价
 - `/admin/testimonials` - 管理员评价管理
 
 **API 端点**：
+
 - `GET /api/testimonials` - 获取已审核评价列表
 - `GET /api/admin/testimonials` - 管理员获取所有评价
 - `POST /api/admin/testimonials` - 创建评价
@@ -363,15 +383,18 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `DELETE /api/admin/testimonials/[id]` - 删除评价
 
 **数据表**：
+
 - `testimonials` - 用户评价表
 
 **评价状态**：
+
 - `pending` - 待审核
 - `approved` - 已审核
 - `featured` - 精选
 - `rejected` - 已拒绝
 
 **评价来源**：
+
 - `website` - 网站提交
 - `google` - Google 评价
 - `facebook` - Facebook 评价
@@ -383,6 +406,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可通过仪表盘查看统计数据和关键指标：
 
 **功能特性**：
+
 - 申请统计概览（总数、待审核、已录取、审核中）
 - 环比增长指标
 - 最近申请列表
@@ -390,6 +414,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 时间范围筛选（7天/30天/90天/1年）
 
 **API 端点**：
+
 - `GET /api/partner/dashboard` - 获取仪表盘统计数据
 
 ### 合作伙伴仪表盘 v2 (Partner Dashboard v2)
@@ -397,6 +422,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 基于 shadcn dashboard-01 模板的现代化仪表盘界面：
 
 **功能特性**：
+
 - 响应式侧边栏 (collapsible offcanvas)
 - 统计卡片组件 (PartnerStatsCards)
 - 应用趋势图表 (PartnerApplicationsChart)
@@ -414,6 +440,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 大学浏览 (University Browser)
 
 **页面路由**：
+
 - `/partner-v2` - v2 仪表盘
 - `/partner-v2/applications` - v2 申请列表
 - `/partner-v2/applications/[id]` - 申请详情
@@ -431,6 +458,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `/partner-v2/profile` - 个人资料页面
 
 **API 端点**：
+
 - `GET /api/partner/dashboard` - 获取仪表盘统计数据
 - `GET /api/partner/analytics` - 获取分析数据
 - `GET /api/partner/export` - 导出申请数据
@@ -448,6 +476,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `GET /api/partner/meetings/[id]` - 获取会议详情
 
 **组件**：
+
 - `src/components/partner-v2/partner-sidebar.tsx` - v2 侧边栏
 - `src/components/partner-v2/partner-stats-cards.tsx` - 统计卡片
 - `src/components/partner-v2/partner-applications-chart.tsx` - 应用图表
@@ -464,6 +493,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可通过分析仪表盘获取深度洞察和报告：
 
 **功能特性**：
+
 - 概览统计卡片（总申请数、录取率、待处理率、增长率）
 - 申请趋势图（按日期的应用数、录取数、拒绝数）
 - 状态分布饼图（各状态占比）
@@ -474,9 +504,11 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 数据导出（CSV/JSON）
 
 **页面路由**：
+
 - `/partner-v2/analytics` - 分析仪表盘
 
 **API 端点**：
+
 - `GET /api/partner/analytics?days=30` - 获取分析数据
 
 ### 通知中心 (Notifications Center)
@@ -484,6 +516,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可通过通知中心查看和管理所有通知：
 
 **功能特性**：
+
 - 通知列表（按时间排序）
 - 按类型筛选（全部/未读/申请/会议/文档）
 - 标记单个通知为已读
@@ -492,18 +525,22 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 通知类型图标（申请/会议/文档/系统）
 
 **页面路由**：
+
 - `/partner-v2/notifications` - 通知中心
 
 **API 端点**：
+
 - `GET /api/partner/notifications` - 获取通知列表
 - `GET /api/partner/notifications/unread-count` - 获取未读数量
 - `POST /api/partner/notifications/[id]/read` - 标记单个通知已读
 - `POST /api/partner/notifications/read-all` - 标记全部已读
 
 **数据表**：
-- `notifications` - 通知表（id, user_id, type, title, content, link, is_read, read_at, created_at）
+
+- `notifications` - 通知表（id, user\_id, type, title, content, link, is\_read, read\_at, created\_at）
 
 **通知类型**：
+
 - `application` - 申请相关通知
 - `meeting` - 会议相关通知
 - `document` - 文档相关通知
@@ -514,6 +551,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可对申请或学生添加私密备注，用于内部协作和信息共享。
 
 **功能特性**：
+
 - 添加私密备注到申请或学生
 - 备注内容支持换行和长文本
 - 私密性控制（仅合作伙伴和管理员可见）
@@ -521,10 +559,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 作者信息和时间戳显示
 
 **页面路由**：
+
 - `/partner-v2/applications/[id]` - 申请详情页（Notes 标签页）
 - `/partner-v2/students/[id]` - 学生详情页（Notes 标签页）
 
 **API 端点**：
+
 - `GET /api/partner/notes?application_id=xxx` - 获取申请备注列表
 - `GET /api/partner/notes?student_id=xxx` - 获取学生备注列表
 - `POST /api/partner/notes` - 创建备注
@@ -533,6 +573,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `DELETE /api/partner/notes/[id]` - 删除备注
 
 **数据表**：
+
 - `partner_notes` - 合作伙伴备注表
   - `id` - 备注 ID
   - `user_id` - 作者 ID（外键）
@@ -544,10 +585,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
   - `updated_at` - 更新时间
 
 **组件**：
+
 - `src/components/partner-v2/partner-notes.tsx` - 备注管理组件
 - `QuickNoteInput` - 快速备注输入组件
 
 **权限控制**：
+
 - 仅合作伙伴和管理员可查看备注
 - 仅备注作者和管理员可编辑/删除备注
 
@@ -556,6 +599,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可通过设置页面管理账户偏好和个人信息：
 
 **功能特性**：
+
 - 通知偏好设置（邮件、会议提醒、申请更新）
 - 显示设置（语言、时区、日期格式）
 - 个人资料编辑（姓名、邮箱、电话）
@@ -564,10 +608,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 安全设置（密码修改、双因素认证）
 
 **页面路由**：
+
 - `/partner-v2/settings` - 设置页面
 - `/partner-v2/profile` - 个人资料页面
 
 **API 端点**：
+
 - `GET /api/partner/settings` - 获取用户设置
 - `PUT /api/partner/settings` - 更新用户设置
 - `GET /api/partner/profile` - 获取个人资料
@@ -575,14 +621,16 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `POST /api/partner/avatar` - 上传头像
 
 **数据表**：
-- `user_settings` - 用户设置表（id, user_id, settings JSONB）
-- `partner_profiles` - 合作伙伴资料表（id, user_id, company_name, position, address, website）
+
+- `user_settings` - 用户设置表（id, user\_id, settings JSONB）
+- `partner_profiles` - 合作伙伴资料表（id, user\_id, company\_name, position, address, website）
 
 ### 日历与会议 (Calendar & Meetings)
 
 合作伙伴可查看和管理所有面试会议：
 
 **功能特性**：
+
 - 日历视图（月历展示）
 - 会议列表视图（按日期分组）
 - 会议详情页（视频会议信息）
@@ -591,19 +639,23 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 一键加入视频会议（Zoom/Google Meet/Teams）
 
 **页面路由**：
+
 - `/partner-v2/meetings` - 会议列表
 - `/partner-v2/meetings/calendar` - 日历视图
 - `/partner-v2/meetings/[id]` - 会议详情
 
 **API 端点**：
+
 - `GET /api/partner/meetings` - 获取会议列表
 - `GET /api/partner/meetings/[id]` - 获取会议详情
 
 **数据表**：
-- `meetings` - 会议表（id, application_id, student_id, title, meeting_date, duration_minutes, platform, status）
+
+- `meetings` - 会议表（id, application\_id, student\_id, title, meeting\_date, duration\_minutes, platform, status）
 - `meeting_details` - 会议详情视图（含学生、申请、项目信息）
 
 **会议状态**：
+
 - `scheduled` - 已安排
 - `completed` - 已完成
 - `cancelled` - 已取消
@@ -614,6 +666,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 合作伙伴可浏览和查看中国大学信息：
 
 **功能特性**：
+
 - 大学列表（网格/列表视图切换）
 - 高级搜索（按名称搜索）
 - 多维度筛选（省份、类型、类别、奖学金）
@@ -623,15 +676,18 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 联系方式查看
 
 **页面路由**：
+
 - `/partner-v2/universities` - 大学列表
 - `/partner-v2/universities/[id]` - 大学详情
 
 **API 端点**：
+
 - `GET /api/universities` - 获取大学列表（支持搜索、筛选、分页）
 - `GET /api/universities/[id]` - 获取大学详情
 - `GET /api/programs?university_id=[id]` - 获取大学项目列表
 
 **筛选参数**：
+
 - `search` - 搜索关键词（中英文名称）
 - `province` - 省份筛选
 - `type` - 大学类型（985/211/Double First-Class/provincial/private）
@@ -643,6 +699,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 学生可通过学生门户管理个人信息、查看申请状态和会议安排：
 
 **功能特性**：
+
 - 个人资料管理（基本信息、护照、学历、语言成绩）
 - 资料完成度指示器
 - 申请状态概览
@@ -652,6 +709,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 最近活动时间线
 
 **页面路由**：
+
 - `/student` - 学生仪表盘
 - `/student/profile` - 个人资料编辑
 - `/student/applications` - 申请列表
@@ -660,11 +718,13 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `/student/meetings` - 会议列表
 
 **API 端点**：
+
 - `GET /api/student/dashboard` - 获取仪表盘数据
 - `GET /api/student/profile` - 获取个人资料
 - `PUT /api/student/profile` - 更新个人资料
 
 **数据表**：
+
 - `students` - 学生详细信息表
 - `users` - 用户账户表
 
@@ -673,6 +733,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 学生可通过学生门户 v2 管理所有学习申请相关事务，采用与 Partner Portal v2 相同的设计风格：
 
 **功能特性**：
+
 - **仪表盘**：统计概览、个人资料完成度、即将到来的会议、待处理文档、最近申请
 - **申请管理**：申请列表（搜索/筛选/分页）、申请详情（时间线、文档）、新建申请向导
 - **文档库**：文档状态管理、上传/下载、重新上传被拒绝文档
@@ -685,6 +746,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - **收藏夹**：收藏的大学和项目
 
 **页面路由**：
+
 - `/student-v2` - 学生仪表盘
 - `/student-v2/applications` - 申请列表
 - `/student-v2/applications/new` - 新建申请
@@ -706,6 +768,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `/student-v2/favorites` - 收藏夹
 
 **API 端点**：
+
 - `GET /api/student/dashboard` - 获取仪表盘数据
 - `GET /api/student/applications` - 获取申请列表
 - `GET /api/student/applications/[id]` - 获取申请详情
@@ -721,9 +784,11 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `GET /api/programs` - 获取项目列表
 
 **组件**：
+
 - `src/components/student-v2/student-sidebar.tsx` - 学生侧边栏
 
 **设计特点**：
+
 - 响应式侧边栏（移动端 offcanvas）
 - 统计卡片组件
 - 状态徽章和时间线
@@ -736,6 +801,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 学生可创建和管理申请模板，复用个人陈述和学习计划内容。
 
 **功能特性**：
+
 - 创建可复用的申请模板（个人陈述、学习计划）
 - 设置默认模板
 - 模板使用次数统计
@@ -744,9 +810,11 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 模板编辑和删除
 
 **页面路由**：
+
 - `/student-v2/templates` - 模板管理页面
 
 **API 端点**：
+
 - `GET /api/student/templates` - 获取模板列表
 - `POST /api/student/templates` - 创建模板
 - `GET /api/student/templates/[id]` - 获取模板详情
@@ -755,6 +823,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `PATCH /api/student/templates/[id]` - 增加使用次数
 
 **数据表**：
+
 - `application_templates` - 申请模板表
   - `id` - 模板 ID
   - `user_id` - 用户 ID（外键）
@@ -766,10 +835,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
   - `use_count` - 使用次数
 
 **组件**：
+
 - `src/components/student-v2/template-manager.tsx` - 模板管理组件
 - `SaveAsTemplateButton` - 保存为模板按钮
 
 **集成点**：
+
 - 新建申请页面：从模板预填、保存当前内容为模板
 - 模板管理页面：完整的 CRUD 操作
 
@@ -784,12 +855,14 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 管理员在创建新大学时，可以使用AI自动生成大学详细信息：
 
 **功能特性**：
+
 - 输入大学英文名称或中文名称
 - AI自动生成完整信息：中英文名称、描述、地址、排名、网站等
-- 支持SEO优化：自动生成meta_title、meta_description、meta_keywords
+- 支持SEO优化：自动生成meta\_title、meta\_description、meta\_keywords
 - 生成设施、住宿等详细信息
 
 **使用方法**：
+
 1. 访问 `/admin/v2/universities/new`
 2. 在"AI-Powered University Generation"卡片中输入大学名称
 3. 点击"AI Generate"按钮
@@ -797,22 +870,25 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 5. 点击"Create University"保存
 
 **API端点**：
+
 - `POST /api/admin/universities/generate` - AI生成大学信息
 
 **生成字段**：
-- 基本信息：name_en, name_cn, short_name, website, founded_year
-- 位置：province, city, address_en, address_cn
+
+- 基本信息：name\_en, name\_cn, short\_name, website, founded\_year
+- 位置：province, city, address\_en, address\_cn
 - 分类：type (985/211/Double First-Class/Provincial/Private), category
-- 排名：ranking_national, ranking_international
-- 描述：description_en, description_cn
-- 设施：facilities_en, facilities_cn
-- 住宿：accommodation_info_en, accommodation_info_cn
-- 学生数据：student_count, international_student_count
-- 奖学金：scholarship_available, scholarship_percentage
-- SEO：meta_title, meta_description, meta_keywords
-- 媒体：logo_url, cover_image_url
+- 排名：ranking\_national, ranking\_international
+- 描述：description\_en, description\_cn
+- 设施：facilities\_en, facilities\_cn
+- 住宿：accommodation\_info\_en, accommodation\_info\_cn
+- 学生数据：student\_count, international\_student\_count
+- 奖学金：scholarship\_available, scholarship\_percentage
+- SEO：meta\_title, meta\_description, meta\_keywords
+- 媒体：logo\_url, cover\_image\_url
 
 **页面路由**：
+
 - `/admin/v2/universities` - 大学列表
 - `/admin/v2/universities/new` - 创建大学（含AI生成）
 - `/admin/v2/universities/[id]` - 大学详情
@@ -828,6 +904,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 完整的面试/会议调度功能，支持管理员与学生之间的视频面试安排。
 
 **功能特性**：
+
 - 日历集成与时间选择
 - 支持视频会议（Zoom/Google Meet/Teams/其他）
 - 会议链接、ID、密码管理
@@ -835,10 +912,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 取消/重新安排会议
 
 **用户角色**：
+
 - **管理员**：创建、编辑、取消会议；发送邀请邮件
 - **学生**：查看会议详情、加入会议
 
 **API 端点**：
+
 - `GET /api/meetings` - 学生获取自己的会议列表
 - `GET /api/admin/meetings` - 管理员获取所有会议
 - `POST /api/admin/meetings` - 创建会议
@@ -848,10 +927,12 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `GET /api/cron/meeting-reminders` - 发送会议提醒（定时任务）
 
 **数据表**：
+
 - `meetings` - 会议主表
 - `meeting_details` - 会议详情视图（含关联数据）
 
 **邮件模板**：
+
 - `meeting_scheduled` - 会议创建通知
 - `meeting_reminder` - 会议提醒（24小时前）
 - `meeting_cancelled` - 会议取消通知
@@ -861,12 +942,14 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 基于 WebSocket 的实时通知推送系统，支持实时推送通知、会议提醒和状态变更。
 
 **技术架构**：
+
 - 自定义 Next.js 服务器 (`src/server.ts`) 支持 WebSocket 和 HTTP 共用 5000 端口
 - WebSocket 端点统一使用 `/ws/*` 路径前缀
 - 心跳机制 30 秒间隔，自动重连延迟 1 秒
 - 消息格式统一为 `{ type: string, payload: unknown }`
 
 **功能特性**：
+
 - 实时连接状态显示（连接中/已连接/断开/重连中）
 - 自动重连机制（断线后自动重连）
 - 心跳保活（30 秒间隔）
@@ -874,23 +957,28 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 不同类型通知的差异化显示（申请/会议/文档/系统）
 
 **用户角色**：
+
 - **学生**：接收申请状态变更、会议提醒、文档审核结果等实时通知
 - **合作伙伴**：接收新申请、会议相关等实时通知
 - **管理员**：发送实时通知给用户
 
 **WebSocket 端点**：
+
 - `/ws/notifications` - 通知推送通道
 
 **API 端点**：
+
 - `POST /api/notifications/send` - 发送实时通知
 
 **消息类型**：
+
 - `ping` / `pong` - 心跳消息
 - `notification` - 新通知推送
 - `meeting_reminder` - 会议提醒
 - `application_status_change` - 申请状态变更
 
 **组件**：
+
 - `src/lib/ws-client.ts` - WebSocket 客户端库和类型定义
 - `src/ws-handlers/notifications.ts` - WebSocket 通知处理器
 - `src/hooks/use-websocket.ts` - React WebSocket Hook
@@ -899,6 +987,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `src/components/student-v2/student-realtime-provider.tsx` - Student 实时通知 Provider
 
 **开发环境配置**：
+
 - 开发环境不销毁未注册的 upgrade 请求（兼容 HMR）
 - 生产环境销毁未注册的 upgrade 请求防止内存泄漏
 
@@ -907,11 +996,13 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 基于 S3 兼容对象存储的文档上传系统，支持学生上传申请文档、管理员审核文档。
 
 **技术架构**：
+
 - 使用 `coze-coding-dev-sdk` 的 `S3Storage` 类
 - 文件存储在对象存储中，数据库存储 `file_key`
 - 通过预签名 URL 提供文件访问
 
 **功能特性**：
+
 - 拖拽上传支持
 - 文件类型和大小验证（最大 10MB）
 - 文档状态管理（pending/verified/rejected）
@@ -919,11 +1010,13 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - 文档审核和拒绝理由
 
 **用户角色**：
+
 - **学生**：上传、下载、删除自己的文档
 - **管理员**：审核文档、标记为验证/拒绝
 - **合作伙伴**：查看关联申请的文档
 
 **API 端点**：
+
 - `GET /api/documents` - 获取文档列表
 - `POST /api/documents` - 上传文档
 - `DELETE /api/documents?id=xxx` - 删除文档
@@ -932,6 +1025,7 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
 - `PUT /api/admin/documents/[id]` - 更新文档状态（管理员）
 
 **数据表**：
+
 - `application_documents` - 申请文档表
   - `file_key` - 对象存储 key
   - `file_name` - 原始文件名
@@ -941,25 +1035,28 @@ The `applications` table uses a `profile_snapshot` JSONB column to store flexibl
   - `rejection_reason` - 拒绝理由
 
 **支持的文档类型**：
+
 - passport - 护照
 - diploma - 学位证书
 - transcript - 成绩单
-- language_certificate - 语言证书
+- language\_certificate - 语言证书
 - photo - 证件照
 - recommendation - 推荐信
 - cv - 简历
-- study_plan - 学习计划
-- financial_proof - 财力证明
-- medical_exam - 体检报告
-- police_clearance - 无犯罪记录证明
+- study\_plan - 学习计划
+- financial\_proof - 财力证明
+- medical\_exam - 体检报告
+- police\_clearance - 无犯罪记录证明
 - other - 其他文档
 
 **组件**：
+
 - `src/components/ui/file-upload.tsx` - 文件上传组件
 - `src/app/(student-v2)/student-v2/documents/page.tsx` - 文档库页面
 - `src/app/(student-v2)/student-v2/applications/[id]/documents/page.tsx` - 申请文档管理页面
 
 **前端下载最佳实践**：
+
 ```typescript
 // 使用 fetch + blob 模式下载跨域文件
 const response = await fetch(signedUrl);
@@ -977,20 +1074,24 @@ window.URL.revokeObjectURL(blobUrl);
 用户可以通过设置页面管理通知偏好、显示设置和隐私选项。
 
 **功能特性**：
+
 - 通知设置（邮件、推送、会议提醒、申请更新、文档更新）
 - 显示设置（语言、时区、日期格式）
 - 隐私设置（资料可见性、联系方式展示）
 - 安全设置（修改密码、双因素认证 - 规划中）
 
 **页面路由**：
+
 - `/student-v2/settings` - 学生设置页面
 - `/partner-v2/settings` - 合作伙伴设置页面
 
 **API 端点**：
+
 - `GET /api/student/settings` - 获取用户设置
 - `PUT /api/student/settings` - 更新用户设置
 
 **数据表**：
+
 - `user_settings` - 用户设置表
   - `user_id` - 用户 ID（外键）
   - `email_notifications` - 邮件通知开关
@@ -1001,25 +1102,29 @@ window.URL.revokeObjectURL(blobUrl);
   - `language` - 语言偏好（en/zh）
   - `timezone` - 时区设置
   - `date_format` - 日期格式
-  - `profile_visibility` - 资料可见性（public/partners_only/private）
+  - `profile_visibility` - 资料可见性（public/partners\_only/private）
   - `show_contact_info` - 联系方式展示开关
 
 **支持的语言**：
+
 - `en` - English
 - `zh` - 中文
 
 **支持的时区**：
-- Asia/Shanghai, Asia/Hong_Kong, Asia/Tokyo, Asia/Seoul, Asia/Singapore
-- America/New_York, America/Los_Angeles
+
+- Asia/Shanghai, Asia/Hong\_Kong, Asia/Tokyo, Asia/Seoul, Asia/Singapore
+- America/New\_York, America/Los\_Angeles
 - Europe/London, Europe/Paris
 - Australia/Sydney
 
 **资料可见性选项**：
+
 - `public` - 公开，所有人可见
 - `partners_only` - 仅合作伙伴可见
 - `private` - 私有，仅管理员可见
 
 **默认设置**：
+
 ```typescript
 {
   email_notifications: true,
@@ -1040,6 +1145,7 @@ window.URL.revokeObjectURL(blobUrl);
 管理员可通过管理后台全面管理平台：
 
 **功能模块**：
+
 - **仪表盘**：平台统计数据、最近申请、待审批合作伙伴、即将到来的会议
 - **学生管理**：学生列表、详情查看、申请历史、文档管理
 - **合作伙伴管理**：审批/拒绝合作伙伴申请
@@ -1051,6 +1157,7 @@ window.URL.revokeObjectURL(blobUrl);
 - **数据导出**：导出学生、申请、合作伙伴数据（CSV/JSON）
 
 **页面路由**：
+
 - `/admin` - 管理员仪表盘
 - `/admin/students` - 学生列表
 - `/admin/students/[id]` - 学生详情
@@ -1068,6 +1175,7 @@ window.URL.revokeObjectURL(blobUrl);
 - `/admin/settings` - 系统设置
 
 **API 端点**：
+
 - `GET /api/admin/dashboard` - 获取仪表盘统计数据
 - `GET /api/admin/students` - 获取学生列表
 - `GET /api/admin/students/[id]` - 获取学生详情
@@ -1078,6 +1186,7 @@ window.URL.revokeObjectURL(blobUrl);
 - `GET /api/admin/export` - 导出数据
 
 **组件**：
+
 - `src/components/admin/sidebar.tsx` - 管理后台侧边栏
 - `src/components/admin/export-button.tsx` - 数据导出按钮
 
@@ -1086,6 +1195,7 @@ window.URL.revokeObjectURL(blobUrl);
 基于 LLM 的 AI 聊天助手，支持 SSE 流式输出，为用户解答来华留学相关问题。
 
 **功能特性**：
+
 - SSE 流式响应（打字机效果）
 - 对话历史持久化（Supabase 存储）
 - 多轮对话上下文（最近 20 条消息）
@@ -1095,28 +1205,34 @@ window.URL.revokeObjectURL(blobUrl);
 - 中英文双语支持（自动匹配用户语言）
 
 **页面路由**：
+
 - 浮动气泡组件，集成在 Student Portal v2 和 Partner Portal v2 布局中
 
 **API 端点**：
+
 - `POST /api/chat` - 发送消息（SSE 流式响应）
 - `GET /api/chat/sessions` - 获取用户对话列表
 - `DELETE /api/chat/sessions?id=xxx` - 删除对话
 - `GET /api/chat/sessions/[id]/messages` - 获取对话消息
 
 **数据表**：
-- `chat_sessions` - 对话会话表（id, user_id, title, created_at, updated_at）
-- `chat_messages` - 对话消息表（id, session_id, role, content, metadata, created_at）
+
+- `chat_sessions` - 对话会话表（id, user\_id, title, created\_at, updated\_at）
+- `chat_messages` - 对话消息表（id, session\_id, role, content, metadata, created\_at）
 
 **组件**：
+
 - `src/components/chat/chat-widget.tsx` - 聊天浮动组件（气泡 + 面板 + 流式渲染）
 
 **技术架构**：
+
 - LLM: `coze-coding-dev-sdk` (LLMClient)，模型 `doubao-seed-2-0-lite-260215`
 - 流式输出: SSE 协议 (`text/event-stream` + `ReadableStream`)
 - 前端渲染: `fetch` + `body.getReader()` 增量渲染
 - 对话存储: Supabase `chat_sessions` + `chat_messages`
 
 **消息格式 (SSE)**：
+
 ```json
 { "type": "session", "session_id": "uuid" }  // 会话创建
 { "type": "content", "content": "text" }       // 流式内容
@@ -1131,6 +1247,7 @@ window.URL.revokeObjectURL(blobUrl);
 ### 架构设计
 
 **核心文件**：
+
 - `src/i18n/config.ts` - 语言配置（支持的语言、默认语言、语言名称和标志）
 - `src/i18n/context.tsx` - I18n Context 和 useI18n Hook
 - `src/i18n/locales/en.json` - 英文翻译文件
@@ -1138,6 +1255,7 @@ window.URL.revokeObjectURL(blobUrl);
 - `src/components/language-switcher.tsx` - 语言切换组件
 
 **支持的语言**：
+
 - `en` - English (默认)
 - `zh` - 中文
 
@@ -1264,6 +1382,7 @@ pnpm test:e2e
 项目使用 Vitest 进行单元测试，配置文件为 `vitest.config.ts`。
 
 **测试目录结构**:
+
 ```
 src/
 ├── lib/__tests__/           # 工具函数测试
@@ -1276,6 +1395,7 @@ src/
 ```
 
 **运行测试**:
+
 - `pnpm test` - 运行测试并监听变化
 - `pnpm test:run` - 运行一次测试
 - `pnpm test:coverage` - 运行测试并生成覆盖率报告
@@ -1285,12 +1405,14 @@ src/
 项目使用 Playwright 进行端到端测试，配置文件为 `playwright.config.ts`。
 
 **测试目录结构**:
+
 ```
 e2e/
 └── app.spec.ts             # 应用程序 E2E 测试
 ```
 
 **测试内容**:
+
 - 首页加载和导航
 - 大学列表页面
 - 项目列表页面
@@ -1298,6 +1420,7 @@ e2e/
 - 可访问性测试
 
 **运行测试**:
+
 - `pnpm test:e2e` - 运行 E2E 测试
 - `pnpm test:e2e:ui` - 打开 Playwright UI 运行测试
 
@@ -1308,6 +1431,7 @@ e2e/
 ### SEO 架构
 
 **核心文件**：
+
 - `src/lib/seo-config.ts` - SEO 配置和工具函数
 - `src/components/seo/json-ld.tsx` - 结构化数据组件
 - `src/app/sitemap.ts` - 动态站点地图
@@ -1318,6 +1442,7 @@ e2e/
 所有公共页面都有完整的元数据配置：
 
 **根布局 (`src/app/layout.tsx`)**：
+
 ```typescript
 export const metadata: Metadata = {
   title: { default: '...', template: '%s | SICA' },
@@ -1331,6 +1456,7 @@ export const metadata: Metadata = {
 ```
 
 **动态元数据生成**：
+
 - 大学详情页：`/universities/[id]/page.tsx`
 - 项目详情页：`/programs/[id]/page.tsx`
 - 博客文章页：`/blog/[slug]/page.tsx`
@@ -1340,42 +1466,49 @@ export const metadata: Metadata = {
 支持的结构化数据类型：
 
 **组织结构化数据**：
+
 ```tsx
 import { OrganizationSchema } from '@/components/seo/json-ld';
 <OrganizationSchema />
 ```
 
 **网站结构化数据**：
+
 ```tsx
 import { WebsiteSchema } from '@/components/seo/json-ld';
 <WebsiteSchema />
 ```
 
 **大学结构化数据**：
+
 ```tsx
 import { UniversitySchema } from '@/components/seo/json-ld';
 <UniversitySchema university={{ name_en: '...', city: '...', province: '...' }} />
 ```
 
 **项目结构化数据**：
+
 ```tsx
 import { ProgramSchema } from '@/components/seo/json-ld';
 <ProgramSchema program={{ name: '...', degree_level: '...', university_name: '...' }} />
 ```
 
 **文章结构化数据**：
+
 ```tsx
 import { ArticleSchema } from '@/components/seo/json-ld';
 <ArticleSchema article={{ title: '...', publishedAt: '...', author: '...' }} />
 ```
 
 **面包屑结构化数据**：
+
 ```tsx
 import { BreadcrumbSchema } from '@/components/seo/json-ld';
 <BreadcrumbSchema items={[{ name: 'Home', url: '/' }, { name: 'Blog', url: '/blog' }]} />
 ```
 
 **FAQ 结构化数据**：
+
 ```tsx
 import { FAQSchema } from '@/components/seo/json-ld';
 <FAQSchema faqs={[{ question: '...', answer: '...' }]} />
@@ -1386,6 +1519,7 @@ import { FAQSchema } from '@/components/seo/json-ld';
 动态生成的站点地图包含：
 
 **静态页面**：
+
 - `/` - 首页 (priority: 1, daily)
 - `/about` - 关于页面 (priority: 0.8, monthly)
 - `/universities` - 大学列表 (priority: 0.9, weekly)
@@ -1394,6 +1528,7 @@ import { FAQSchema } from '@/components/seo/json-ld';
 - `/faq`, `/contact`, `/apply` - 其他页面
 
 **动态页面**：
+
 - 所有活跃的大学详情页 (priority: 0.7, monthly)
 - 所有活跃的项目详情页 (priority: 0.7, monthly)
 - 所有已发布的博客文章 (priority: 0.6, weekly)
@@ -1405,9 +1540,11 @@ import { FAQSchema } from '@/components/seo/json-ld';
 爬虫访问控制配置：
 
 **允许访问**：
+
 - 所有公共页面 (`/`)
 
 **禁止访问**：
+
 - `/admin/` - 管理后台
 - `/api/` - API 端点
 - `/student/`, `/student-v2/` - 学生门户
@@ -1454,3 +1591,4 @@ generateFAQSchema(faqs)
 4. **设置规范链接**：使用 `alternates.canonical` 避免重复内容
 5. **更新站点地图**：新增公共页面时更新 sitemap.ts
 6. **测试 SEO**：使用 Google Rich Results Test 验证结构化数据
+

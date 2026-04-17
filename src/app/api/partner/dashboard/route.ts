@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     };
     
     // Get recent applications with program and university details
-    let recentQuery = supabase
+    const recentQuery = supabase
       .from('applications')
       .select(`
         id,

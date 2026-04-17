@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DocumentStatusBadge } from "@/components/ui/document-status-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -87,6 +88,7 @@ interface StudentDetail {
     document_type: string
     file_url: string
     uploaded_at: string
+    status: string
     verified: boolean
     application_id: string
   }>
@@ -426,9 +428,7 @@ function StudentDetailContent({ studentId }: { studentId: string }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={doc.verified ? 'default' : 'secondary'}>
-                          {doc.verified ? 'Verified' : 'Pending'}
-                        </Badge>
+                        <DocumentStatusBadge status={doc.status || (doc.verified ? 'verified' : 'pending')} />
                         {doc.file_url && (
                           <Button variant="ghost" size="sm" asChild>
                             <a href={doc.file_url} target="_blank" rel="noopener noreferrer">

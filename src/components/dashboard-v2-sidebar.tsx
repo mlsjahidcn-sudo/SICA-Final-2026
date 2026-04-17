@@ -106,6 +106,14 @@ const navData = {
       ),
     },
     {
+      title: "Documents",
+      url: "/admin/v2/documents",
+      icon: (
+        <IconFileText
+        />
+      ),
+    },
+    {
       title: "Universities",
       url: "/admin/v2/universities",
       icon: (

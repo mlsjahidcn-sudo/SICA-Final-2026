@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
           }
         }
         // Check if student was referred by team member
-        const studentData = app.students as { user_id: string; users?: { referred_by_partner_id: string | null } | Array<{ referred_by_partner_id: string | null }> };
+        const studentData = app.students as any as { user_id: string; users?: { referred_by_partner_id: string | null } | Array<{ referred_by_partner_id: string | null }> };
         const userData = Array.isArray(studentData?.users) ? studentData.users[0] : studentData?.users;
         const { data: teamMembers } = await supabase
           .from('users')
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Regular member can only access applications for students they referred
-        const studentData = app.students as { user_id: string; users?: { referred_by_partner_id: string | null } | Array<{ referred_by_partner_id: string | null }> };
+        const studentData = app.students as any as { user_id: string; users?: { referred_by_partner_id: string | null } | Array<{ referred_by_partner_id: string | null }> };
         const userData = Array.isArray(studentData?.users) ? studentData.users[0] : studentData?.users;
         if (userData?.referred_by_partner_id === partnerUser.id) {
           accessibleIds.push(app.id);

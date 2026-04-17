@@ -196,21 +196,21 @@ export function ActivityLog({ entityType, entityId, title = 'Activity Log', limi
                       {/* Metadata details */}
                       {log.metadata && Object.keys(log.metadata).length > 0 && (
                         <div className="text-xs text-muted-foreground">
-                          {log.metadata.old_status && log.metadata.new_status && (
+                          {!!log.metadata.old_status && !!log.metadata.new_status && (
                             <span>
-                              {log.metadata.old_status} → {log.metadata.new_status}
+                              {String(log.metadata.old_status)} → {String(log.metadata.new_status)}
                             </span>
                           )}
-                          {log.metadata.note_preview && (
+                          {!!log.metadata.note_preview && (
                             <span className="truncate block max-w-[300px]">
-                              "{log.metadata.note_preview}"
+                              "{String(log.metadata.note_preview)}"
                             </span>
                           )}
-                          {log.metadata.document_name && (
-                            <span>{log.metadata.document_name}</span>
+                          {!!log.metadata.document_name && (
+                            <span>{String(log.metadata.document_name)}</span>
                           )}
-                          {log.metadata.meeting_title && (
-                            <span>{log.metadata.meeting_title}</span>
+                          {!!log.metadata.meeting_title && (
+                            <span>{String(log.metadata.meeting_title)}</span>
                           )}
                         </div>
                       )}

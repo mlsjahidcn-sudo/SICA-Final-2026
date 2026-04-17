@@ -23,6 +23,7 @@ vi.mock('next/image', () => ({
 
 // Mock Supabase client
 vi.mock('@/storage/database/supabase-client', () => ({
+  clearSupabaseClient: vi.fn(),
   getSupabaseClient: () => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
