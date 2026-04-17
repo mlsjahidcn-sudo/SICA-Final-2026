@@ -130,6 +130,7 @@ interface StudentProfile {
 
 interface Student {
   id: string;
+  student_id?: string;
   email: string | null;
   full_name: string;
   phone?: string | null;
@@ -311,7 +312,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const p = student.profile || student;
+  const p = student.profile || {} as StudentProfile;
   const stats = student.stats || { totalApplications: 0, accepted: 0, rejected: 0, pending: 0 };
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 

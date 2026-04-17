@@ -112,6 +112,7 @@ interface DocChecklistItem {
   is_required: boolean
   is_uploaded: boolean
   status: string
+  file_name?: string
 }
 
 interface WizardFormData {

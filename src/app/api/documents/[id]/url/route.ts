@@ -49,7 +49,7 @@ export async function GET(
       isOwner = studentRecord?.id === doc.student_id;
     } else if (authUser.role === 'partner') {
       // For partner role, check via referred_by_partner_id
-      const { data: docStudents } = supabase.from('students').select('user_id').eq('id', doc.student_id).maybeSingle();
+      const { data: docStudents } = await supabase.from('students').select('user_id').eq('id', doc.student_id).maybeSingle();
       if (docStudents?.user_id) {
         const { data: userRec } = await supabase
           .from('users')

@@ -36,6 +36,7 @@ export async function GET(
       .from('documents')
       .select(`
         id,
+        student_id,
         type,
         status,
         file_key,

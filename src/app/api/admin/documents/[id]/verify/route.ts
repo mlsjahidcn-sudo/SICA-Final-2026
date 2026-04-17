@@ -106,13 +106,15 @@ export async function PATCH(
       // Send realtime notification
       try {
         await sendNotificationToUser(student.user_id, {
-          title,
-          message: content,
           type: 'document_update',
-          metadata: {
-            documentId: document.id,
-            status,
-            type: document.type,
+          payload: {
+            title,
+            message: content,
+            metadata: {
+              documentId: document.id,
+              status,
+              type: document.type,
+            }
           }
         });
       } catch (wsError) {
