@@ -44,7 +44,7 @@ export async function PATCH(
       .from('documents')
       .select('id, student_id, type, file_name, status')
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !document) {
       return NextResponse.json(
@@ -100,7 +100,7 @@ export async function PATCH(
         title,
         content,
         type: 'document',
-        link: `/student-v2/documents`,
+        link: `/student-v2/profile#documents`,
       });
 
       // Send realtime notification

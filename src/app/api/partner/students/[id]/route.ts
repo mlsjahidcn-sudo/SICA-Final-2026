@@ -132,6 +132,10 @@ export async function GET(
       student: {
         ...user,
         ...student,
+        id: user.id, // Preserve user.id as the main id (used in URL params)
+        email: user.email, // Preserve user.email (students.email may be null)
+        phone: user.phone ?? student?.phone ?? null, // Prefer users.phone, fallback to students.phone
+        student_id: student?.id || null, // students table id as separate field
         last_sign_in_at: authUser?.user?.last_sign_in_at || null,
         applications: applications || [],
         stats,

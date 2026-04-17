@@ -45,10 +45,40 @@ import {
   IconStar,
   IconCircleCheck,
   IconAlertCircle,
+  IconFiles,
+  IconFile,
+  IconCheck,
+  IconX,
+  IconClock,
+  IconDownload,
+  IconUpload,
+  IconCalendarDue,
 } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { studentApi, type StudentProfile, type WorkExperienceEntry, type EducationHistoryEntry, type FamilyMemberEntry, type ExtracurricularActivityEntry, type AwardEntry, type PublicationEntry, type ResearchExperienceEntry, type ScholarshipApplicationData, type FinancialGuaranteeData } from "@/lib/student-api"
-import { getDocumentTypeLabel, getDocumentTypeOptions, getDocumentTypeDescription, normalizeDocumentType } from "@/lib/document-types"
+import { getDocumentTypeLabel, denormalizeDocumentType } from "@/lib/document-types"
+import { FileUpload, DocumentTypeSelect } from "@/components/ui/file-upload"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 
 interface ProfileFormData {
   // User fields
@@ -1471,383 +1501,441 @@ export default function ProfilePage() {
 }
 
 // ========== Profile Documents Tab Component ==========
+// Rewritten to use /api/student/documents API with rich UI from standalone documents page
 
-interface ProfileDocument {
+interface StudentDocument {
   id: string
-  application_id: string
-  document_type: string
+  type: string
   file_name: string
-  file_size: number
-  content_type: string
+  file_size: number | null
+  content_type: string | null
   status: string
-  rejection_reason?: string
+  rejection_reason?: string | null
+  expires_at?: string | null
   created_at: string
+  updated_at: string
+  uploaded_at?: string | null
   url?: string
-  applications?: {
-    id: string
-    programs?: {
-      id: string
-      name: string
-      universities?: { id: string; name_en: string }
-    }
-  }
-}
-
-interface ProfileApplication {
-  id: string
-  status: string
-  programs?: {
-    id: string
-    name: string
-    universities?: { id: string; name_en: string }
-  }
-}
-
-const STATUS_BADGE: Record<string, { className: string; label: string }> = {
-  verified: { className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', label: 'Verified' },
-  pending: { className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', label: 'Pending' },
-  rejected: { className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: 'Rejected' },
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  student_id?: string
+  application_id?: string | null
 }
 
 function ProfileDocumentsTab() {
-  const [documents, setDocuments] = React.useState<ProfileDocument[]>([])
-  const [applications, setApplications] = React.useState<ProfileApplication[]>([])
+  const [documents, setDocuments] = React.useState<StudentDocument[]>([])
+  const [stats, setStats] = React.useState({ total: 0, verified: 0, pending: 0, rejected: 0 })
   const [loading, setLoading] = React.useState(true)
-  const [uploadAppId, setUploadAppId] = React.useState('')
-  const [uploadDocType, setUploadDocType] = React.useState('')
+  const [filter, setFilter] = React.useState("all")
+  const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false)
+  const [selectedDocType, setSelectedDocType] = React.useState("")
   const [uploading, setUploading] = React.useState(false)
 
-  const fetchData = React.useCallback(async () => {
+  const fetchDocuments = React.useCallback(async () => {
     setLoading(true)
+
     try {
-      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const params = new URLSearchParams()
+      if (filter !== "all") {
+        params.append('status', filter)
+      }
 
-      const [docsRes, appsRes] = await Promise.all([
-        fetch('/api/documents', { headers }),
-        fetch('/api/student/applications', { headers }),
-      ])
+      const response = await fetch(`/api/student/documents?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
 
-      if (docsRes.ok) {
-        const data = await docsRes.json()
+      if (response.ok) {
+        const data = await response.json()
         setDocuments(data.documents || [])
+        setStats(data.stats || { total: 0, verified: 0, pending: 0, rejected: 0 })
+      } else {
+        const data = await response.json().catch(() => ({}))
+        console.error("Failed to fetch documents:", data.error || response.statusText)
+        setDocuments([])
+        setStats({ total: 0, verified: 0, pending: 0, rejected: 0 })
       }
-
-      if (appsRes.ok) {
-        const data = await appsRes.json()
-        setApplications(data.applications || [])
-      }
-    } catch (err) {
-      console.error('Error fetching documents:', err)
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching documents:", error)
+      setDocuments([])
+      setStats({ total: 0, verified: 0, pending: 0, rejected: 0 })
     }
-  }, [])
+
+    setLoading(false)
+  }, [filter])
 
   React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchDocuments()
+  }, [fetchDocuments])
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { icon: React.ReactNode; className: string; label: string }> = {
+      verified: { icon: <IconCheck className="h-3 w-3 mr-1" />, className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", label: "Verified" },
+      pending: { icon: <IconClock className="h-3 w-3 mr-1" />, className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400", label: "Pending" },
+      rejected: { icon: <IconX className="h-3 w-3 mr-1" />, className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", label: "Rejected" },
+    }
+    const c = config[status] || config.pending
+    return <Badge className={c.className}>{c.icon}{c.label}</Badge>
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    })
+  }
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return 'N/A'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const getExpiryInfo = (expiresAt: string | null | undefined) => {
+    if (!expiresAt) return null
+
+    const now = new Date()
+    const expiryDate = new Date(expiresAt)
+    const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (daysLeft < 0) {
+      return { label: 'Expired', days: Math.abs(daysLeft), variant: 'destructive' as const }
+    } else if (daysLeft <= 30) {
+      return { label: `${daysLeft}d left`, days: daysLeft, variant: 'warning' as const }
+    }
+    return { label: formatDate(expiresAt), days: daysLeft, variant: 'normal' as const }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/student/documents/${id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+
+      if (response.ok) {
+        setDocuments(documents.filter(d => d.id !== id))
+        toast.success("Document deleted successfully")
+      } else {
+        const data = await response.json()
+        toast.error(data.error || "Failed to delete document")
+      }
+    } catch {
+      toast.error("Failed to delete document")
+    }
+  }
+
+  const handleDownload = async (documentId: string, fileName: string) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/documents/${documentId}/url`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const fileResponse = await fetch(data.url)
+        const blob = await fileResponse.blob()
+        const blobUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = blobUrl
+        link.download = fileName
+        link.click()
+        window.URL.revokeObjectURL(blobUrl)
+      } else {
+        toast.error("Failed to get download link")
+      }
+    } catch {
+      toast.error("Failed to download file")
+    }
+  }
 
   const handleUpload = async (file: File) => {
-    if (!uploadAppId || !uploadDocType) return
+    if (!selectedDocType) {
+      toast.error("Please select a document type")
+      return
+    }
 
     setUploading(true)
     try {
-      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
       const formData = new FormData()
-      formData.append('application_id', uploadAppId)
-      formData.append('document_type', uploadDocType)
+      formData.append('type', selectedDocType)
       formData.append('file', file)
 
-      const res = await fetch('/api/documents', {
+      const response = await fetch('/api/student/documents', {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       })
 
-      if (res.ok) {
-        setUploadAppId('')
-        setUploadDocType('')
-        fetchData()
+      if (response.ok) {
+        toast.success("Document uploaded successfully")
+        setUploadDialogOpen(false)
+        setSelectedDocType("")
+        fetchDocuments()
       } else {
-        const data = await res.json()
-        console.error('Upload failed:', data.error)
+        const data = await response.json()
+        throw new Error(data.error || "Upload failed")
       }
-    } catch (err) {
-      console.error('Upload error:', err)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed")
     } finally {
       setUploading(false)
     }
   }
 
-  const handleDelete = async (docId: string) => {
-    if (!confirm('Are you sure you want to delete this document?')) return
-
-    try {
-      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
-      const res = await fetch(`/api/documents?id=${docId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (res.ok) {
-        fetchData()
-      }
-    } catch (err) {
-      console.error('Delete error:', err)
-    }
-  }
-
-  // Group documents by application
-  const docsByApp = documents.reduce<Record<string, ProfileDocument[]>>((acc, doc) => {
-    const key = doc.application_id
-    if (!acc[key]) acc[key] = []
-    acc[key].push(doc)
-    return acc
-  }, {})
-
-  const getAppName = (appId: string) => {
-    const app = applications.find(a => a.id === appId)
-    if (app?.programs) {
-      return `${app.programs.name}${app.programs.universities ? ` - ${app.programs.universities.name_en}` : ''}`
-    }
-    return 'Unknown Application'
-  }
-
   return (
-    <>
-      {/* Upload Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <IconFileText className="h-5 w-5" />
-            Upload Document
-          </CardTitle>
-          <CardDescription>Select an application and document type, then drag and drop a file below.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Application</Label>
-              <Select value={uploadAppId} onValueChange={setUploadAppId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an application..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {applications.map(app => (
-                    <SelectItem key={app.id} value={app.id}>
-                      {app.programs?.name || 'Unknown Program'}
-                      {app.programs?.universities ? ` - ${app.programs.universities.name_en}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Document Type</Label>
-              <Select value={uploadDocType} onValueChange={setUploadDocType} disabled={!uploadAppId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select document type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {getDocumentTypeOptions().map((option) => (
-                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">My Documents</h2>
+          <p className="text-sm text-muted-foreground">Manage your personal documents for applications</p>
+        </div>
 
-          {uploadAppId && uploadDocType && (
-            <div
-              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx'
-                input.onchange = async (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) await handleUpload(file)
-                }
-                input.click()
-              }}
-            >
-              {uploading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <IconLoader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Uploading...</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <IconFileText className="h-8 w-8 text-muted-foreground" />
-                  <p className="font-medium">Click or drag file to upload</p>
-                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG, DOC, DOCX (max 10MB)</p>
-                </div>
+        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <IconPlus className="h-4 w-4 mr-2" />
+              Upload Document
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Upload Document</DialogTitle>
+              <DialogDescription>
+                Select a document type and upload your file. No need to link to an application.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Document Type</Label>
+                <DocumentTypeSelect
+                  value={selectedDocType}
+                  onChange={setSelectedDocType}
+                />
+              </div>
+
+              {selectedDocType && (
+                <FileUpload
+                  onUpload={handleUpload}
+                  documentType={getDocumentTypeLabel(selectedDocType)}
+                  maxSize={10}
+                  disabled={uploading}
+                />
               )}
             </div>
-          )}
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          {applications.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              You need to create an application first before uploading documents.
-            </p>
-          )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <IconFiles className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Total</span>
+            </div>
+            <div className="text-2xl font-bold mt-2">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <IconCheck className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-muted-foreground">Verified</span>
+            </div>
+            <div className="text-2xl font-bold mt-2">{stats.verified}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <IconClock className="h-4 w-4 text-yellow-500" />
+              <span className="text-sm text-muted-foreground">Pending</span>
+            </div>
+            <div className="text-2xl font-bold mt-2">{stats.pending}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <IconX className="h-4 w-4 text-red-500" />
+              <span className="text-sm text-muted-foreground">Rejected</span>
+            </div>
+            <div className="text-2xl font-bold mt-2">{stats.rejected}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Documents</SelectItem>
+                <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" onClick={() => { setLoading(true); fetchDocuments(); }}>
+              <IconRefresh className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Uploaded Documents */}
+      {/* Documents List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <IconFileText className="h-5 w-5" />
-            Uploaded Documents
-          </CardTitle>
+          <CardTitle>Documents ({documents.length})</CardTitle>
           <CardDescription>
-            {loading ? 'Loading...' : `${documents.length} document${documents.length !== 1 ? 's' : ''} across ${Object.keys(docsByApp).length} application${Object.keys(docsByApp).length !== 1 ? 's' : ''}`}
+            {loading ? "Loading..." : `Showing ${documents.length} documents`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <IconLoader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : documents.length === 0 ? (
-            <div className="text-center py-8">
-              <IconFileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No documents uploaded yet.</p>
-              <p className="text-sm text-muted-foreground mt-1">Upload documents for your applications above.</p>
+            <div className="text-center py-12">
+              <IconFiles className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No documents found</h3>
+              <p className="text-muted-foreground mb-4">
+                Upload your documents to support your applications
+              </p>
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <IconUpload className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
             </div>
           ) : (
-            <div className="space-y-6">
-              {Object.entries(docsByApp).map(([appId, docs]) => (
-                <div key={appId}>
-                  <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                    <IconSchool className="h-4 w-4" />
-                    {getAppName(appId)}
-                  </h4>
-                  <div className="space-y-2">
-                    {docs.map(doc => {
-                      const badge = STATUS_BADGE[doc.status] || STATUS_BADGE.pending
-                      return (
-                        <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                              doc.status === 'verified' ? 'bg-green-500' :
-                              doc.status === 'rejected' ? 'bg-red-500' : 'bg-yellow-500'
-                            }`} />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium truncate">{getDocumentTypeLabel(doc.document_type)}</p>
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${badge.className}`}>{badge.label}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {doc.file_name} &middot; {formatFileSize(doc.file_size)}
-                              </p>
-                              {doc.rejection_reason && (
-                                <p className="text-xs text-red-600 mt-1">{doc.rejection_reason}</p>
-                              )}
+            <div className="space-y-4">
+              {documents.map((doc) => {
+                const expiryInfo = getExpiryInfo(doc.expires_at)
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow gap-4"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-lg ${
+                        doc.status === 'verified' ? 'bg-green-100 dark:bg-green-900/30' :
+                        doc.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30' :
+                        'bg-yellow-100 dark:bg-yellow-900/30'
+                      }`}>
+                        <IconFile className={`h-6 w-6 ${
+                          doc.status === 'verified' ? 'text-green-600' :
+                          doc.status === 'rejected' ? 'text-red-600' :
+                          'text-yellow-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold">
+                            {getDocumentTypeLabel(denormalizeDocumentType(doc.type))}
+                          </h3>
+                          {getStatusBadge(doc.status)}
+                          {expiryInfo && (
+                            <Badge
+                              variant={expiryInfo.variant === 'destructive' ? 'destructive' : 'outline'}
+                              className={
+                                expiryInfo.variant === 'warning'
+                                  ? 'border-orange-300 text-orange-700 bg-orange-50'
+                                  : ''
+                              }
+                            >
+                              <IconCalendarDue className="h-3 w-3 mr-1" />
+                              {expiryInfo.label}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          {doc.file_name} &middot; {formatFileSize(doc.file_size)}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>Uploaded: {formatDate(doc.uploaded_at || doc.created_at)}</span>
+                          {doc.content_type && (
+                            <span>&middot; {doc.content_type.split('/')[1]?.toUpperCase() || doc.content_type}</span>
+                          )}
+                        </div>
+                        {doc.rejection_reason && (
+                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md flex items-start gap-2">
+                            <IconAlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-red-700 dark:text-red-400">Rejection Reason</p>
+                              <p className="text-sm text-red-600 dark:text-red-300">{doc.rejection_reason}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                            {doc.url && (
-                              <Button variant="ghost" size="sm" onClick={() => window.open(doc.url, '_blank')} title="View">
-                                <IconFileText className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {(doc.status === 'pending' || doc.status === 'rejected') && (
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(doc.id)} title="Delete">
-                                <IconTrash className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(doc.id, doc.file_name)}
+                      >
+                        <IconDownload className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                      {doc.status === 'rejected' && (
+                        <Button variant="outline" size="sm" onClick={() => setUploadDialogOpen(true)}>
+                          <IconUpload className="h-4 w-4 mr-1" />
+                          Re-upload
+                        </Button>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{doc.file_name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(doc.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                  <Separator className="mt-4" />
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Document Checklist */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <IconFileText className="h-5 w-5" />
-            Commonly Required Documents
-          </CardTitle>
-          <CardDescription>Documents are uploaded per application. Here is a checklist of commonly required documents.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <h4 className="font-medium">Required for Most Applications</h4>
-            <div className="grid gap-2">
-              {[
-                { type: 'passport_copy', desc: 'Valid passport photo page' },
-                { type: 'bachelor_diploma', desc: 'Highest degree certificate with notarization' },
-                { type: 'bachelor_transcript', desc: 'Official transcripts with notarization' },
-                { type: 'study_plan', desc: 'Detailed study plan for the program' },
-                { type: 'recommendation', desc: 'From professors or supervisors' },
-                { type: 'cv_resume', desc: 'Comprehensive curriculum vitae' },
-                { type: 'passport_photo', desc: 'Recent photos meeting Chinese visa requirements' },
-                { type: 'health_exam', desc: 'Foreigner Physical Examination Form' },
-                { type: 'non_criminal_record', desc: 'Police clearance certificate' },
-              ].map((doc) => {
-                const uploaded = documents.some(d => normalizeDocumentType(d.document_type) === doc.type)
-                return (
-                  <div key={doc.type} className="flex items-start gap-3 p-3 rounded-lg border">
-                    <div className={`mt-0.5 h-5 w-5 rounded-full flex-shrink-0 flex items-center justify-center ${
-                      uploaded ? 'bg-green-500/20' : 'border-2 border-muted-foreground/30'
-                    }`}>
-                      {uploaded && <IconStar className="h-3 w-3 text-green-600" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{getDocumentTypeLabel(doc.type)}</p>
-                      <p className="text-xs text-muted-foreground">{doc.desc}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <h4 className="font-medium">Additional Documents (Program-Specific)</h4>
-            <div className="grid gap-2">
-              {[
-                { type: 'language_certificate', desc: 'Language proficiency test results' },
-                { type: 'financial_proof', desc: 'Financial guarantee document' },
-                { type: 'other', desc: 'Program-specific requirements' },
-              ].map((doc) => {
-                const uploaded = documents.some(d => normalizeDocumentType(d.document_type) === doc.type)
-                return (
-                  <div key={doc.type} className="flex items-start gap-3 p-3 rounded-lg border">
-                    <div className={`mt-0.5 h-5 w-5 rounded-full flex-shrink-0 flex items-center justify-center ${
-                      uploaded ? 'bg-green-500/20' : 'border-2 border-muted-foreground/30'
-                    }`}>
-                      {uploaded && <IconStar className="h-3 w-3 text-green-600" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{getDocumentTypeLabel(doc.type)}</p>
-                      <p className="text-xs text-muted-foreground">{doc.desc}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </>
+    </div>
   )
 }

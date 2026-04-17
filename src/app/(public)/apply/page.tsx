@@ -125,7 +125,7 @@ function ApplyContent() {
       icon: Upload,
       estimatedTime: '5-10 min',
       action: 'Upload Documents',
-      href: '/student-v2/documents',
+      href: '/student-v2/profile#documents',
       details: 'Upload passport, transcripts, certificates and other documents',
     },
     {

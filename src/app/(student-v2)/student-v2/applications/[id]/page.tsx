@@ -40,12 +40,17 @@ import {
   IconAlertCircle,
   IconCheck,
   IconX,
-  IconLoader2
+  IconLoader2,
+  IconFiles,
+  IconDownload,
+  IconUpload,
+  IconLink,
 } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { DocumentChecklist } from "@/components/student-v2/document-checklist"
 import { ApplicationProgress } from "@/components/student-v2/application-progress"
 import { ApplicationDeadline } from "@/components/student-v2/application-deadline"
+import { getDocumentTypeLabel, denormalizeDocumentType } from "@/lib/document-types"
 
 interface ApplicationDetail {
   id: string
@@ -100,6 +105,8 @@ export default function ApplicationDetailPage() {
   const [loading, setLoading] = React.useState(true)
   const [submitting, setSubmitting] = React.useState(false)
   const [showSubmitDialog, setShowSubmitDialog] = React.useState(false)
+  const [studentDocuments, setStudentDocuments] = React.useState<any[]>([])
+  const [linkingDocId, setLinkingDocId] = React.useState<string | null>(null)
 
   const fetchApplication = React.useCallback(async () => {
     try {
@@ -127,6 +134,81 @@ export default function ApplicationDetailPage() {
       fetchApplication()
     }
   }, [applicationId, fetchApplication])
+
+  // Fetch student's all documents for the "My Document Library" section
+  const fetchStudentDocuments = React.useCallback(async () => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch('/api/student/documents?status=verified,pending', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setStudentDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error("Error fetching student documents:", error)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchStudentDocuments()
+  }, [fetchStudentDocuments])
+
+  const handleLinkDocument = async (docId: string) => {
+    setLinkingDocId(docId)
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/student/documents/${docId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ application_id: applicationId }),
+      })
+      if (response.ok) {
+        toast.success('Document linked to this application')
+        fetchStudentDocuments()
+        fetchApplication()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to link document')
+      }
+    } catch (error) {
+      console.error("Error linking document:", error)
+      toast.error('Failed to link document')
+    } finally {
+      setLinkingDocId(null)
+    }
+  }
+
+  const handleDownloadStudentDoc = async (documentId: string, fileName: string) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token')
+      const token = await getValidToken()
+      const response = await fetch(`/api/documents/${documentId}/url`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const fileResponse = await fetch(data.url)
+        const blob = await fileResponse.blob()
+        const blobUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = blobUrl
+        link.download = fileName
+        link.click()
+        window.URL.revokeObjectURL(blobUrl)
+      } else {
+        toast.error("Failed to get download link")
+      }
+    } catch {
+      toast.error("Failed to download file")
+    }
+  }
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -461,7 +543,105 @@ export default function ApplicationDetailPage() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
+          {/* My Document Library - Student All Uploaded Documents */}
+          {studentDocuments.length > 0 && (
+            <Card className="bg-muted/30">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <IconFiles className="h-5 w-5" />
+                  My Document Library
+                </CardTitle>
+                <CardDescription>
+                  Your uploaded documents available to link to this application
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {studentDocuments.map((doc) => {
+                    const isLinked = doc.application_id === applicationId
+                    return (
+                      <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-background">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-lg ${
+                            doc.status === 'verified' ? 'bg-green-100 dark:bg-green-900/30' :
+                            'bg-yellow-100 dark:bg-yellow-900/30'
+                          }`}>
+                            <IconFile className={`h-5 w-5 ${
+                              doc.status === 'verified' ? 'text-green-600' : 'text-yellow-600'
+                            }`} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {getDocumentTypeLabel(denormalizeDocumentType(doc.type))}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {doc.file_name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadStudentDoc(doc.id, doc.file_name)}
+                          >
+                            <IconDownload className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                          {isLinked ? (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <IconCheck className="h-3 w-3" />
+                              Linked
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleLinkDocument(doc.id)}
+                              disabled={linkingDocId === doc.id}
+                            >
+                              <IconLink className="h-4 w-4 mr-1" />
+                              {linkingDocId === doc.id ? 'Linking...' : 'Link'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/student-v2/profile#documents">
+                      <IconUpload className="h-4 w-4 mr-2" />
+                      Upload More Documents
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Existing Document Checklist for this Application */}
           <DocumentChecklist applicationId={applicationId} />
+
+          {studentDocuments.length === 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-6">
+                  <IconFiles className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground mb-4">
+                    No documents uploaded yet. Upload documents to your profile to link them to applications.
+                  </p>
+                  <Button variant="outline" asChild>
+                    <Link href="/student-v2/profile#documents">
+                      <IconUpload className="h-4 w-4 mr-2" />
+                      Upload Documents
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Timeline Tab */}

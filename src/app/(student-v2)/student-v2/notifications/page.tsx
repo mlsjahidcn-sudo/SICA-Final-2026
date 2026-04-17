@@ -80,9 +80,9 @@ export default function NotificationsPage() {
         setNotifications([
           { id: "1", type: "application", title: "Application Status Updated", content: "Your application to Computer Science at Tsinghua University has been moved to Under Review status.", is_read: false, created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), link: "/student-v2/applications/1" },
           { id: "2", type: "meeting", title: "Interview Scheduled", content: "Your interview for Data Science at Peking University has been scheduled for Dec 15, 2024 at 2:00 PM.", is_read: false, created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), link: "/student-v2/meetings/2" },
-          { id: "3", type: "document", title: "Document Verified", content: "Your Passport document has been verified successfully.", is_read: true, created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), link: "/student-v2/documents" },
+          { id: "3", type: "document", title: "Document Verified", content: "Your Passport document has been verified successfully.", is_read: true, created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), link: "/student-v2/profile#documents" },
           { id: "4", type: "application", title: "New Application Created", content: "You have successfully created a new application for Artificial Intelligence at Zhejiang University.", is_read: true, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-          { id: "5", type: "document", title: "Document Rejected", content: "Your Language Test (IELTS) document was rejected. Reason: Document is not clear. Please upload a higher resolution scan.", is_read: false, created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), link: "/student-v2/documents" },
+          { id: "5", type: "document", title: "Document Rejected", content: "Your Language Test (IELTS) document was rejected. Reason: Document is not clear. Please upload a higher resolution scan.", is_read: false, created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), link: "/student-v2/profile#documents" },
         ])
         setUnreadCount(3)
       } else {

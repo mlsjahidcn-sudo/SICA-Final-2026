@@ -35,9 +35,14 @@ export async function GET(
         )
       `)
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
-    if (error || !document) {
+    if (error) {
+      console.error('Error fetching document:', error);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
@@ -154,9 +159,14 @@ export async function PUT(
         )
       `)
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !document) {
+    if (fetchError) {
+      console.error('Error fetching document:', fetchError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
@@ -234,9 +244,14 @@ export async function DELETE(
       .from('documents')
       .select('id, file_key, uploaded_by')
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !document) {
+    if (fetchError) {
+      console.error('Error fetching document:', fetchError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 

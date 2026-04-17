@@ -25,7 +25,7 @@ export async function DELETE(
       .from('documents')
       .select('id, file_key')
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });

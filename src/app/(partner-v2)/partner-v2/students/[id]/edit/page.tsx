@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +45,7 @@ import {
   IconFlask,
   IconCurrencyDollar,
   IconBrandWechat,
+  IconPhone,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import type {
@@ -161,7 +162,8 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
         if (response.ok) {
           const data = await response.json();
           const s = data.student;
-          const p = s.profile || {};
+          // API returns student fields at top level (from ...student spread), not nested under profile
+          const p = s.profile || s;
 
           setFormData({
             email: s.email || '',
@@ -370,9 +372,9 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6">
+    <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <IconArrowLeft className="h-5 w-5" />
@@ -383,134 +385,159 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={isDeleting}>
-              {isDeleting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconTrash className="h-4 w-4 mr-2" />}
-              Delete Student
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Student</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete <strong>{formData.full_name}</strong>? This action cannot be undone. Students with active applications cannot be deleted.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
+            {isSubmitting ? <IconLoader2 className="h-4 w-4 animate-spin" /> : <IconCheck className="h-4 w-4" />}
+            Save Changes
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isDeleting}>
+                {isDeleting ? <IconLoader2 className="h-4 w-4 mr-2 animate-spin" /> : <IconTrash className="h-4 w-4 mr-2" />}
                 Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Student</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete <strong>{formData.full_name}</strong>? This action cannot be undone. Students with active applications cannot be deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 sm:grid-cols-6 mb-6">
-              <TabsTrigger value="personal" className="flex items-center gap-1.5 text-xs">
-                <IconUser className="h-3.5 w-3.5" />
-                Personal
-              </TabsTrigger>
-              <TabsTrigger value="passport" className="flex items-center gap-1.5 text-xs">
-                <IconEPassport className="h-3.5 w-3.5" />
-                Passport
-              </TabsTrigger>
-              <TabsTrigger value="academic" className="flex items-center gap-1.5 text-xs">
-                <IconSchool className="h-3.5 w-3.5" />
-                Academic
-              </TabsTrigger>
-              <TabsTrigger value="family" className="flex items-center gap-1.5 text-xs">
-                <IconUsers className="h-3.5 w-3.5" />
-                Family
-              </TabsTrigger>
-              <TabsTrigger value="additional" className="flex items-center gap-1.5 text-xs">
-                <IconStar className="h-3.5 w-3.5" />
-                Additional
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center gap-1.5 text-xs">
-                <IconFileText className="h-3.5 w-3.5" />
-                Preferences
-              </TabsTrigger>
-            </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6">
+          <TabsTrigger value="personal" className="flex items-center gap-1.5 text-xs">
+            <IconUser className="h-3.5 w-3.5" />
+            Personal
+          </TabsTrigger>
+          <TabsTrigger value="passport" className="flex items-center gap-1.5 text-xs">
+            <IconEPassport className="h-3.5 w-3.5" />
+            Passport
+          </TabsTrigger>
+          <TabsTrigger value="academic" className="flex items-center gap-1.5 text-xs">
+            <IconSchool className="h-3.5 w-3.5" />
+            Academic
+          </TabsTrigger>
+          <TabsTrigger value="family" className="flex items-center gap-1.5 text-xs">
+            <IconUsers className="h-3.5 w-3.5" />
+            Family
+          </TabsTrigger>
+          <TabsTrigger value="additional" className="flex items-center gap-1.5 text-xs">
+            <IconStar className="h-3.5 w-3.5" />
+            Additional
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="flex items-center gap-1.5 text-xs">
+            <IconFileText className="h-3.5 w-3.5" />
+            Preferences
+          </TabsTrigger>
+        </TabsList>
 
             {/* ============ Personal Tab ============ */}
-            <TabsContent value="personal" className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={formData.email} disabled className="bg-muted" />
-                    <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+            <TabsContent value="personal" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconUser className="h-5 w-5" />
+                    Basic Information
+                  </CardTitle>
+                  <CardDescription>Student's basic personal details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" value={formData.email} disabled className="bg-muted" />
+                      <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input id="full_name" placeholder="Student's full name" value={formData.full_name} onChange={(e) => handleInputChange('full_name', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chinese_name">Chinese Name</Label>
+                      <Input id="chinese_name" placeholder="中文名" value={formData.chinese_name} onChange={(e) => handleInputChange('chinese_name', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input id="phone" placeholder="+1234567890" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name *</Label>
-                    <Input id="full_name" placeholder="Student's full name" value={formData.full_name} onChange={(e) => handleInputChange('full_name', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="chinese_name">Chinese Name</Label>
-                    <Input id="chinese_name" placeholder="中文名" value={formData.chinese_name} onChange={(e) => handleInputChange('chinese_name', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" placeholder="+1234567890" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              <Separator className="my-6" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconUser className="h-5 w-5" />
+                    Personal Details
+                  </CardTitle>
+                  <CardDescription>Additional personal information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="nationality">Nationality</Label>
+                      <Input id="nationality" placeholder="Country of nationality" value={formData.nationality} onChange={(e) => handleInputChange('nationality', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_of_birth">Date of Birth</Label>
+                      <Input id="date_of_birth" type="date" value={formData.date_of_birth} onChange={(e) => handleInputChange('date_of_birth', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">Gender</Label>
+                      <Select value={formData.gender} onValueChange={(val) => handleInputChange('gender', val)}>
+                        <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="marital_status">Marital Status</Label>
+                      <Select value={formData.marital_status} onValueChange={(val) => handleInputChange('marital_status', val)}>
+                        <SelectTrigger id="marital_status"><SelectValue placeholder="Select status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single">Single</SelectItem>
+                          <SelectItem value="married">Married</SelectItem>
+                          <SelectItem value="divorced">Divorced</SelectItem>
+                          <SelectItem value="widowed">Widowed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="religion">Religion</Label>
+                      <Input id="religion" placeholder="Religion (optional)" value={formData.religion} onChange={(e) => handleInputChange('religion', e.target.value)} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Personal Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nationality">Nationality</Label>
-                    <Input id="nationality" placeholder="Country of nationality" value={formData.nationality} onChange={(e) => handleInputChange('nationality', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date_of_birth">Date of Birth</Label>
-                    <Input id="date_of_birth" type="date" value={formData.date_of_birth} onChange={(e) => handleInputChange('date_of_birth', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select value={formData.gender} onValueChange={(val) => handleInputChange('gender', val)}>
-                      <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="marital_status">Marital Status</Label>
-                    <Select value={formData.marital_status} onValueChange={(val) => handleInputChange('marital_status', val)}>
-                      <SelectTrigger id="marital_status"><SelectValue placeholder="Select status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="married">Married</SelectItem>
-                        <SelectItem value="divorced">Divorced</SelectItem>
-                        <SelectItem value="widowed">Widowed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="religion">Religion</Label>
-                    <Input id="religion" placeholder="Religion (optional)" value={formData.religion} onChange={(e) => handleInputChange('religion', e.target.value)} />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconBrandWechat className="h-5 w-5" />
+                    Contact Information
+                  </CardTitle>
+                  <CardDescription>Student's contact and address details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="current_address">Current Address</Label>
                       <Textarea id="current_address" placeholder="Current residential address" value={formData.current_address} onChange={(e) => handleInputChange('current_address', e.target.value)} />
@@ -519,8 +546,6 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                       <Label htmlFor="permanent_address">Permanent Address</Label>
                       <Textarea id="permanent_address" placeholder="Permanent home address" value={formData.permanent_address} onChange={(e) => handleInputChange('permanent_address', e.target.value)} />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="postal_code">Postal Code</Label>
                       <Input id="postal_code" placeholder="Postal/ZIP code" value={formData.postal_code} onChange={(e) => handleInputChange('postal_code', e.target.value)} />
@@ -530,78 +555,101 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                       <Input id="wechat_id" placeholder="WeChat ID" value={formData.wechat_id} onChange={(e) => handleInputChange('wechat_id', e.target.value)} />
                     </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Separator className="my-6" />
-
-                <h4 className="text-base font-semibold mb-3">Emergency Contact</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_name">Name</Label>
-                    <Input id="emergency_contact_name" placeholder="Contact name" value={formData.emergency_contact_name} onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)} />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconPhone className="h-5 w-5" />
+                    Emergency Contact
+                  </CardTitle>
+                  <CardDescription>Who to contact in case of emergency</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency_contact_name">Name</Label>
+                      <Input id="emergency_contact_name" placeholder="Contact name" value={formData.emergency_contact_name} onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency_contact_phone">Phone</Label>
+                      <Input id="emergency_contact_phone" placeholder="Contact phone" value={formData.emergency_contact_phone} onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergency_contact_relationship">Relationship</Label>
+                      <Input id="emergency_contact_relationship" placeholder="e.g. Parent, Guardian" value={formData.emergency_contact_relationship} onChange={(e) => handleInputChange('emergency_contact_relationship', e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_phone">Phone</Label>
-                    <Input id="emergency_contact_phone" placeholder="Contact phone" value={formData.emergency_contact_phone} onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency_contact_relationship">Relationship</Label>
-                    <Input id="emergency_contact_relationship" placeholder="e.g. Parent, Guardian" value={formData.emergency_contact_relationship} onChange={(e) => handleInputChange('emergency_contact_relationship', e.target.value)} />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ============ Passport Tab ============ */}
-            <TabsContent value="passport" className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Passport Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="passport_number">Passport Number</Label>
-                    <Input id="passport_number" placeholder="Passport number" value={formData.passport_number} onChange={(e) => handleInputChange('passport_number', e.target.value)} />
+            <TabsContent value="passport" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconEPassport className="h-5 w-5" />
+                    Passport Information
+                  </CardTitle>
+                  <CardDescription>Student's passport details for university applications</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="passport_number">Passport Number</Label>
+                      <Input id="passport_number" placeholder="Passport number" value={formData.passport_number} onChange={(e) => handleInputChange('passport_number', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="passport_issuing_country">Passport Issuing Country</Label>
+                      <Input id="passport_issuing_country" placeholder="Country that issued the passport" value={formData.passport_issuing_country} onChange={(e) => handleInputChange('passport_issuing_country', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="passport_expiry_date">Passport Expiry Date</Label>
+                      <Input id="passport_expiry_date" type="date" value={formData.passport_expiry_date} onChange={(e) => handleInputChange('passport_expiry_date', e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="passport_issuing_country">Passport Issuing Country</Label>
-                    <Input id="passport_issuing_country" placeholder="Country that issued the passport" value={formData.passport_issuing_country} onChange={(e) => handleInputChange('passport_issuing_country', e.target.value)} />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="passport_expiry_date">Passport Expiry Date</Label>
-                    <Input id="passport_expiry_date" type="date" value={formData.passport_expiry_date} onChange={(e) => handleInputChange('passport_expiry_date', e.target.value)} />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ============ Academic Tab ============ */}
-            <TabsContent value="academic" className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconSchool className="h-5 w-5" />
-                    Education History
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('education_history', { institution: '', degree: '', field_of_study: '', start_date: '', gpa: '', city: '', country: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Education
-                  </Button>
-                </div>
-                {formData.education_history.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <IconSchool className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No education history added yet</p>
-                    <p className="text-sm">Click &quot;Add Education&quot; to add an entry</p>
+            <TabsContent value="academic" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconSchool className="h-5 w-5" />
+                        Education History
+                      </CardTitle>
+                      <CardDescription>Add all academic qualifications (high school and above)</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('education_history', { institution: '', degree: '', field_of_study: '', start_date: '', gpa: '', city: '', country: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Education
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {formData.education_history.map((edu, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('education_history', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.education_history.length === 0 ? (
+                    <div className="text-center py-8">
+                      <IconSchool className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No education history added yet.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Click &quot;Add Education&quot; to add your academic background.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.education_history.map((edu, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Education #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('education_history', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Institution</Label>
                               <Input value={edu.institution} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, institution: e.target.value })} placeholder="University name" />
@@ -620,11 +668,11 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Start Date</Label>
-                              <Input type="date" value={edu.start_date} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, start_date: e.target.value })} />
+                              <Input type="month" value={edu.start_date} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, start_date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                               <Label>End Date</Label>
-                              <Input type="date" value={edu.end_date || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, end_date: e.target.value })} />
+                              <Input type="month" value={edu.end_date || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, end_date: e.target.value })} placeholder="Leave blank if current" />
                             </div>
                             <div className="space-y-2">
                               <Label>City</Label>
@@ -635,42 +683,45 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                               <Input value={edu.country || ''} onChange={(e) => updateArrayItem('education_history', idx, { ...edu, country: e.target.value })} placeholder="Country" />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-              <Separator className="my-6" />
-
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconBriefcase className="h-5 w-5" />
-                    Work Experience
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('work_experience', { company: '', position: '', start_date: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Experience
-                  </Button>
-                </div>
-                {formData.work_experience.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <IconBriefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No work experience added yet</p>
-                    <p className="text-sm">Click &quot;Add Experience&quot; to add an entry</p>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconBriefcase className="h-5 w-5" />
+                        Work Experience
+                      </CardTitle>
+                      <CardDescription>Add your professional experience</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('work_experience', { company: '', position: '', start_date: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Experience
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {formData.work_experience.map((work, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('work_experience', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.work_experience.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-muted-foreground">No work experience added yet. Click &quot;Add Experience&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.work_experience.map((work, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Experience #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('work_experience', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Company</Label>
                               <Input value={work.company} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, company: e.target.value })} placeholder="Company name" />
@@ -681,78 +732,91 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Start Date</Label>
-                              <Input type="date" value={work.start_date} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, start_date: e.target.value })} />
+                              <Input type="month" value={work.start_date} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, start_date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                               <Label>End Date</Label>
-                              <Input type="date" value={work.end_date || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, end_date: e.target.value })} />
+                              <Input type="month" value={work.end_date || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, end_date: e.target.value })} placeholder="Leave blank if current" />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>Description</Label>
-                              <Textarea value={work.description || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, description: e.target.value })} placeholder="Job description" />
+                              <Textarea value={work.description || ''} onChange={(e) => updateArrayItem('work_experience', idx, { ...work, description: e.target.value })} placeholder="Job description" rows={2} />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-              <Separator className="my-6" />
-
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <IconLanguage className="h-5 w-5" />
-                  Language Test Scores
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="hsk_level">HSK Level</Label>
-                    <Input id="hsk_level" type="number" min="1" max="6" placeholder="1-6" value={formData.hsk_level} onChange={(e) => handleInputChange('hsk_level', e.target.value)} />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconLanguage className="h-5 w-5" />
+                    Language Test Scores
+                  </CardTitle>
+                  <CardDescription>Your language proficiency test results</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="hsk_level">HSK Level</Label>
+                      <Input id="hsk_level" type="number" min="1" max="6" placeholder="1-6" value={formData.hsk_level} onChange={(e) => handleInputChange('hsk_level', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hsk_score">HSK Score</Label>
+                      <Input id="hsk_score" type="number" placeholder="HSK score" value={formData.hsk_score} onChange={(e) => handleInputChange('hsk_score', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ielts_score">IELTS Score</Label>
+                      <Input id="ielts_score" type="number" step="0.5" placeholder="e.g. 6.5" value={formData.ielts_score} onChange={(e) => handleInputChange('ielts_score', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="toefl_score">TOEFL Score</Label>
+                      <Input id="toefl_score" type="number" placeholder="e.g. 90" value={formData.toefl_score} onChange={(e) => handleInputChange('toefl_score', e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hsk_score">HSK Score</Label>
-                    <Input id="hsk_score" type="number" placeholder="HSK score" value={formData.hsk_score} onChange={(e) => handleInputChange('hsk_score', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ielts_score">IELTS Score</Label>
-                    <Input id="ielts_score" type="number" step="0.5" placeholder="e.g. 6.5" value={formData.ielts_score} onChange={(e) => handleInputChange('ielts_score', e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="toefl_score">TOEFL Score</Label>
-                    <Input id="toefl_score" type="number" placeholder="e.g. 90" value={formData.toefl_score} onChange={(e) => handleInputChange('toefl_score', e.target.value)} />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ============ Family Tab ============ */}
-            <TabsContent value="family" className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Family Members</h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('family_members', { name: '', relationship: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Family Member
-                  </Button>
-                </div>
-                {formData.family_members.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <IconUsers className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No family members added yet</p>
-                    <p className="text-sm">Click &quot;Add Family Member&quot; to add an entry</p>
+            <TabsContent value="family" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconUsers className="h-5 w-5" />
+                        Family Members
+                      </CardTitle>
+                      <CardDescription>Family information required by most Chinese universities</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('family_members', { name: '', relationship: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Family Member
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {formData.family_members.map((member, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('family_members', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.family_members.length === 0 ? (
+                    <div className="text-center py-8">
+                      <IconUsers className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No family members added yet.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Click &quot;Add Family Member&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.family_members.map((member, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Family Member #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('family_members', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Name</Label>
                               <Input value={member.name} onChange={(e) => updateArrayItem('family_members', idx, { ...member, name: e.target.value })} placeholder="Full name" />
@@ -778,40 +842,49 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                               <Input value={member.address || ''} onChange={(e) => updateArrayItem('family_members', idx, { ...member, address: e.target.value })} placeholder="Address" />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ============ Additional Tab ============ */}
-            <TabsContent value="additional" className="space-y-4">
+            <TabsContent value="additional" className="space-y-6">
               {/* Extracurricular Activities */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconStar className="h-5 w-5" />
-                    Extracurricular Activities
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('extracurricular_activities', { activity: '', start_date: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Activity
-                  </Button>
-                </div>
-                {formData.extracurricular_activities.length === 0 ? (
-                  <p className="text-muted-foreground text-sm py-4 text-center border-2 border-dashed rounded-lg">No activities added yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {formData.extracurricular_activities.map((act, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('extracurricular_activities', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconStar className="h-5 w-5" />
+                        Extracurricular Activities
+                      </CardTitle>
+                      <CardDescription>Clubs, organizations, volunteer work, and other activities</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('extracurricular_activities', { activity: '', start_date: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Activity
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.extracurricular_activities.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-muted-foreground">No activities added yet. Click &quot;Add Activity&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.extracurricular_activities.map((act, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Activity #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('extracurricular_activities', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Activity</Label>
                               <Input value={act.activity} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, activity: e.target.value })} placeholder="Activity name" />
@@ -826,50 +899,57 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Start Date</Label>
-                              <Input type="date" value={act.start_date} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, start_date: e.target.value })} />
+                              <Input type="month" value={act.start_date} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, start_date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                               <Label>End Date</Label>
-                              <Input type="date" value={act.end_date || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, end_date: e.target.value })} />
+                              <Input type="month" value={act.end_date || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, end_date: e.target.value })} placeholder="Leave blank if current" />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>Description</Label>
-                              <Textarea value={act.description || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, description: e.target.value })} placeholder="Description" />
+                              <Textarea value={act.description || ''} onChange={(e) => updateArrayItem('extracurricular_activities', idx, { ...act, description: e.target.value })} placeholder="Description" rows={2} />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-6" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Awards */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconTrophy className="h-5 w-5" />
-                    Awards
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('awards', { title: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Award
-                  </Button>
-                </div>
-                {formData.awards.length === 0 ? (
-                  <p className="text-muted-foreground text-sm py-4 text-center border-2 border-dashed rounded-lg">No awards added yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {formData.awards.map((award, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('awards', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconTrophy className="h-5 w-5" />
+                        Awards & Achievements
+                      </CardTitle>
+                      <CardDescription>Honors, awards, and notable achievements</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('awards', { title: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Award
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.awards.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-muted-foreground">No awards added yet. Click &quot;Add Award&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.awards.map((award, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Award #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('awards', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Title</Label>
                               <Input value={award.title} onChange={(e) => updateArrayItem('awards', idx, { ...award, title: e.target.value })} placeholder="Award title" />
@@ -880,46 +960,53 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Date</Label>
-                              <Input type="date" value={award.date || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, date: e.target.value })} />
+                              <Input type="month" value={award.date || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, date: e.target.value })} />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>Description</Label>
-                              <Textarea value={award.description || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, description: e.target.value })} placeholder="Description" />
+                              <Textarea value={award.description || ''} onChange={(e) => updateArrayItem('awards', idx, { ...award, description: e.target.value })} placeholder="Description" rows={2} />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-6" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Publications */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconFileText className="h-5 w-5" />
-                    Publications
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('publications', { title: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Publication
-                  </Button>
-                </div>
-                {formData.publications.length === 0 ? (
-                  <p className="text-muted-foreground text-sm py-4 text-center border-2 border-dashed rounded-lg">No publications added yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {formData.publications.map((pub, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('publications', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconFileText className="h-5 w-5" />
+                        Publications
+                      </CardTitle>
+                      <CardDescription>Published papers, articles, or research work</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('publications', { title: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Publication
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.publications.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-muted-foreground">No publications added yet. Click &quot;Add Publication&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.publications.map((pub, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Publication #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('publications', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Title</Label>
                               <Input value={pub.title} onChange={(e) => updateArrayItem('publications', idx, { ...pub, title: e.target.value })} placeholder="Publication title" />
@@ -930,7 +1017,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Publication Date</Label>
-                              <Input type="date" value={pub.publication_date || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, publication_date: e.target.value })} />
+                              <Input type="month" value={pub.publication_date || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, publication_date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                               <Label>URL</Label>
@@ -938,42 +1025,49 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>Description</Label>
-                              <Textarea value={pub.description || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, description: e.target.value })} placeholder="Description" />
+                              <Textarea value={pub.description || ''} onChange={(e) => updateArrayItem('publications', idx, { ...pub, description: e.target.value })} placeholder="Description" rows={2} />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-6" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Research Experience */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IconFlask className="h-5 w-5" />
-                    Research Experience
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => addArrayItem('research_experience', { topic: '', start_date: '' })}>
-                    <IconPlus className="h-4 w-4 mr-1" /> Add Research
-                  </Button>
-                </div>
-                {formData.research_experience.length === 0 ? (
-                  <p className="text-muted-foreground text-sm py-4 text-center border-2 border-dashed rounded-lg">No research experience added yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {formData.research_experience.map((res, idx) => (
-                      <Card key={idx} className="relative">
-                        <CardContent className="pt-4">
-                          <div className="absolute top-3 right-3">
-                            <Button variant="ghost" size="icon-sm" onClick={() => removeArrayItem('research_experience', idx)}>
-                              <IconTrash className="h-4 w-4 text-destructive" />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <IconFlask className="h-5 w-5" />
+                        Research Experience
+                      </CardTitle>
+                      <CardDescription>Research projects and lab experience</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => addArrayItem('research_experience', { topic: '', start_date: '' })}>
+                      <IconPlus className="h-4 w-4 mr-1" /> Add Research
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.research_experience.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-muted-foreground">No research experience added yet. Click &quot;Add Research&quot; to add.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.research_experience.map((res, idx) => (
+                        <div key={idx} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Research #{idx + 1}</span>
+                            <Button variant="ghost" size="sm" onClick={() => removeArrayItem('research_experience', idx)} className="text-destructive hover:text-destructive">
+                              <IconTrash className="h-4 w-4 mr-1" />
+                              Remove
                             </Button>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label>Topic</Label>
                               <Input value={res.topic} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, topic: e.target.value })} placeholder="Research topic" />
@@ -988,132 +1082,133 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
                             </div>
                             <div className="space-y-2">
                               <Label>Start Date</Label>
-                              <Input type="date" value={res.start_date} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, start_date: e.target.value })} />
+                              <Input type="month" value={res.start_date} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, start_date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
                               <Label>End Date</Label>
-                              <Input type="date" value={res.end_date || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, end_date: e.target.value })} />
+                              <Input type="month" value={res.end_date || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, end_date: e.target.value })} placeholder="Leave blank if current" />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                               <Label>Description</Label>
-                              <Textarea value={res.description || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, description: e.target.value })} placeholder="Description" />
+                              <Textarea value={res.description || ''} onChange={(e) => updateArrayItem('research_experience', idx, { ...res, description: e.target.value })} placeholder="Description" rows={2} />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ============ Preferences Tab ============ */}
-            <TabsContent value="preferences" className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Study Preferences</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="study_mode">Study Mode</Label>
-                    <Select value={formData.study_mode} onValueChange={(val) => handleInputChange('study_mode', val)}>
-                      <SelectTrigger id="study_mode"><SelectValue placeholder="Select study mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="full_time">Full Time</SelectItem>
-                        <SelectItem value="part_time">Part Time</SelectItem>
-                      </SelectContent>
-                    </Select>
+            <TabsContent value="preferences" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconSchool className="h-5 w-5" />
+                    Study Preferences
+                  </CardTitle>
+                  <CardDescription>Student's study preferences for university applications</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="study_mode">Study Mode</Label>
+                      <Select value={formData.study_mode} onValueChange={(val) => handleInputChange('study_mode', val)}>
+                        <SelectTrigger id="study_mode"><SelectValue placeholder="Select study mode" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full_time">Full Time</SelectItem>
+                          <SelectItem value="part_time">Part Time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="funding_source">Funding Source</Label>
+                      <Select value={formData.funding_source} onValueChange={(val) => handleInputChange('funding_source', val)}>
+                        <SelectTrigger id="funding_source"><SelectValue placeholder="Select funding source" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="self_funded">Self Funded</SelectItem>
+                          <SelectItem value="csc_scholarship">CSC Scholarship</SelectItem>
+                          <SelectItem value="university_scholarship">University Scholarship</SelectItem>
+                          <SelectItem value="government_scholarship">Government Scholarship</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="funding_source">Funding Source</Label>
-                    <Select value={formData.funding_source} onValueChange={(val) => handleInputChange('funding_source', val)}>
-                      <SelectTrigger id="funding_source"><SelectValue placeholder="Select funding source" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="self_funded">Self Funded</SelectItem>
-                        <SelectItem value="csc_scholarship">CSC Scholarship</SelectItem>
-                        <SelectItem value="university_scholarship">University Scholarship</SelectItem>
-                        <SelectItem value="government_scholarship">Government Scholarship</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
 
-              <Separator className="my-6" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconCurrencyDollar className="h-5 w-5" />
+                    Scholarship Application
+                  </CardTitle>
+                  <CardDescription>Scholarship information for applications</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Scholarship Type</Label>
+                      <Input value={formData.scholarship_application.type || ''} onChange={(e) => updateObjectField('scholarship_application', 'type', e.target.value)} placeholder="e.g. Full, Partial" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Scholarship Name</Label>
+                      <Input value={formData.scholarship_application.name || ''} onChange={(e) => updateObjectField('scholarship_application', 'name', e.target.value)} placeholder="Scholarship name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Coverage</Label>
+                      <Input value={formData.scholarship_application.coverage || ''} onChange={(e) => updateObjectField('scholarship_application', 'coverage', e.target.value)} placeholder="e.g. Tuition + Living" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Input value={formData.scholarship_application.status || ''} onChange={(e) => updateObjectField('scholarship_application', 'status', e.target.value)} placeholder="e.g. Applied, Pending" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Notes</Label>
+                      <Textarea value={formData.scholarship_application.notes || ''} onChange={(e) => updateObjectField('scholarship_application', 'notes', e.target.value)} placeholder="Additional notes" rows={2} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <IconCurrencyDollar className="h-5 w-5" />
-                  Scholarship Application
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Scholarship Type</Label>
-                    <Input value={formData.scholarship_application.type || ''} onChange={(e) => updateObjectField('scholarship_application', 'type', e.target.value)} placeholder="e.g. Full, Partial" />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <IconCurrencyDollar className="h-5 w-5" />
+                    Financial Guarantee
+                  </CardTitle>
+                  <CardDescription>Financial guarantee information for visa applications</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Guarantor Name</Label>
+                      <Input value={formData.financial_guarantee.guarantor_name || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_name', e.target.value)} placeholder="Guarantor's full name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Guarantor Relationship</Label>
+                      <Input value={formData.financial_guarantee.guarantor_relationship || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_relationship', e.target.value)} placeholder="e.g. Parent, Sponsor" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Guarantor Occupation</Label>
+                      <Input value={formData.financial_guarantee.guarantor_occupation || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_occupation', e.target.value)} placeholder="Occupation" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Annual Income</Label>
+                      <Input value={formData.financial_guarantee.annual_income || ''} onChange={(e) => updateObjectField('financial_guarantee', 'annual_income', e.target.value)} placeholder="e.g. 50000" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Income Currency</Label>
+                      <Input value={formData.financial_guarantee.income_currency || ''} onChange={(e) => updateObjectField('financial_guarantee', 'income_currency', e.target.value)} placeholder="e.g. USD, CNY" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Scholarship Name</Label>
-                    <Input value={formData.scholarship_application.name || ''} onChange={(e) => updateObjectField('scholarship_application', 'name', e.target.value)} placeholder="Scholarship name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Coverage</Label>
-                    <Input value={formData.scholarship_application.coverage || ''} onChange={(e) => updateObjectField('scholarship_application', 'coverage', e.target.value)} placeholder="e.g. Tuition + Living" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Input value={formData.scholarship_application.status || ''} onChange={(e) => updateObjectField('scholarship_application', 'status', e.target.value)} placeholder="e.g. Applied, Pending" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Notes</Label>
-                    <Textarea value={formData.scholarship_application.notes || ''} onChange={(e) => updateObjectField('scholarship_application', 'notes', e.target.value)} placeholder="Additional notes" />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <IconCurrencyDollar className="h-5 w-5" />
-                  Financial Guarantee
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Guarantor Name</Label>
-                    <Input value={formData.financial_guarantee.guarantor_name || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_name', e.target.value)} placeholder="Guarantor's full name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Guarantor Relationship</Label>
-                    <Input value={formData.financial_guarantee.guarantor_relationship || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_relationship', e.target.value)} placeholder="e.g. Parent, Sponsor" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Guarantor Occupation</Label>
-                    <Input value={formData.financial_guarantee.guarantor_occupation || ''} onChange={(e) => updateObjectField('financial_guarantee', 'guarantor_occupation', e.target.value)} placeholder="Occupation" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Annual Income</Label>
-                    <Input value={formData.financial_guarantee.annual_income || ''} onChange={(e) => updateObjectField('financial_guarantee', 'annual_income', e.target.value)} placeholder="e.g. 50000" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Income Currency</Label>
-                    <Input value={formData.financial_guarantee.income_currency || ''} onChange={(e) => updateObjectField('financial_guarantee', 'income_currency', e.target.value)} placeholder="e.g. USD, CNY" />
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
-
-          {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t">
-            <Button variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
-              {isSubmitting ? <IconLoader2 className="h-4 w-4 animate-spin" /> : <IconCheck className="h-4 w-4" />}
-              Save Changes
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+        </div>
+      );
+    }

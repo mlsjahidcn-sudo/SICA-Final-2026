@@ -135,21 +135,22 @@ export async function POST(request: NextRequest) {
     if (user instanceof NextResponse) return user;
 
     const formData = await request.formData();
-    const studentId = formData.get('student_id') as string; // Primary identifier
+    const studentIdParam = formData.get('student_id') as string; // Optional - will auto-resolve
     const applicationId = formData.get('application_id') as string | null; // Optional link
-    const documentType = formData.get('document_type') as string;
+    // Support both 'type' (unified) and 'document_type' (legacy) field names
+    const documentType = (formData.get('type') || formData.get('document_type')) as string;
     const file = formData.get('file') as File;
 
-    if (!studentId || !documentType || !file) {
+    if (!documentType || !file) {
       return NextResponse.json(
-        { error: 'Student ID, document type, and file are required' },
+        { error: 'Document type and file are required' },
         { status: 400 }
       );
     }
 
     const supabase = getSupabaseClient();
 
-    // Verify student owns this student_id
+    // Auto-resolve student ID from authenticated user
     const { data: studentRecord } = await supabase
       .from('students')
       .select('id')
@@ -160,8 +161,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
-    // Security check: student can only upload to their own profile
-    if (studentRecord.id !== studentId) {
+    const studentId = studentRecord.id;
+
+    // If explicit student_id provided, verify ownership
+    if (studentIdParam && studentIdParam !== studentId) {
       return NextResponse.json({ error: 'Forbidden - can only upload to your own profile' }, { status: 403 });
     }
 
@@ -196,9 +199,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload file to Supabase Storage
+    // Use user.id (auth.uid()) for storage path to comply with RLS policies
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `${studentId}/${documentType}_${timestamp}_${sanitizedFileName}`;
+    const filePath = `${user.id}/${documentType}_${timestamp}_${sanitizedFileName}`;
     
     const arrayBuffer = await file.arrayBuffer();
     const { data: uploadData, error: uploadError } = await supabase
@@ -231,48 +235,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update document record using documents table
+    const documentRecord = {
+      student_id: studentId,
+      application_id: applicationId || null,
+      type: documentType,
+      file_key: uploadData.path,
+      file_path: uploadData.path, // Required field
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type,
+      status: 'pending',
+      uploaded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      uploaded_by: user.id, // Track who uploaded the document
+    };
+
     let result;
     if (existingDoc?.id) {
       // Update existing record
       const { data, error } = await supabase
         .from('documents')
-        .update({
-          file_key: uploadData.path,
-          file_name: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          status: 'pending',
-          uploaded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          uploaded_by: user.id, // Track who uploaded the document
-        })
+        .update(documentRecord)
         .eq('id', existingDoc.id)
         .select()
-        .single();
+        .maybeSingle();
       result = { data, error };
     } else {
       // Insert new record
       const { data, error } = await supabase
         .from('documents')
-        .insert({
-          student_id: studentId,
-          application_id: applicationId || null,
-          type: documentType,
-          file_key: uploadData.path,
-          file_name: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          status: 'pending',
-          uploaded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          uploaded_by: user.id, // Track who uploaded the document
-        })
+        .insert(documentRecord)
         .select()
-        .single();
+        .maybeSingle();
       result = { data, error };
     }
 
-    if (result.error) {
+    if (result.error || !result.data) {
       console.error('Error creating document record:', result.error);
       // Try to clean up uploaded file
       try {

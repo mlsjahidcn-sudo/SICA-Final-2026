@@ -248,8 +248,8 @@ export function DocumentExpiryAlerts() {
                     Close
                   </Button>
                   <Button asChild>
-                    <Link href="/partner-v2/documents?expiry=expiring">
-                      View in Document Library
+                    <Link href="/partner-v2/students">
+                      View Students
                     </Link>
                   </Button>
                 </div>

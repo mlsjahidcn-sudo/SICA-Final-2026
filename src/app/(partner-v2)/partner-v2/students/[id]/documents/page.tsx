@@ -22,10 +22,12 @@ import {
   IconUpload,
   IconTrash,
 } from '@tabler/icons-react';
-import { toast } from 'sonner';
+import { toast } from "sonner";
+
 
 interface Student {
   id: string;
+  student_id?: string;
   email: string;
   full_name: string;
   phone?: string;
@@ -116,6 +118,11 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
+      if (studentResponse.status === 403) {
+        toast.error('You do not have access to view this student');
+        return;
+      }
+
       if (!studentResponse.ok) {
         toast.error('Student not found');
         return;
@@ -124,19 +131,12 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
       const studentData = await studentResponse.json();
       setStudent(studentData.student);
 
-      // Fetch documents using the student's id (user_id)
-      // We need to get the student record id, not the user id
-      const { getSupabaseClient } = await import('@/storage/database/supabase-client');
-      const supabase = getSupabaseClient();
+      // Fetch documents via partner API with student_id filter
+      // studentData.student.student_id is the students table ID
+      const studentRecordId = studentData.student?.student_id;
       
-      const { data: studentRecord } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', resolvedParams.id)
-        .maybeSingle();
-
-      if (studentRecord) {
-        const docsResponse = await fetch(`/api/documents?student_id=${studentRecord.id}`, {
+      if (studentRecordId) {
+        const docsResponse = await fetch(`/api/partner/documents?student_id=${studentRecordId}&limit=100`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -144,6 +144,9 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
           const docsData = await docsResponse.json();
           setDocuments(docsData.documents || []);
         }
+      } else {
+        // No student record found, show empty documents
+        setDocuments([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -168,27 +171,21 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
     try {
       const { getValidToken } = await import('@/lib/auth-token');
       const token = await getValidToken();
-      const { getSupabaseClient } = await import('@/storage/database/supabase-client');
-      const supabase = getSupabaseClient();
       
-      // Get student record id
-      const { data: studentRecord } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', resolvedParams.id)
-        .maybeSingle();
-
-      if (!studentRecord) {
+      // Use student_id from the already loaded student data (students table ID)
+      const studentRecordId = (student as Student & { student_id?: string })?.student_id;
+      
+      if (!studentRecordId) {
         toast.error('Student record not found');
         return;
       }
 
       const formData = new FormData();
-      formData.append('student_id', studentRecord.id);
-      formData.append('document_type', selectedDocType);
+      formData.append('student_id', studentRecordId);
+      formData.append('type', selectedDocType);
       formData.append('file', selectedFile);
 
-      const response = await fetch('/api/documents', {
+      const response = await fetch('/api/partner/documents', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -251,19 +248,56 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
     }
   };
 
-  const handleDownload = async (doc: Document) => {
-    if (!doc.url) {
-      toast.error('Document URL not available');
-      return;
-    }
+  const handleViewExternal = async (doc: Document) => {
     try {
-      const response = await fetch(doc.url);
-      const blob = await response.blob();
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+
+      const response = await fetch(`/api/documents/${doc.id}/url`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to get document URL');
+        return;
+      }
+
+      const data = await response.json();
+      window.open(data.url, '_blank');
+    } catch (error) {
+      console.error('Error opening document:', error);
+      toast.error('Failed to open document');
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
+
+      const response = await fetch(`/api/documents/${doc.id}/url`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to get document URL');
+        return;
+      }
+
+      const data = await response.json();
+
+      // Download the file
+      const fileResponse = await fetch(data.url);
+      const blob = await fileResponse.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = doc.file_name;
+      link.download = data.file_name || doc.file_name;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Error downloading document:', error);
@@ -412,37 +446,47 @@ export default function StudentDocumentsPage({ params }: { params: Promise<{ id:
                       </div>
                     )}
                     
-                    {/* Overlay Actions */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      {getFileType(doc.mime_type) === 'image' && doc.url && (
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          onClick={() => setSelectedDocument(doc)}
-                        >
-                          <IconZoomIn className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {doc.url && (
-                        <Button size="icon" variant="secondary" asChild>
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                            <IconExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      )}
-                      <Button size="icon" variant="secondary" onClick={() => handleDownload(doc)}>
-                        <IconDownload className="h-4 w-4" />
+                    {/* Action Buttons - Always Visible */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/90 backdrop-blur-sm rounded-md p-1 opacity-100 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => setSelectedDocument(doc)}
+                        className="h-7 w-7"
+                        title="View"
+                      >
+                        <IconZoomIn className="h-3 w-3" />
                       </Button>
                       <Button
-                        size="icon"
-                        variant="secondary"
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => handleViewExternal(doc)}
+                        className="h-7 w-7"
+                        title="Open in new tab"
+                      >
+                        <IconExternalLink className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => handleDownload(doc)}
+                        className="h-7 w-7"
+                        title="Download"
+                      >
+                        <IconDownload className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
                         onClick={() => handleDelete(doc.id)}
                         disabled={isDeleting === doc.id}
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        title="Delete"
                       >
                         {isDeleting === doc.id ? (
-                          <IconLoader2 className="h-4 w-4 animate-spin" />
+                          <IconLoader2 className="h-3 w-3 animate-spin" />
                         ) : (
-                          <IconTrash className="h-4 w-4" />
+                          <IconTrash className="h-3 w-3" />
                         )}
                       </Button>
                     </div>

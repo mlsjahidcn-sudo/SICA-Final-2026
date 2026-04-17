@@ -50,7 +50,6 @@ import {
   IconClipboardList,
   IconArrowsDiff,
   IconInnerShadowTop,
-  IconFiles
 } from "@tabler/icons-react"
 
 const navItems = [
@@ -73,11 +72,6 @@ const navItems = [
     title: "Students",
     url: "/partner-v2/students",
     icon: <IconUsers />,
-  },
-  {
-    title: "Documents",
-    url: "/partner-v2/documents",
-    icon: <IconFiles />,
   },
   {
     title: "Team",

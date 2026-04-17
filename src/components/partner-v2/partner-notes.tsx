@@ -75,11 +75,15 @@ export function PartnerNotes({
 
     setLoading(true)
     try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const params = new URLSearchParams()
       if (applicationId) params.set('application_id', applicationId)
       if (studentId) params.set('student_id', studentId)
 
-      const response = await fetch(`/api/partner/notes?${params.toString()}`)
+      const response = await fetch(`/api/partner/notes?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
       if (response.ok) {
         const data = await response.json()
         setNotes(data.notes || [])
@@ -120,6 +124,8 @@ export function PartnerNotes({
 
     setSaving(true)
     try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const url = editingNote 
         ? `/api/partner/notes/${editingNote.id}`
         : '/api/partner/notes'
@@ -136,7 +142,10 @@ export function PartnerNotes({
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       })
 
@@ -160,8 +169,11 @@ export function PartnerNotes({
 
     setDeletingId(id)
     try {
+      const { getValidToken } = await import('@/lib/auth-token');
+      const token = await getValidToken();
       const response = await fetch(`/api/partner/notes/${id}`, {
         method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
       })
 
       if (response.ok) {

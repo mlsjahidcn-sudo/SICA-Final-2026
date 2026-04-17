@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { getCompletionColor, getMissingFields } from '../lib/student-utils';
+import { calculateProfileCompletion, getCompletionColor, getMissingFields } from '../lib/student-utils';
 import type { StudentProfile } from '../lib/types';
 
 interface CompletionBadgeProps {
@@ -21,16 +21,12 @@ interface CompletionBadgeProps {
 /**
  * Display student profile completion status
  */
-export function CompletionBadge({ 
-  profile, 
+export function CompletionBadge({
+  profile,
   showDetails = false,
   variant = 'badge' 
 }: CompletionBadgeProps) {
-  const completion = profile 
-    ? Math.round(
-        calculateCompletion(profile)
-      )
-    : 0;
+  const completion = calculateProfileCompletion(profile);
   
   const missingFields = getMissingFields(profile);
   const colorClass = getCompletionColor(completion);
@@ -84,50 +80,4 @@ export function CompletionBadge({
       </Tooltip>
     </TooltipProvider>
   );
-}
-
-/**
- * Calculate completion percentage (duplicated to avoid circular dependency)
- */
-function calculateCompletion(profile: StudentProfile): number {
-  if (!profile) return 0;
-
-  const requiredFields: Array<{ key: keyof StudentProfile; weight: number }> = [
-    { key: 'nationality', weight: 10 },
-    { key: 'date_of_birth', weight: 5 },
-    { key: 'gender', weight: 5 },
-    { key: 'current_address', weight: 5 },
-    { key: 'chinese_name', weight: 5 },
-    { key: 'passport_number', weight: 10 },
-    { key: 'passport_expiry_date', weight: 5 },
-    { key: 'passport_issuing_country', weight: 5 },
-    { key: 'education_history', weight: 15 },
-    { key: 'highest_education', weight: 5 },
-    { key: 'gpa', weight: 5 },
-    { key: 'hsk_level', weight: 5 },
-    { key: 'ielts_score', weight: 5 },
-    { key: 'emergency_contact_name', weight: 2 },
-    { key: 'emergency_contact_phone', weight: 2 },
-    { key: 'emergency_contact_relationship', weight: 1 },
-  ];
-
-  let totalWeight = 0;
-  let filledWeight = 0;
-
-  for (const field of requiredFields) {
-    totalWeight += field.weight;
-    const value = profile[field.key];
-    
-    if (value !== null && value !== undefined && value !== '') {
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          filledWeight += field.weight;
-        }
-      } else {
-        filledWeight += field.weight;
-      }
-    }
-  }
-
-  return totalWeight > 0 ? Math.round((filledWeight / totalWeight) * 100) : 0;
 }

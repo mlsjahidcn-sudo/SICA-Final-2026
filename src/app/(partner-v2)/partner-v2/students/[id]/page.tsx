@@ -311,7 +311,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const p = student.profile || {};
+  const p = student.profile || student;
   const stats = student.stats || { totalApplications: 0, accepted: 0, rejected: 0, pending: 0 };
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -702,92 +702,145 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Documents Tab */}
           <TabsContent value="documents" className="space-y-4">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <IconFile className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Total</span>
+                  </div>
+                  <div className="text-2xl font-bold mt-2">{student.documentStats?.total || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <IconCheck className="h-4 w-4 text-green-500" />
+                    <span className="text-sm text-muted-foreground">Verified</span>
+                  </div>
+                  <div className="text-2xl font-bold mt-2">{student.documentStats?.verified || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <IconClock className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm text-muted-foreground">Pending</span>
+                  </div>
+                  <div className="text-2xl font-bold mt-2">{student.documentStats?.pending || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <IconX className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-muted-foreground">Rejected</span>
+                  </div>
+                  <div className="text-2xl font-bold mt-2">{student.documentStats?.rejected || 0}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Upload Card */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <IconFile className="h-4 w-4" />
-                      Documents
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Manage student documents and certificates
-                    </CardDescription>
-                  </div>
-                  <Button asChild>
-                    <Link href={`/partner-v2/students/${student.id}/documents`}>
-                      <IconUpload className="h-4 w-4 mr-2" />
-                      Manage Documents
-                    </Link>
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <IconUpload className="h-4 w-4" />
+                  Upload Document
+                </CardTitle>
+                <CardDescription>Upload documents for this student</CardDescription>
               </CardHeader>
               <CardContent>
-                {student.documentStats && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{student.documentStats.total}</div>
-                      <p className="text-xs text-muted-foreground">Total</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{student.documentStats.verified}</div>
-                      <p className="text-xs text-muted-foreground">Verified</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-amber-600">{student.documentStats.pending}</div>
-                      <p className="text-xs text-muted-foreground">Pending</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">{student.documentStats.rejected}</div>
-                      <p className="text-xs text-muted-foreground">Rejected</p>
-                    </div>
-                  </div>
-                )}
-                
+                <Button asChild>
+                  <Link href={`/partner-v2/students/${student.id}/documents`}>
+                    <IconUpload className="h-4 w-4 mr-2" />
+                    Go to Document Management
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Documents List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Documents ({student.documents?.length || 0})</CardTitle>
+                <CardDescription>
+                  All documents uploaded for this student
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 {student.documents && student.documents.length > 0 ? (
-                  <div className="space-y-3">
-                    {student.documents.slice(0, 5).map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <IconFileText className="h-5 w-5 text-primary" />
-                          <div>
-                            <p className="font-medium text-sm">
-                              {ALLOWED_DOCUMENT_TYPES[doc.type] || doc.type}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
+                  <div className="space-y-4">
+                    {student.documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border hover:shadow-md transition-shadow gap-4"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${
+                            doc.status === 'verified' ? 'bg-green-100 dark:bg-green-900/30' :
+                            doc.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30' :
+                            'bg-yellow-100 dark:bg-yellow-900/30'
+                          }`}>
+                            <IconFile className={`h-6 w-6 ${
+                              doc.status === 'verified' ? 'text-green-600' :
+                              doc.status === 'rejected' ? 'text-red-600' :
+                              'text-yellow-600'
+                            }`} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold">
+                                {ALLOWED_DOCUMENT_TYPES[doc.type] || doc.type}
+                              </h3>
+                              <Badge className={`
+                                ${doc.status === 'verified' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
+                                  doc.status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 
+                                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}
+                              `}>
+                                {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">
                               {doc.file_name} • {doc.file_size / 1024 / 1024 < 1 
                                 ? `${(doc.file_size / 1024).toFixed(1)} KB` 
                                 : `${(doc.file_size / 1024 / 1024).toFixed(1)} MB`
-                              } • {new Date(doc.created_at).toLocaleDateString()}
+                              }
                             </p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>Uploaded: {new Date(doc.created_at).toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </div>
-                        <Badge className={`
-                          ${doc.status === 'verified' ? 'bg-green-100 text-green-800' : 
-                            doc.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                            'bg-yellow-100 text-yellow-800'}
-                        `}>
-                          {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <Link href={`/partner-v2/students/${student.id}/documents`}>
+                              <IconFileText className="h-4 w-4 mr-1" />
+                              View
+                            </Link>
+                          </Button>
+                        </div>
                       </div>
                     ))}
-                    {student.documents.length > 5 && (
-                      <div className="text-center pt-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/partner-v2/students/${student.id}/documents`}>
-                            View all {student.documents.length} documents
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 ) : (
-                  <div className="py-8 text-center">
-                    <IconFile className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Click &quot;Manage Documents&quot; to upload documents
+                  <div className="text-center py-12">
+                    <IconFile className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No documents found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Upload documents to support student applications
                     </p>
+                    <Button asChild>
+                      <Link href={`/partner-v2/students/${student.id}/documents`}>
+                        <IconUpload className="h-4 w-4 mr-2" />
+                        Upload Document
+                      </Link>
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -796,7 +849,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Notes Tab */}
           <TabsContent value="notes">
-            <PartnerNotes studentId={student.id} currentUserId={user?.id} />
+            <PartnerNotes studentId={student.student_id} currentUserId={user?.id} />
           </TabsContent>
 
           {/* Activity Tab */}

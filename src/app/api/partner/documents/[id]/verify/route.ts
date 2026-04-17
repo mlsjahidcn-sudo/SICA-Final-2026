@@ -60,7 +60,7 @@ export async function PATCH(
         )
       `)
       .eq('id', documentId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });

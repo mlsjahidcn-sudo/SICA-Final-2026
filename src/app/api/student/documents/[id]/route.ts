@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
-// GET /api/student/documents/[id] - Get document details
+// GET /api/student/documents/[id] - Get document details (unified documents table)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,7 +20,7 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabaseClient();
 
-    // applications.student_id references students.id, NOT users.id
+    // Get student record
     const { data: studentRecord } = await supabase
       .from('students')
       .select('id')
@@ -31,11 +31,12 @@ export async function GET(
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
+    // Query unified documents table
     const { data: document, error } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
-        document_type,
+        type,
         status,
         file_key,
         file_name,
@@ -43,30 +44,24 @@ export async function GET(
         content_type,
         rejection_reason,
         uploaded_at,
+        expires_at,
         created_at,
         updated_at,
-        applications (
+        application_id,
+        students (
           id,
-          student_id,
-          programs (
-            id,
-            name_en,
-            universities (
-              name_en
-            )
-          )
+          user_id
         )
       `)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error || !document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // Verify document belongs to user (compare students.id, not users.id)
-    const appData = document.applications as unknown as { student_id: string } | null;
-    if (!appData || appData.student_id !== studentRecord.id) {
+    // Verify document belongs to this student
+    if (document.student_id !== studentRecord.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -96,7 +91,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/student/documents/[id] - Delete document
+// DELETE /api/student/documents/[id] - Delete document (unified documents table)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -110,7 +105,7 @@ export async function DELETE(
     const { id } = await params;
     const supabase = getSupabaseClient();
 
-    // applications.student_id references students.id, NOT users.id
+    // Get student record
     const { data: studentRecord } = await supabase
       .from('students')
       .select('id')
@@ -121,26 +116,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
-    // Get document
+    // Get document from unified documents table
     const { data: document } = await supabase
-      .from('application_documents')
+      .from('documents')
       .select(`
         id,
         file_key,
-        applications (
-          student_id
-        )
+        student_id
       `)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // Verify document belongs to user (compare students.id, not users.id)
-    const appData = document.applications as unknown as { student_id: string } | null;
-    if (!appData || appData.student_id !== studentRecord.id) {
+    // Verify document belongs to this student
+    if (document.student_id !== studentRecord.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -154,9 +146,9 @@ export async function DELETE(
       }
     }
 
-    // Delete document record
+    // Delete document record from unified documents table
     const { error } = await supabase
-      .from('application_documents')
+      .from('documents')
       .delete()
       .eq('id', id);
 

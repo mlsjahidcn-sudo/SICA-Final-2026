@@ -72,11 +72,6 @@ const navItems = [
     icon: <IconStar />,
   },
   {
-    title: "Documents",
-    url: "/student-v2/documents",
-    icon: <IconFiles />,
-  },
-  {
     title: "Meetings",
     url: "/student-v2/meetings",
     icon: <IconCalendar />,

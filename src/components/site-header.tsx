@@ -21,7 +21,6 @@ const routeTitles: Record<string, string> = {
   '/student-v2': 'Dashboard',
   '/student-v2/applications': 'Applications',
   '/student-v2/applications/new': 'New Application',
-  '/student-v2/documents': 'Documents',
   '/student-v2/meetings': 'Meetings',
   '/student-v2/universities': 'Universities',
   '/student-v2/programs': 'Programs',

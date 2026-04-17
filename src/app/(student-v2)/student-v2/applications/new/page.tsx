@@ -252,6 +252,7 @@ export default function NewApplicationPage() {
   // Documents
   const [docChecklist, setDocChecklist] = React.useState<DocChecklistItem[]>([])
   const [loadingDocs, setLoadingDocs] = React.useState(false)
+  const [studentUploadedDocs, setStudentUploadedDocs] = React.useState<{ type: string; file_name: string; status: string }[]>([])
 
   // Templates
   const [showTemplatesDialog, setShowTemplatesDialog] = React.useState(false)
@@ -345,12 +346,44 @@ export default function NewApplicationPage() {
       setLoadingDocs(true)
       try {
         const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
-        const res = await fetch(`/api/student/applications/${applicationId}/documents/checklist`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setDocChecklist(data.checklist || [])
+
+        // Fetch checklist and student uploaded docs in parallel
+        const [checklistRes, studentDocsRes] = await Promise.all([
+          fetch(`/api/student/applications/${applicationId}/documents/checklist`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }),
+          fetch('/api/student/documents?status=verified,pending', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          })
+        ])
+
+        // Build map of student's uploaded document types
+        const studentUploadedMap = new Map<string, { file_name: string; status: string }>()
+        if (studentDocsRes.ok) {
+          const studentData = await studentDocsRes.json()
+          const docs = studentData.documents || []
+          setStudentUploadedDocs(docs)
+          docs.forEach((doc: any) => {
+            studentUploadedMap.set(doc.type, { file_name: doc.file_name, status: doc.status })
+          })
+        }
+
+        // Merge student uploaded docs into checklist
+        if (checklistRes.ok) {
+          const data = await checklistRes.json()
+          const mergedChecklist = (data.checklist || []).map((item: DocChecklistItem) => {
+            const uploaded = studentUploadedMap.get(item.document_type)
+            if (uploaded && !item.is_uploaded) {
+              return {
+                ...item,
+                is_uploaded: true,
+                status: item.status === 'not_uploaded' ? uploaded.status : item.status,
+                file_name: item.file_name || uploaded.file_name,
+              }
+            }
+            return item
+          })
+          setDocChecklist(mergedChecklist)
         }
       } catch (err) {
         console.error("Error fetching doc checklist:", err)
@@ -1402,36 +1435,48 @@ export default function NewApplicationPage() {
       { type: "sponsor_letter", label: "Sponsor Letter", required: false },
     ]
 
-    const renderDocItem = (docType: string, label: string, required: boolean, description?: string) => (
-      <div key={docType} className="flex items-center gap-3 p-3 rounded-lg border">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">
-            {label}
-            {required && <span className="text-destructive ml-1">*</span>}
-          </p>
-          {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
-        </div>
-        {uploadingDocs[docType] ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground max-w-32 truncate">{uploadingDocs[docType].name}</span>
-            <IconCheck className="h-4 w-4 text-green-600" />
-            <Button variant="ghost" size="sm" onClick={() => removeFile(docType)} className="text-destructive h-6 w-6 p-0">
-              <IconX className="h-3 w-3" />
-            </Button>
+    const renderDocItem = (docType: string, label: string, required: boolean, description?: string) => {
+      // Check if this doc type was uploaded to student's profile
+      const profileUpload = studentUploadedDocs.find(d => d.type === docType)
+      const isInProfile = !!profileUpload
+
+      return (
+        <div key={docType} className="flex items-center gap-3 p-3 rounded-lg border">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {label}
+              {required && <span className="text-destructive ml-1">*</span>}
+            </p>
+            {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+            {isInProfile && (
+              <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                <IconCheck className="h-3 w-3" />
+                Already uploaded to your profile: {profileUpload.file_name}
+              </p>
+            )}
           </div>
-        ) : (
-          <label className="cursor-pointer">
-            <span className="text-xs text-primary hover:underline">Choose file</span>
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFileSelect(docType, e.target.files[0])}
-              accept=".pdf,.jpg,.jpeg,.png"
-            />
-          </label>
-        )}
-      </div>
-    )
+          {uploadingDocs[docType] ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground max-w-32 truncate">{uploadingDocs[docType].name}</span>
+              <IconCheck className="h-4 w-4 text-green-600" />
+              <Button variant="ghost" size="sm" onClick={() => removeFile(docType)} className="text-destructive h-6 w-6 p-0">
+                <IconX className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <label className="cursor-pointer">
+              <span className="text-xs text-primary hover:underline">{isInProfile ? 'Replace' : 'Choose file'}</span>
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(docType, e.target.files[0])}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+            </label>
+          )}
+        </div>
+      )
+    }
 
     return (
       <Card>

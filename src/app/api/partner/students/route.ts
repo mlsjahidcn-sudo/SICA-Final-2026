@@ -514,6 +514,9 @@ export async function POST(request: NextRequest) {
       student: {
         ...newUser,
         ...newStudent,
+        id: newUser.id, // Preserve user.id as the main id (used in URL params)
+        email: newUser.email, // Preserve user.email (students.email may be null)
+        student_id: newStudent?.id || null, // students table id as separate field
       } 
     }, { status: 201 });
   } catch (error) {

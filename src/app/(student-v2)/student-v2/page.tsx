@@ -418,7 +418,7 @@ export default function StudentDashboard() {
                   </div>
                 ))}
                 <Button variant="ghost" className="w-full" asChild>
-                  <Link href="/student-v2/documents">
+                  <Link href="/student-v2/profile#documents">
                     View All Documents
                     <IconArrowRight className="h-4 w-4 ml-2" />
                   </Link>
