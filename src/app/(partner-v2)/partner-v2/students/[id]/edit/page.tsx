@@ -300,6 +300,8 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
 
       updateData.student_profile = studentProfile;
 
+      console.log('[DEBUG partner student edit] Sending updateData:', JSON.stringify(updateData, null, 2));
+
       const response = await fetch(`/api/partner/students/${resolvedParams.id}`, {
         method: 'PUT',
         headers: {
@@ -310,6 +312,7 @@ export default function PartnerV2EditStudentPage({ params }: { params: Promise<{
       });
 
       if (response.ok) {
+        console.log('[DEBUG partner student edit] Update successful!');
         toast.success('Student updated successfully!');
         router.push(`/partner-v2/students/${resolvedParams.id}`);
       } else {

@@ -24,9 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { 
+import {
   IconArrowLeft,
   IconUser,
+  IconUserPlus,
   IconSchool,
   IconMapPin,
   IconCalendar,
@@ -101,6 +102,13 @@ interface ApplicationDetail {
   reviewed_by: string | null
   created_at: string
   updated_at: string
+  student_source?: 'individual' | 'partner_referred'
+  student_partner?: {
+    id: string
+    full_name: string
+    email: string
+    company_name?: string
+  } | null
   students: {
     id: string
     user_id: string
@@ -377,10 +385,23 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-semibold">
-            {application.students?.users?.full_name || 
-              `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'Unknown Applicant'}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold">
+              {application.students?.users?.full_name ||
+                `${application.students?.first_name || ''} ${application.students?.last_name || ''}`.trim() || 'Unknown Applicant'}
+            </h1>
+            {application.student_source === 'partner_referred' ? (
+              <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
+                <IconUserPlus className="h-3 w-3" />
+                Partner-Referred
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1">
+                <IconUser className="h-3 w-3" />
+                Individual
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {application.programs?.name || 'Unknown Program'} · {application.programs?.universities?.name_en || 'Unknown University'}
           </p>
@@ -519,7 +540,7 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
               </Card>
 
               {/* Partner Info */}
-              {application.partner && (
+              {(application.partner || application.student_partner) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -527,23 +548,49 @@ function ApplicationDetailContent({ applicationId }: { applicationId: string }) 
                       Partner Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Partner Name</div>
-                        <div className="font-medium">{application.partner.full_name || 'N/A'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Email</div>
-                        <div className="font-medium">{application.partner.email || 'N/A'}</div>
-                      </div>
-                      {application.partner.company_name && (
-                        <div>
-                          <div className="text-sm text-muted-foreground">Company</div>
-                          <div className="font-medium">{application.partner.company_name}</div>
+                  <CardContent className="space-y-4">
+                    {application.student_partner && (
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="text-sm font-medium text-primary mb-2">Student Referral Partner</div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <div className="text-xs text-muted-foreground">Partner Name</div>
+                            <div className="font-medium">{application.student_partner.full_name || 'N/A'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Email</div>
+                            <div className="font-medium">{application.student_partner.email || 'N/A'}</div>
+                          </div>
+                          {application.student_partner.company_name && (
+                            <div>
+                              <div className="text-xs text-muted-foreground">Company</div>
+                              <div className="font-medium">{application.student_partner.company_name}</div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                    {application.partner && (
+                      <div>
+                        <div className="text-sm font-medium mb-2">Application Partner</div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Partner Name</div>
+                            <div className="font-medium">{application.partner.full_name || 'N/A'}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Email</div>
+                            <div className="font-medium">{application.partner.email || 'N/A'}</div>
+                          </div>
+                          {application.partner.company_name && (
+                            <div>
+                              <div className="text-sm text-muted-foreground">Company</div>
+                              <div className="font-medium">{application.partner.company_name}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   IconUser,
   IconBuilding,
@@ -20,9 +21,11 @@ import {
   IconCheck,
   IconLoader2,
   IconShield,
+  IconFiles,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
+import { PartnerProfileDocumentsTab } from '@/components/partner-v2/partner-profile-documents-tab';
 
 interface PartnerProfile {
   id: string;
@@ -246,8 +249,21 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Profile Content */}
-      <div className="px-4 lg:px-6 pb-6 space-y-6">
+      {/* Profile Tabs */}
+      <div className="px-4 lg:px-6 pb-6">
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="profile" className="gap-2">
+              <IconUser className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <IconFiles className="h-4 w-4" />
+              Documents
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="space-y-6">
         {/* Avatar Section */}
         <Card>
           <CardHeader>
@@ -473,6 +489,13 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents">
+          <PartnerProfileDocumentsTab />
+        </TabsContent>
+      </Tabs>
       </div>
     </>
   );

@@ -21,6 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import {
   Table,
   TableBody,
   TableCell,
@@ -36,8 +42,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
-import { 
-  IconSearch, 
+import {
+  IconSearch,
   IconFileText,
   IconClock,
   IconCircleCheck,
@@ -55,7 +61,9 @@ import {
   IconList,
   IconLayoutGrid,
   IconPlus,
-  IconEdit
+  IconEdit,
+  IconUser,
+  IconUserPlus
 } from "@tabler/icons-react"
 
 interface Application {
@@ -66,6 +74,12 @@ interface Application {
   submitted_at: string | null
   created_at: string
   updated_at: string
+  student_source?: 'individual' | 'partner_referred'
+  partner_info?: {
+    full_name: string
+    email: string
+    company_name?: string
+  } | null
   profile_snapshot?: {
     intake?: string
     personal_statement?: string
@@ -96,6 +110,8 @@ interface Application {
 
 interface Stats {
   total: number
+  individual_total: number
+  partner_total: number
   submitted: number
   under_review: number
   document_request: number
@@ -127,11 +143,12 @@ function ApplicationsListContent() {
 
   const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState<Stats>({ total: 0, submitted: 0, under_review: 0, document_request: 0, interview_scheduled: 0, accepted: 0, rejected: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, individual_total: 0, partner_total: 0, submitted: 0, under_review: 0, document_request: 0, interview_scheduled: 0, accepted: 0, rejected: 0 })
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [universityFilter, setUniversityFilter] = useState('all')
   const [degreeFilter, setDegreeFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'individual' | 'partner_referred'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [universities, setUniversities] = useState<University[]>([])
@@ -159,6 +176,7 @@ function ApplicationsListContent() {
       if (statusFilter !== 'all') params.append('status', statusFilter)
       if (universityFilter !== 'all') params.append('university_id', universityFilter)
       if (degreeFilter !== 'all') params.append('degree_type', degreeFilter)
+      if (sourceFilter !== 'all') params.append('source', sourceFilter)
       if (searchQuery) params.append('search', searchQuery)
       params.append('page', currentPage.toString())
       params.append('limit', ITEMS_PER_PAGE.toString())
@@ -183,7 +201,7 @@ function ApplicationsListContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [statusFilter, universityFilter, degreeFilter, searchQuery, currentPage])
+  }, [statusFilter, universityFilter, degreeFilter, sourceFilter, searchQuery, currentPage])
 
   useEffect(() => {
     fetchUniversities()
@@ -206,7 +224,7 @@ function ApplicationsListContent() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
@@ -214,6 +232,26 @@ function ApplicationsListContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Individual</CardTitle>
+            <IconUser className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.individual_total}</div>
+            <p className="text-xs text-muted-foreground">Self-registered</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Partner-Referred</CardTitle>
+            <IconUserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.partner_total}</div>
+            <p className="text-xs text-muted-foreground">Via partners</p>
           </CardContent>
         </Card>
         <Card>
@@ -250,84 +288,93 @@ function ApplicationsListContent() {
         </Card>
       </div>
 
-      {/* Status Overview */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-2">
-            <Badge 
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              className="cursor-pointer"
-              onClick={() => setStatusFilter('all')}
-            >
-              All ({stats.total})
-            </Badge>
-            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-              const count = stats[status as keyof Stats] || 0
-              if (count === 0 && status !== 'submitted' && status !== 'under_review') return null
-              return (
-                <Badge 
-                  key={status}
-                  variant={statusFilter === status ? 'default' : 'outline'}
-                  className={`cursor-pointer ${config.bgColor} ${config.color}`}
-                  onClick={() => setStatusFilter(status)}
-                >
-                  {config.label} ({count})
-                </Badge>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Source Tabs */}
+      <Tabs value={sourceFilter} onValueChange={(v) => { setSourceFilter(v as typeof sourceFilter); setCurrentPage(1); }}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="all">All Applications</TabsTrigger>
+          <TabsTrigger value="individual">Individual</TabsTrigger>
+          <TabsTrigger value="partner_referred">Partner-Referred</TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="flex flex-col md:flex-row gap-4 flex-1">
-              <div className="flex-1">
-                <div className="relative">
-                  <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search applications..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
+        <TabsContent value={sourceFilter} className="space-y-4">
+          {/* Status Overview */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All ({stats.total})
+                </Badge>
+                {Object.entries(STATUS_CONFIG).map(([status, config]) => {
+                  const count = stats[status as keyof Stats] || 0
+                  if (count === 0 && status !== 'submitted' && status !== 'under_review') return null
+                  return (
+                    <Badge
+                      key={status}
+                      variant={statusFilter === status ? 'default' : 'outline'}
+                      className={`cursor-pointer ${config.bgColor} ${config.color}`}
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {config.label} ({count})
+                    </Badge>
+                  )
+                })}
               </div>
-              <Select value={universityFilter} onValueChange={setUniversityFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="University" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Universities</SelectItem>
-                  {universities.map((uni) => (
-                    <SelectItem key={uni.id} value={uni.id}>{uni.name_en}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={degreeFilter} onValueChange={setDegreeFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Degree" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Degrees</SelectItem>
-                  <SelectItem value="bachelor">Bachelor</SelectItem>
-                  <SelectItem value="master">Master</SelectItem>
-                  <SelectItem value="phd">PhD</SelectItem>
-                  <SelectItem value="language">Language</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button asChild>
-              <Link href="/admin/v2/applications/new">
-                <IconPlus className="h-4 w-4 mr-2" />
-                Add Application
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 flex-1">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search applications..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
+                  <Select value={universityFilter} onValueChange={setUniversityFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="University" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Universities</SelectItem>
+                      {universities.map((uni) => (
+                        <SelectItem key={uni.id} value={uni.id}>{uni.name_en}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={degreeFilter} onValueChange={setDegreeFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Degree" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Degrees</SelectItem>
+                      <SelectItem value="bachelor">Bachelor</SelectItem>
+                      <SelectItem value="master">Master</SelectItem>
+                      <SelectItem value="phd">PhD</SelectItem>
+                      <SelectItem value="language">Language</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button asChild>
+                  <Link href="/admin/v2/applications/new">
+                    <IconPlus className="h-4 w-4 mr-2" />
+                    Add Application
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
       {/* Applications Table */}
       <Card>
@@ -348,6 +395,8 @@ function ApplicationsListContent() {
                   <TableHead>Program</TableHead>
                   <TableHead>University</TableHead>
                   <TableHead>Degree</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Partner</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -380,6 +429,31 @@ function ApplicationsListContent() {
                         <Badge variant="secondary" className="capitalize">
                           {app.program?.degree_level || 'N/A'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {app.student_source === 'partner_referred' ? (
+                          <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
+                            <IconUserPlus className="h-3 w-3" />
+                            Partner
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1">
+                            <IconUser className="h-3 w-3" />
+                            Individual
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {app.partner_info ? (
+                          <div className="text-sm">
+                            <div className="font-medium">{app.partner_info.company_name || app.partner_info.full_name}</div>
+                            {app.partner_info.company_name && (
+                              <div className="text-xs text-muted-foreground">{app.partner_info.full_name}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={`${statusConfig.bgColor} ${statusConfig.color}`}>
@@ -459,6 +533,8 @@ function ApplicationsListContent() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

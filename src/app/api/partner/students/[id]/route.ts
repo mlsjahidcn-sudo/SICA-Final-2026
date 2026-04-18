@@ -130,13 +130,17 @@ export async function GET(
 
     return NextResponse.json({
       student: {
-        ...user,
-        ...student,
-        id: user.id, // Preserve user.id as the main id (used in URL params)
-        email: user.email, // Preserve user.email (students.email may be null)
-        phone: user.phone ?? student?.phone ?? null, // Prefer users.phone, fallback to students.phone
-        student_id: student?.id || null, // students table id as separate field
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone ?? student?.phone ?? null,
+        avatar_url: user.avatar_url,
+        nationality: student?.nationality || null,
+        created_at: user.created_at,
+        student_id: student?.id || null,
         last_sign_in_at: authUser?.user?.last_sign_in_at || null,
+        // Nested profile for CompletionBadge and profile-dependent components
+        profile: student || undefined,
         applications: applications || [],
         stats,
         documents: documents || [],
@@ -167,6 +171,8 @@ export async function PUT(
     }
 
     const body = await request.json();
+    console.log('[DEBUG PUT partner/students] Received body keys:', Object.keys(body));
+    console.log('[DEBUG PUT partner/students] full_body:', JSON.stringify(body, null, 2));
     const supabase = getSupabaseClient();
 
     // Update user info
@@ -207,16 +213,22 @@ export async function PUT(
         studentUpdateData[field] = studentProfileData[field];
       }
     }
+    console.log('[DEBUG PUT partner/students] studentUpdateData:', JSON.stringify(studentUpdateData, null, 2));
 
     if (Object.keys(studentUpdateData).length > 0) {
+      console.log('[DEBUG PUT partner/students] Updating students table with:', Object.keys(studentUpdateData));
       const { error: studentUpdateError } = await supabase
         .from('students')
         .update(studentUpdateData)
         .eq('user_id', id);
 
       if (studentUpdateError) {
+        console.error('[DEBUG PUT partner/students] Student update error:', studentUpdateError);
         return NextResponse.json({ error: 'Failed to update student details', details: studentUpdateError.message }, { status: 500 });
       }
+      console.log('[DEBUG PUT partner/students] Student updated successfully');
+    } else {
+      console.log('[DEBUG PUT partner/students] No student fields to update');
     }
 
     // Log activity

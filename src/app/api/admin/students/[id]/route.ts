@@ -34,13 +34,18 @@ export async function GET(
           last_name,
           nationality,
           passport_number,
+          passport_expiry_date,
           date_of_birth,
           gender,
           current_address,
           wechat_id,
           emergency_contact_name,
           emergency_contact_phone,
+          emergency_contact_relationship,
           highest_education,
+          institution_name,
+          field_of_study,
+          graduation_date,
           gpa,
           hsk_level,
           hsk_score,
@@ -141,15 +146,22 @@ export async function GET(
       .order('scheduled_at', { ascending: false })
       .limit(10);
 
+    // Flatten students table fields to top level for frontend convenience
+    // studentData already declared on line 114
+    const flatStudent = {
+      ...student,
+      ...(studentData || {}),  // Spread students fields at top level
+      source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
+      referred_by_partner: referredByPartner,
+      applications: applications || [],
+      documents: documents || [],
+      meetings: meetings || [],
+    };
+    // Remove the nested students property since we've flattened it
+    delete (flatStudent as any).students;
+
     return NextResponse.json({
-      student: {
-        ...student,
-        source: student.referred_by_partner_id ? 'partner_referred' as const : 'individual' as const,
-        referred_by_partner: referredByPartner,
-        applications: applications || [],
-        documents: documents || [],
-        meetings: meetings || [],
-      },
+      student: flatStudent,
     });
   } catch (error) {
     console.error('Error fetching student details:', error);
@@ -190,22 +202,20 @@ export async function PUT(
       full_name, 
       phone, 
       is_active,
-      // Student table fields
+      // Student table fields (flat format)
       nationality,
-      passport_first_name,
-      passport_last_name,
-      passport_number,
-      passport_expiry_date,
-      passport_issuing_country,
       date_of_birth,
       gender,
       current_address,
       permanent_address,
       postal_code,
-      wechat_id,
       chinese_name,
       marital_status,
       religion,
+      passport_number,
+      passport_expiry_date,
+      passport_issuing_country,
+      wechat_id,
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
@@ -218,11 +228,17 @@ export async function PUT(
       hsk_score,
       ielts_score,
       toefl_score,
-      personal_statement,
-      study_plan,
-      admin_notes,
       education_history,
       work_experience,
+      family_members,
+      extracurricular_activities,
+      awards,
+      publications,
+      research_experience,
+      scholarship_application,
+      financial_guarantee,
+      study_mode,
+      funding_source,
     } = body;
 
     // Update user table
@@ -243,40 +259,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
     }
 
-    // Update student table
+    // Update student table - include ALL fields
     const studentUpdateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (nationality !== undefined) studentUpdateData.nationality = nationality;
-    if (passport_first_name !== undefined) studentUpdateData.passport_first_name = passport_first_name;
-    if (passport_last_name !== undefined) studentUpdateData.passport_last_name = passport_last_name;
-    if (passport_number !== undefined) studentUpdateData.passport_number = passport_number;
-    if (passport_expiry_date !== undefined) studentUpdateData.passport_expiry_date = passport_expiry_date;
-    if (passport_issuing_country !== undefined) studentUpdateData.passport_issuing_country = passport_issuing_country;
-    if (date_of_birth !== undefined) studentUpdateData.date_of_birth = date_of_birth;
-    if (gender !== undefined) studentUpdateData.gender = gender;
-    if (current_address !== undefined) studentUpdateData.current_address = current_address;
-    if (permanent_address !== undefined) studentUpdateData.permanent_address = permanent_address;
-    if (postal_code !== undefined) studentUpdateData.postal_code = postal_code;
-    if (wechat_id !== undefined) studentUpdateData.wechat_id = wechat_id;
-    if (chinese_name !== undefined) studentUpdateData.chinese_name = chinese_name;
-    if (marital_status !== undefined) studentUpdateData.marital_status = marital_status;
-    if (religion !== undefined) studentUpdateData.religion = religion;
-    if (emergency_contact_name !== undefined) studentUpdateData.emergency_contact_name = emergency_contact_name;
-    if (emergency_contact_phone !== undefined) studentUpdateData.emergency_contact_phone = emergency_contact_phone;
-    if (emergency_contact_relationship !== undefined) studentUpdateData.emergency_contact_relationship = emergency_contact_relationship;
-    if (highest_education !== undefined) studentUpdateData.highest_education = highest_education;
-    if (institution_name !== undefined) studentUpdateData.institution_name = institution_name;
-    if (field_of_study !== undefined) studentUpdateData.field_of_study = field_of_study;
-    if (graduation_date !== undefined) studentUpdateData.graduation_date = graduation_date;
-    if (gpa !== undefined) studentUpdateData.gpa = gpa;
-    if (hsk_level !== undefined) studentUpdateData.hsk_level = hsk_level;
-    if (hsk_score !== undefined) studentUpdateData.hsk_score = hsk_score;
-    if (ielts_score !== undefined) studentUpdateData.ielts_score = ielts_score;
-    if (toefl_score !== undefined) studentUpdateData.toefl_score = toefl_score;
-    if (personal_statement !== undefined) studentUpdateData.personal_statement = personal_statement;
-    if (study_plan !== undefined) studentUpdateData.study_plan = study_plan;
-    if (admin_notes !== undefined) studentUpdateData.admin_notes = admin_notes;
-    if (education_history !== undefined) studentUpdateData.education_history = education_history;
-    if (work_experience !== undefined) studentUpdateData.work_experience = work_experience;
+    const studentFields = [
+      'nationality', 'date_of_birth', 'gender', 'current_address', 'postal_code',
+      'permanent_address', 'chinese_name', 'marital_status', 'religion',
+      'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
+      'passport_number', 'passport_expiry_date', 'passport_issuing_country', 'wechat_id',
+      'highest_education', 'institution_name', 'field_of_study', 'graduation_date', 'gpa',
+      'hsk_level', 'hsk_score', 'ielts_score', 'toefl_score',
+      'education_history', 'work_experience',
+      'family_members', 'extracurricular_activities', 'awards', 'publications',
+      'research_experience', 'scholarship_application', 'financial_guarantee',
+      'study_mode', 'funding_source',
+    ];
+    
+    for (const field of studentFields) {
+      if ((body as Record<string, unknown>)[field] !== undefined) {
+        studentUpdateData[field] = (body as Record<string, unknown>)[field];
+      }
+    }
 
     // Only update if there are student fields to update
     if (Object.keys(studentUpdateData).length > 1) {
@@ -317,7 +319,11 @@ export async function PUT(
           wechat_id,
           emergency_contact_name,
           emergency_contact_phone,
+          emergency_contact_relationship,
           highest_education,
+          institution_name,
+          field_of_study,
+          graduation_date,
           gpa,
           hsk_level,
           hsk_score,

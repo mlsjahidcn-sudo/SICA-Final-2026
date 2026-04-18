@@ -50,7 +50,8 @@ export async function GET(
             id,
             full_name,
             email,
-            phone
+            phone,
+            referred_by_partner_id
           )
         ),
         programs (
@@ -200,13 +201,51 @@ export async function GET(
     const study_plan = snapshot.study_plan || null;
     const intake = snapshot.intake || null;
 
-    return NextResponse.json({ 
+    // Determine student_source and partner_info from users.referred_by_partner_id
+    const studentUser = application.students?.users
+      ? (Array.isArray(application.students.users) ? application.students.users[0] : application.students.users)
+      : null;
+    const referredByPartnerId = studentUser?.referred_by_partner_id || null;
+    const student_source = referredByPartnerId ? 'partner_referred' : 'individual';
+
+    // partnerInfo already fetched above for applications with partner_id
+    // For student_source, we need partner info from the referred_by_partner_id (which may differ from application.partner_id)
+    let studentPartnerInfo: typeof partnerInfo = null;
+    if (referredByPartnerId && referredByPartnerId !== application.partner_id) {
+      // Fetch partner info for the student if different from application partner
+      const { data: studentPartnerRecord } = await supabase
+        .from('partners')
+        .select('id, user_id, company_name')
+        .eq('user_id', referredByPartnerId)
+        .maybeSingle();
+
+      if (studentPartnerRecord) {
+        const { data: studentPartnerUser } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('id', referredByPartnerId)
+          .maybeSingle();
+
+        if (studentPartnerUser) {
+          studentPartnerInfo = {
+            id: studentPartnerUser.id,
+            full_name: studentPartnerUser.full_name,
+            email: studentPartnerUser.email,
+            company_name: studentPartnerRecord.company_name,
+          };
+        }
+      }
+    }
+
+    return NextResponse.json({
       application: {
         ...application,
         personal_statement,
         study_plan,
         intake,
+        student_source,
         partner: partnerInfo,
+        student_partner: studentPartnerInfo,
         reviewer: reviewerInfo,
         status_history: historyWithUsers || [],
         documents: documents || [],

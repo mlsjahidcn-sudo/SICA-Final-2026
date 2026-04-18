@@ -15,6 +15,12 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -133,7 +139,7 @@ function StudentsListContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [nationalityFilter, setNationalityFilter] = useState(searchParams.get('nationality') || 'all')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
-  const [sourceFilter, setSourceFilter] = useState(searchParams.get('source') || 'all')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'individual' | 'partner_referred' | 'orphan'>('all')
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1'))
 
   const nationalities = ['China', 'Nigeria', 'Pakistan', 'India', 'Bangladesh', 'Indonesia', 'Thailand', 'Vietnam', 'Russia', 'Kazakhstan']
@@ -267,70 +273,69 @@ function StudentsListContent() {
         </Card>
       </div>
 
-      {/* Filters and Actions */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="flex flex-col md:flex-row gap-4 flex-1">
-              <div className="flex-1">
-                <div className="relative">
-                  <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search students..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
+      {/* Source Tabs */}
+      <Tabs value={sourceFilter} onValueChange={(v) => setSourceFilter(v as typeof sourceFilter)}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="all">All Students</TabsTrigger>
+          <TabsTrigger value="individual">Individual</TabsTrigger>
+          <TabsTrigger value="partner_referred">Partner-Referred</TabsTrigger>
+          <TabsTrigger value="orphan">Orphan</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={sourceFilter} className="space-y-4">
+          {/* Filters and Actions */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 flex-1">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search students..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
+                  <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Nationalities</SelectItem>
+                      {nationalities.map((nat) => (
+                        <SelectItem key={nat} value={nat}>{nat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <ExportStudentsButton search={searchQuery} source={sourceFilter} />
+                  <Button asChild>
+                    <Link href="/admin/v2/students/new">
+                      <IconUserPlus className="mr-2 h-4 w-4" />
+                      Add Student
+                    </Link>
+                  </Button>
                 </div>
               </div>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
-                  <SelectItem value="partner_referred">Partner-Referred</SelectItem>
-                  <SelectItem value="orphan">Orphan (Pending)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Nationality" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Nationalities</SelectItem>
-                  {nationalities.map((nat) => (
-                    <SelectItem key={nat} value={nat}>{nat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <ExportStudentsButton search={searchQuery} source={sourceFilter} />
-              <Button asChild>
-                <Link href="/admin/v2/students/new">
-                  <IconUserPlus className="mr-2 h-4 w-4" />
-                  Add Student
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Students Table */}
-      <Card>
+          {/* Students Table */}
+          <Card>
         <CardContent className="pt-6">
           {isLoading ? (
             <div className="flex justify-center py-8">
@@ -555,6 +560,8 @@ function StudentsListContent() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     const universityId = searchParams.get('university_id') || '';
     const degreeLevel = searchParams.get('degree_type') || searchParams.get('degree_level') || '';
     const search = searchParams.get('search') || '';
-    
+    const source = searchParams.get('source') || 'all'; // 'all' | 'individual' | 'partner_referred'
+
     const offset = (page - 1) * limit;
 
     // Build query with correct schema columns
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
           users (
             id,
             full_name,
-            email
+            email,
+            referred_by_partner_id
           )
         ),
         programs (
@@ -95,6 +97,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
+    // Get all unique referred_by_partner_ids to fetch partner info
+    const referredPartnerIds = (applications || [])
+      .map(app => {
+        const student = Array.isArray(app.students) ? app.students[0] : app.students;
+        const studentUser = student?.users
+          ? (Array.isArray(student.users) ? student.users[0] : student.users)
+          : null;
+        return studentUser?.referred_by_partner_id || null;
+      })
+      .filter((id): id is string => id !== null);
+
+    // Fetch partner info for all referred students in one query
+    let partnerMap = new Map<string, { full_name: string; email: string; company_name?: string }>();
+    if (referredPartnerIds.length > 0) {
+      const uniquePartnerIds = [...new Set(referredPartnerIds)];
+      const [partnerUsersResult, partnerRecordsResult] = await Promise.all([
+        supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', uniquePartnerIds),
+        supabase
+          .from('partners')
+          .select('user_id, company_name')
+          .in('user_id', uniquePartnerIds),
+      ]);
+
+      const partnerCompanyMap = new Map<string, string>();
+      for (const pr of (partnerRecordsResult.data || [])) {
+        partnerCompanyMap.set(pr.user_id, pr.company_name);
+      }
+      for (const pu of (partnerUsersResult.data || [])) {
+        partnerMap.set(pu.id, {
+          full_name: pu.full_name,
+          email: pu.email,
+          company_name: partnerCompanyMap.get(pu.id),
+        });
+      }
+    }
+
     // Transform data to flatten structure for frontend
     const transformedApplications = (applications || []).map(app => {
       // Handle Supabase returning relations as arrays or single objects
@@ -106,7 +147,11 @@ export async function GET(request: NextRequest) {
       const university = program?.universities
         ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
         : null;
-      
+
+      const referredByPartnerId = studentUser?.referred_by_partner_id || null;
+      const student_source = referredByPartnerId ? 'partner_referred' : 'individual';
+      const partner_info = referredByPartnerId ? partnerMap.get(referredByPartnerId) || null : null;
+
       return {
         id: app.id,
         status: app.status,
@@ -115,6 +160,8 @@ export async function GET(request: NextRequest) {
         submitted_at: app.submitted_at,
         created_at: app.created_at,
         updated_at: app.updated_at,
+        student_source,
+        partner_info,
         program: program ? {
           id: program.id,
           name: program.name,
@@ -138,9 +185,21 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Compute stats from the current result set
-    const stats = {
-      total: count || 0,
+    // Filter by source if not 'all'
+    let filteredApplications = transformedApplications;
+    if (source !== 'all') {
+      filteredApplications = transformedApplications.filter(app => app.student_source === source);
+    }
+
+    // Apply pagination to filtered results
+    const totalCount = filteredApplications.length;
+    const paginatedApplications = filteredApplications.slice(offset, offset + limit);
+
+    // Compute stats - separate counts for individual and partner applications
+    const allStats = {
+      total: 0,
+      individual_total: 0,
+      partner_total: 0,
       submitted: 0,
       under_review: 0,
       document_request: 0,
@@ -148,45 +207,77 @@ export async function GET(request: NextRequest) {
       accepted: 0,
       rejected: 0,
     };
-    // Count statuses from the current page (approximate)
-    for (const app of applications || []) {
+
+    // Count from transformed (all data) not paginated
+    for (const app of transformedApplications) {
+      allStats.total++;
+      if (app.student_source === 'individual') {
+        allStats.individual_total++;
+      } else {
+        allStats.partner_total++;
+      }
       const s = app.status as string;
-      if (s in stats) {
-        (stats as Record<string, number>)[s]++;
+      if (s in allStats) {
+        (allStats as Record<string, number>)[s]++;
       }
     }
 
-    // Get total counts across all applications (not just current page)
-    const { data: allStatuses } = await supabase
+    // Get total counts across all applications for accurate stats
+    const { data: allApplicationStatuses } = await supabase
       .from('applications')
-      .select('status');
-    
-    if (allStatuses) {
-      const fullStats = {
-        total: allStatuses.length,
-        submitted: 0,
-        under_review: 0,
-        document_request: 0,
-        interview_scheduled: 0,
-        accepted: 0,
-        rejected: 0,
-      };
-      for (const row of allStatuses) {
+      .select(`
+        status,
+        students (
+          users (
+            referred_by_partner_id
+          )
+        )
+      `);
+
+    if (allApplicationStatuses) {
+      allStats.total = allApplicationStatuses.length;
+      allStats.individual_total = 0;
+      allStats.partner_total = 0;
+      allStats.submitted = 0;
+      allStats.under_review = 0;
+      allStats.document_request = 0;
+      allStats.interview_scheduled = 0;
+      allStats.accepted = 0;
+      allStats.rejected = 0;
+
+      for (const row of allApplicationStatuses) {
+        const student = Array.isArray(row.students) ? row.students[0] : row.students;
+        const studentUser = student?.users
+          ? (Array.isArray(student.users) ? student.users[0] : student.users)
+          : null;
+        const isPartner = !!studentUser?.referred_by_partner_id;
+
+        if (isPartner) {
+          allStats.partner_total++;
+        } else {
+          allStats.individual_total++;
+        }
+
         const s = row.status as string;
-        if (s in fullStats) {
-          (fullStats as Record<string, number>)[s]++;
+        if (s in allStats) {
+          (allStats as Record<string, number>)[s]++;
         }
       }
-      Object.assign(stats, fullStats);
     }
 
+    // Return source-specific stats if filtered
+    const returnStats = source === 'all' ? allStats : {
+      ...allStats,
+      total: source === 'individual' ? allStats.individual_total : allStats.partner_total,
+    };
+
     return NextResponse.json({
-      applications: transformedApplications,
-      total: count || 0,
+      applications: paginatedApplications,
+      total: totalCount,
       page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit),
-      stats,
+      totalPages: Math.ceil(totalCount / limit),
+      stats: returnStats,
     });
   } catch (error) {
     console.error('Error in admin applications GET:', error);
