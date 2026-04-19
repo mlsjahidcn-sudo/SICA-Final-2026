@@ -1,318 +1,365 @@
-"use client"
+'use client';
 
-import { Suspense, useEffect, useState, useCallback } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { AppSidebar } from "@/components/dashboard-v2-sidebar"
-import { SiteHeader } from "@/components/dashboard-v2-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { AppSidebar } from '@/components/dashboard-v2-sidebar';
+import { SiteHeader } from '@/components/dashboard-v2-header';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/auth-context';
+import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  Users,
+  FileText,
+  Calendar,
+  MoreHorizontal,
+  Eye,
+  UserCheck,
+  UserX,
+  Search,
+  RefreshCw,
+  User,
+  Building2,
+  UserCircle,
+} from 'lucide-react';
+import { getValidToken } from '@/lib/auth-token';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { toast } from "sonner"
-import { 
-  IconSearch, 
-  IconUsers, 
-  IconUserCheck, 
-  IconEye,
-  IconChevronLeft,
-  IconChevronRight,
-  IconDotsVertical,
-  IconMail,
-  IconFileText,
-  IconUser,
-  IconUserPlus,
-  IconEdit,
-  IconTrash
-} from "@tabler/icons-react"
-import { DeleteStudentDialog } from "@/components/admin/delete-student-dialog"
-import { ExportStudentsButton } from "@/components/admin/export-students-button"
-import { ClaimInvitationDialog } from "@/components/admin/claim-invitation-dialog"
+} from '@/components/ui/dropdown-menu';
 
-interface ReferredByPartner {
-  full_name: string
-  email: string
-  company_name?: string
+interface StudentSource {
+  type: 'individual' | 'partner';
+  id: string;
+  full_name: string;
+  email: string;
+  nationality: string | null;
+  is_active: boolean;
+  created_at: string;
+  applications: { total: number; pending: number };
+  referred_by_partner?: { company_name?: string; full_name: string } | null;
+  created_by_partner?: { full_name: string; company_name?: string } | null;
 }
 
-interface Student {
-  id: string
-  email: string | null
-  full_name: string
-  phone?: string | null
-  nationality?: string | null
-  avatar_url?: string | null
-  is_active?: boolean
-  created_at: string
-  updated_at?: string
-  referred_by_partner_id?: string | null
-  source: 'individual' | 'partner_referred' | 'orphan'
-  referred_by_partner: ReferredByPartner | null
-  has_user_account?: boolean
-  students?: {
-    id: string
-    first_name: string
-    last_name: string
-    passport_number?: string
-    date_of_birth?: string
-    gender?: string
-    current_address?: string
-    wechat_id?: string
-  } | null
-  applications?: {
-    total: number
-    pending: number
-  }
+interface PartnerOption {
+  id: string;
+  full_name: string;
+  company_name?: string;
 }
 
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
-interface Stats {
-  total: number
-  individual: number
-  partnerReferred: number
-  orphan: number
-  active: number
-  newThisMonth: number
-  withApplications: number
-}
-
-const ITEMS_PER_PAGE = 20
-
-function StudentsListContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-
-  const [students, setStudents] = useState<Student[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [stats, setStats] = useState<Stats>({ total: 0, individual: 0, partnerReferred: 0, orphan: 0, active: 0, newThisMonth: 0, withApplications: 0 })
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: ITEMS_PER_PAGE,
+function AllStudentsContent() {
+  const searchParams = useSearchParams();
+  const [students, setStudents] = useState<StudentSource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [nationality, setNationality] = useState(searchParams.get('nationality') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [sourceFilter, setSourceFilter] = useState(searchParams.get('source') || '');
+  const [partnerFilter, setPartnerFilter] = useState(searchParams.get('partner_id') || '');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filteredTotal, setFilteredTotal] = useState(0);
+  const [stats, setStats] = useState({
     total: 0,
-    totalPages: 0,
-  })
-
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
-  const [nationalityFilter, setNationalityFilter] = useState(searchParams.get('nationality') || 'all')
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'individual' | 'partner_referred' | 'orphan'>('all')
-  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1'))
-
-  const nationalities = ['China', 'Nigeria', 'Pakistan', 'India', 'Bangladesh', 'Indonesia', 'Thailand', 'Vietnam', 'Russia', 'Kazakhstan']
+    individual: 0,
+    partner: 0,
+    active: 0,
+    newThisMonth: 0,
+  });
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchStudents = useCallback(async () => {
-    setIsLoading(true)
+    setLoading(true);
     try {
-      const { getValidToken } = await import('@/lib/auth-token'); const token = await getValidToken()
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: ITEMS_PER_PAGE.toString(),
-        ...(searchQuery && { search: searchQuery }),
-        ...(nationalityFilter !== 'all' && { nationality: nationalityFilter }),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(sourceFilter !== 'all' && { source: sourceFilter }),
-      })
+      const token = await getValidToken();
 
-      const response = await fetch(`/api/admin/students?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      // Fetch both individual and partner students in parallel
+      const [indRes, partnerRes] = await Promise.all([
+        fetch(`/api/admin/individual-students?page=${page}&limit=50&search=${encodeURIComponent(search)}&nationality=${nationality}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/admin/partner-students?page=${page}&limit=50&search=${encodeURIComponent(search)}&nationality=${nationality}${partnerFilter ? `&partner_id=${partnerFilter}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
+      const indData = indRes.ok ? await indRes.json() : { students: [], stats: { total: 0 } };
+      const partnerData = partnerRes.ok ? await partnerRes.json() : { students: [], stats: { total: 0 } };
+
+      // Mark individual students
+      const individualStudents: StudentSource[] = (indData.students || []).map((s: Record<string, unknown>) => ({
+        type: 'individual' as const,
+        id: s.id as string,
+        full_name: s.full_name as string,
+        email: s.email as string,
+        nationality: (s.nationality as string) || null,
+        is_active: s.is_active as boolean,
+        created_at: s.created_at as string,
+        applications: (s.applications as { total: number; pending: number }) || { total: 0, pending: 0 },
+        referred_by_partner: null,
+        created_by_partner: null,
+      }));
+
+      // Mark partner students
+      const partnerStudents: StudentSource[] = (partnerData.students || []).map((s: Record<string, unknown>) => ({
+        type: 'partner' as const,
+        id: s.id as string,
+        full_name: s.full_name as string,
+        email: s.email as string,
+        nationality: (s.nationality as string) || null,
+        is_active: s.is_active as boolean,
+        created_at: s.created_at as string,
+        applications: (s.applications as { total: number; pending: number }) || { total: 0, pending: 0 },
+        referred_by_partner: (s.referred_by_partner as { company_name?: string; full_name: string }) || null,
+        created_by_partner: (s.created_by_partner as { full_name: string; company_name?: string }) || null,
+      }));
+
+      // Combine and filter
+      let combined: StudentSource[] = [...individualStudents, ...partnerStudents];
+
+      // Apply source filter
+      if (sourceFilter === 'individual') {
+        combined = combined.filter(s => s.type === 'individual');
+      } else if (sourceFilter === 'partner') {
+        combined = combined.filter(s => s.type === 'partner');
+      }
+
+      // Apply status filter
+      if (statusFilter === 'active') {
+        combined = combined.filter(s => s.is_active);
+      } else if (statusFilter === 'inactive') {
+        combined = combined.filter(s => !s.is_active);
+      }
+
+      // Sort by created_at desc
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setStudents(combined);
+      setFilteredTotal(combined.length);
+
+      // Calculate combined stats
+      const totalInd = indData.stats?.total || 0;
+      const totalPartner = partnerData.stats?.total || 0;
+      const activeInd = indData.students?.filter((s: { is_active: boolean }) => s.is_active).length || 0;
+      const activePartner = partnerData.students?.filter((s: { is_active: boolean }) => s.is_active).length || 0;
+
+      setStats({
+        total: totalInd + totalPartner,
+        individual: totalInd,
+        partner: totalPartner,
+        active: activeInd + activePartner,
+        newThisMonth: (indData.stats?.newThisMonth || 0) + (partnerData.stats?.newThisMonth || 0),
+      });
+
+      setTotalPages(Math.ceil((totalInd + totalPartner) / 50));
+
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, nationality, statusFilter, sourceFilter, partnerFilter]);
+
+  const fetchPartners = async () => {
+    try {
+      const token = await getValidToken();
+      const response = await fetch('/api/admin/partners?limit=100&status=approved', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
-        const data = await response.json()
-        setStudents(data.students || [])
-        setPagination(data.pagination)
-        if (data.stats) setStats(data.stats)
-      } else {
-        toast.error('Failed to load students')
+        const data = await response.json();
+        setPartners(data.partners.map((p: { id: string; full_name: string; company_name?: string }) => ({
+          id: p.id,
+          full_name: p.full_name,
+          company_name: p.company_name,
+        })));
       }
     } catch (error) {
-      console.error('Error fetching students:', error)
-      toast.error('Failed to load students')
-    } finally {
-      setIsLoading(false)
+      console.error('Error fetching partners:', error);
     }
-  }, [currentPage, searchQuery, nationalityFilter, statusFilter, sourceFilter])
+  };
 
   useEffect(() => {
-    fetchStudents()
-  }, [fetchStudents])
+    fetchStudents();
+  }, [fetchStudents]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  useEffect(() => {
+    fetchPartners();
+  }, []);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  }
+  const toggleStudentStatus = async (student: StudentSource, currentStatus: boolean) => {
+    setTogglingId(student.id);
+    try {
+      const token = await getValidToken();
+      const apiEndpoint = student.type === 'individual'
+        ? `/api/admin/individual-students/${student.id}/toggle-status`
+        : `/api/admin/partner-students/${student.id}/toggle-status`;
+
+      const response = await fetch(apiEndpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: !currentStatus }),
+      });
+
+      if (response.ok) {
+        toast.success(`Student ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+        fetchStudents();
+      } else {
+        const err = await response.json();
+        toast.error(err.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error toggling student status:', error);
+      toast.error('Failed to update student status');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const getDetailUrl = (student: StudentSource) => {
+    return student.type === 'individual'
+      ? `/admin/v2/students/${student.id}`
+      : `/admin/v2/partner-students/${student.id}`;
+  };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <IconUsers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.newThisMonth} new this month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Individual</CardTitle>
-            <IconUser className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.individual}</div>
-            <p className="text-xs text-muted-foreground">
-              Self-registered students
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Partner-Referred</CardTitle>
-            <IconUserPlus className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.partnerReferred}</div>
-            <p className="text-xs text-muted-foreground">
-              Added by partners
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Orphan Students</CardTitle>
-            <IconUsers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.orphan}</div>
-            <p className="text-xs text-muted-foreground">
-              Pending account claim
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-            <IconUserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">
-              {((stats.active / stats.total) * 100 || 0).toFixed(1)}% active rate
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">With Applications</CardTitle>
-            <IconFileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.withApplications}</div>
-            <p className="text-xs text-muted-foreground">
-              Applied for programs
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <SiteHeader />
+        <main className="flex-1 overflow-auto bg-muted/10">
+          <div className="flex flex-col gap-4 p-4 md:p-6">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">All Students</h1>
+                <p className="text-muted-foreground text-sm">
+                  View all students from individual registrations and partner referrals
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => fetchStudents()}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
 
-      {/* Source Tabs */}
-      <Tabs value={sourceFilter} onValueChange={(v) => setSourceFilter(v as typeof sourceFilter)}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">All Students</TabsTrigger>
-          <TabsTrigger value="individual">Individual</TabsTrigger>
-          <TabsTrigger value="partner_referred">Partner-Referred</TabsTrigger>
-          <TabsTrigger value="orphan">Orphan</TabsTrigger>
-        </TabsList>
+            {/* Stats Cards */}
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Individual</CardTitle>
+                  <UserCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.individual}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Partner</CardTitle>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.partner}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.active}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">New This Month</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.newThisMonth}</div>
+                </CardContent>
+              </Card>
+            </div>
 
-        <TabsContent value={sourceFilter} className="space-y-4">
-          {/* Filters and Actions */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div className="flex flex-col md:flex-row gap-4 flex-1">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search students..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8"
-                      />
-                    </div>
+            {/* Filters */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row gap-3 flex-wrap">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                      }}
+                      className="pl-9"
+                    />
                   </div>
-                  <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Nationality" />
+                  <Select value={sourceFilter} onValueChange={(val) => {
+                    setSourceFilter(val === 'all' ? '' : val);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="All Sources" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Nationalities</SelectItem>
-                      {nationalities.map((nat) => (
-                        <SelectItem key={nat} value={nat}>{nat}</SelectItem>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="individual">Individual</SelectItem>
+                      <SelectItem value="partner">Partner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={partnerFilter} onValueChange={(val) => {
+                    setPartnerFilter(val === 'all' ? '' : val);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All Partners" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Partners</SelectItem>
+                      {partners.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.company_name || p.full_name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Status" />
+                  <Select value={statusFilter} onValueChange={(val) => {
+                    setStatusFilter(val === 'all' ? '' : val);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="All Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
@@ -320,263 +367,196 @@ function StudentsListContent() {
                       <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={nationality} onValueChange={(val) => {
+                    setNationality(val === 'all' ? '' : val);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-[170px]">
+                      <SelectValue placeholder="Nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Nationalities</SelectItem>
+                      <SelectItem value="china">China</SelectItem>
+                      <SelectItem value="nigeria">Nigeria</SelectItem>
+                      <SelectItem value="pakistan">Pakistan</SelectItem>
+                      <SelectItem value="india">India</SelectItem>
+                      <SelectItem value="bangladesh">Bangladesh</SelectItem>
+                      <SelectItem value="kenya">Kenya</SelectItem>
+                      <SelectItem value="ghana">Ghana</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Students Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Students List</CardTitle>
+                <CardDescription>
+                  {students.length} of {filteredTotal || stats.total} students
+                  {(statusFilter || nationality || sourceFilter || partnerFilter || search) && ' (filtered)'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">Source</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Partner</TableHead>
+                        <TableHead>Nationality</TableHead>
+                        <TableHead>Applications</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading && students.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                            Loading students...
+                          </TableCell>
+                        </TableRow>
+                      ) : students.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                            No students found matching your filters.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        students.map((student) => (
+                          <TableRow key={`${student.type}-${student.id}`} className="hover:bg-muted/50 transition-colors">
+                            <TableCell>
+                              <Badge variant={student.type === 'individual' ? 'secondary' : 'outline'} className="text-xs">
+                                {student.type === 'individual' ? (
+                                  <><UserCircle className="h-3 w-3 mr-1" /> Individual</>
+                                ) : (
+                                  <><Building2 className="h-3 w-3 mr-1" /> Partner</>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={getDetailUrl(student)}
+                                className="font-semibold hover:text-primary transition-colors hover:underline"
+                              >
+                                {student.full_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{student.email}</TableCell>
+                            <TableCell>
+                              {student.type === 'partner' && student.referred_by_partner ? (
+                                <Badge variant="outline" className="font-normal text-xs">
+                                  {student.referred_by_partner.company_name || student.referred_by_partner.full_name}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm capitalize">{student.nationality || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  {student.applications.total}
+                                </Badge>
+                                {student.applications.pending > 0 && (
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    {student.applications.pending} pending
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={student.is_active ? 'default' : 'secondary'} className="cursor-pointer select-none">
+                                {student.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(student.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuItem asChild>
+                                    <Link href={getDetailUrl(student)} className="cursor-pointer">
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Details
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => toggleStudentStatus(student, student.is_active)}
+                                    disabled={togglingId === student.id}
+                                    className="cursor-pointer"
+                                  >
+                                    {togglingId === student.id ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : student.is_active ? (
+                                      <UserX className="mr-2 h-4 w-4" />
+                                    ) : (
+                                      <UserCheck className="mr-2 h-4 w-4" />
+                                    )}
+                                    {student.is_active ? 'Deactivate' : 'Activate'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * 50 + 1}</span> to <span className="font-medium">{Math.min(page * 50, filteredTotal || stats.total)}</span> of <span className="font-medium">{filteredTotal || stats.total}</span> students
+                </p>
                 <div className="flex gap-2">
-                  <ExportStudentsButton search={searchQuery} source={sourceFilter} />
-                  <Button asChild>
-                    <Link href="/admin/v2/students/new">
-                      <IconUserPlus className="mr-2 h-4 w-4" />
-                      Add Student
-                    </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Next
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Students Table */}
-          <Card>
-        <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : students.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No students found
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Nationality</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Applications</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={student.avatar_url ?? undefined} />
-                          <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{student.full_name}</div>
-                          {student.phone && (
-                            <div className="text-xs text-muted-foreground">{student.phone}</div>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {student.email ? (
-                        student.email
-                      ) : (
-                        <span className="text-muted-foreground italic">No account</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {student.nationality && (
-                        <Badge variant="secondary">{student.nationality}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {student.source === 'individual' ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline" className="gap-1 cursor-default">
-                              <IconUser className="h-3 w-3" />
-                              Individual
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Self-registered student</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : student.source === 'partner_referred' ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline" className="gap-1 cursor-default border-primary/30 bg-primary/5 text-primary">
-                              <IconUserPlus className="h-3 w-3" />
-                              {student.referred_by_partner?.company_name || student.referred_by_partner?.full_name || 'Partner'}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <div className="space-y-1">
-                              <p className="font-medium">Referred by Partner</p>
-                              {student.referred_by_partner?.full_name && (
-                                <p className="text-xs">{student.referred_by_partner.full_name}</p>
-                              )}
-                              {student.referred_by_partner?.company_name && (
-                                <p className="text-xs text-muted-foreground">{student.referred_by_partner.company_name}</p>
-                              )}
-                              {student.referred_by_partner?.email && (
-                                <p className="text-xs text-muted-foreground">{student.referred_by_partner.email}</p>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant="outline" className="gap-1 cursor-default border-amber-500/30 bg-amber-50 text-amber-700">
-                              <IconUser className="h-3 w-3" />
-                              Orphan
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <div className="space-y-1">
-                              <p className="font-medium">Admin-Created (No Account)</p>
-                              <p className="text-xs text-muted-foreground">Pending account claim</p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{student.applications?.total || 0}</span>
-                        {student.applications && student.applications.pending > 0 && (
-                          <Badge variant="outline" className="text-amber-600">
-                            {student.applications.pending} pending
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(student.created_at)}</TableCell>
-                    <TableCell>
-                      {student.source === 'orphan' ? (
-                        <Badge variant="outline" className="border-amber-500/30 bg-amber-50 text-amber-700">
-                          Pending Claim
-                        </Badge>
-                      ) : (
-                        <Badge variant={student.is_active ? 'default' : 'secondary'}>
-                          {student.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <IconDotsVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/v2/students/${student.id}`}>
-                              <IconEye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/v2/students/${student.id}/edit`}>
-                              <IconEdit className="mr-2 h-4 w-4" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {student.source === 'orphan' ? (
-                            <ClaimInvitationDialog
-                              studentId={student.id}
-                              studentName={student.full_name}
-                              onInvitationSent={fetchStudents}
-                              trigger={
-                                <button className="flex w-full items-center px-2 py-1.5 text-sm">
-                                  <IconMail className="mr-2 h-4 w-4" />
-                                  Send Claim Invitation
-                                </button>
-                              }
-                            />
-                          ) : (
-                            <DropdownMenuItem asChild>
-                              <a href={`mailto:${student.email}`}>
-                                <IconMail className="mr-2 h-4 w-4" />
-                                Send Email
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
-                            <DeleteStudentDialog 
-                              studentId={student.id}
-                              studentName={student.full_name}
-                              hasApplications={(student.applications?.total || 0) > 0}
-                              onStudentDeleted={fetchStudents}
-                              trigger={
-                                <button className="flex w-full items-center px-2 py-1.5 text-sm text-destructive">
-                                  <IconTrash className="mr-2 h-4 w-4" />
-                                  Delete
-                                </button>
-                              }
-                            />
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                {pagination.total} students
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  disabled={pagination.page === 1}
-                >
-                  <IconChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  Next
-                  <IconChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
+            )}
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
 
-export default function StudentsPage() {
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
+export default function AllStudentsPage() {
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/admin/login')
-    }
-  }, [user, authLoading, router])
-
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -584,35 +564,22 @@ export default function StudentsPage() {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!user || user.role !== 'admin') {
-    return null
+    return null;
   }
 
   return (
     <TooltipProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader title="Students" />
-          <Suspense fallback={
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          }>
-            <StudentsListContent />
-          </Suspense>
-        </SidebarInset>
-      </SidebarProvider>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <AllStudentsContent />
+      </Suspense>
     </TooltipProvider>
-  )
+  );
 }

@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('student_id');
+    const userId = searchParams.get('user_id'); // Support user_id as alternative
     const status = searchParams.get('status');
     const type = searchParams.get('type');
     const isExpiring = searchParams.get('is_expiring') === 'true';
@@ -43,6 +44,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
     const offset = (page - 1) * limit;
+
+    // If user_id is provided, look up the corresponding student_id from students table
+    let targetStudentId = studentId;
+    if (!targetStudentId && userId) {
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      targetStudentId = studentRecord?.id || null;
+    }
 
     // Determine partner's access scope
     const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
@@ -140,12 +152,12 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' });
 
     // Filter by accessible students
-    if (studentId) {
+    if (targetStudentId) {
       // If specific student requested, verify access
-      if (!accessibleStudentIds.includes(studentId)) {
+      if (!accessibleStudentIds.includes(targetStudentId)) {
         return NextResponse.json({ error: 'Access denied to this student' }, { status: 403 });
       }
-      query = query.eq('student_id', studentId);
+      query = query.eq('student_id', targetStudentId);
     } else {
       query = query.in('student_id', accessibleStudentIds);
     }
@@ -316,16 +328,27 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData();
-    const studentId = formData.get('student_id') as string;
+    let studentId = formData.get('student_id') as string;
+    const userId = formData.get('user_id') as string | null; // Support user_id as alternative
     const type = formData.get('type') as string;
     const file = formData.get('file') as File;
     const applicationId = formData.get('application_id') as string | null;
     const expiresAt = formData.get('expires_at') as string | null;
 
+    // If student_id not provided but user_id is, look up the student record
+    if (!studentId && userId) {
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      studentId = studentRecord?.id || '';
+    }
+
     // Validate required fields
     if (!studentId || !type || !file) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, type, file' },
+        { error: 'Missing required fields: student_id or user_id, type, file' },
         { status: 400 }
       );
     }
@@ -383,14 +406,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload file to Supabase Storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${studentId}/${type}_${Date.now()}_${file.name}`;
-    const filePath = fileName;
-
+    const filePath = `${studentId}/${type}_${Date.now()}_${file.name}`;
+    const arrayBuffer = await file.arrayBuffer();
     const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('documents')
-      .upload(filePath, file, {
+      .upload(filePath, arrayBuffer, {
+        contentType: file.type,
         cacheControl: '3600',
         upsert: false,
       });

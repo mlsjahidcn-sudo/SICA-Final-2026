@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, User, FileText, Calendar, MoreHorizontal, Plus } from 'lucide-react';
+import { Search, User, FileText, Calendar, MoreHorizontal, Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
 import type { IndividualStudent } from '@/lib/types/admin-modules';
@@ -23,6 +23,7 @@ function IndividualStudentsContent() {
   const searchParams = useSearchParams();
   const [students, setStudents] = useState<IndividualStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [nationality, setNationality] = useState(searchParams.get('nationality') || '');
   const [page, setPage] = useState(1);
@@ -36,6 +37,7 @@ function IndividualStudentsContent() {
 
   const fetchStudents = async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = await getValidToken();
       const params = new URLSearchParams({
@@ -53,12 +55,16 @@ function IndividualStudentsContent() {
 
       if (response.ok) {
         const data = await response.json();
-        setStudents(data.students);
-        setTotalPages(data.pagination.totalPages);
-        setStats(data.stats);
+        setStudents(data.students || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setStats(data.stats || stats);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.error || `Failed to load students (${response.status})`);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
+      setError('Network error. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -172,8 +178,23 @@ function IndividualStudentsContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-10">Loading...</div>
+          {error && (
+            <div className="flex items-center gap-2 text-destructive bg-destructive/10 p-3 rounded-md mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
+              <Button variant="ghost" size="sm" onClick={fetchStudents} className="ml-auto">Retry</Button>
+            </div>
+          )}
+          {loading && !students.length ? (
+            <div className="text-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">Loading students...</p>
+            </div>
+          ) : !loading && students.length === 0 && !error ? (
+            <div className="text-center py-10">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No individual students found</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -181,6 +202,7 @@ function IndividualStudentsContent() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Nationality</TableHead>
+                  <TableHead>Country</TableHead>
                   <TableHead>Applications</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
@@ -191,7 +213,7 @@ function IndividualStudentsContent() {
                 {students.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
-                      <Link 
+                      <Link
                         href={`/admin/v2/students/${student.id}`}
                         className="font-medium hover:underline"
                       >
@@ -200,6 +222,7 @@ function IndividualStudentsContent() {
                     </TableCell>
                     <TableCell>{student.email}</TableCell>
                     <TableCell>{student.nationality || '-'}</TableCell>
+                    <TableCell>{student.country || student.city || '-'}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
                         {student.applications.total} total
@@ -232,6 +255,31 @@ function IndividualStudentsContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

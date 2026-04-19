@@ -135,30 +135,12 @@ export async function GET(request: NextRequest) {
         studentIds = (studentRecs || []).map(s => s.id);
       }
 
-      // Now, also get applications where partner_id matches the partner user's organization
-      let orgPartnerId = '';
-      if (isAdmin && partnerUser.id) {
-        const { data: partnerRec } = await supabase
-          .from('partners')
-          .select('id')
-          .eq('user_id', partnerUser.id)
-          .maybeSingle();
-        if (partnerRec) {
-          orgPartnerId = partnerRec.id;
-        }
-      }
-
-      if (studentIds.length === 0 && !orgPartnerId) {
+      if (studentIds.length === 0) {
         return NextResponse.json({ applications: [], total: 0, page, pageSize, hasMore: false, limit: pageSize, totalPages: 0 });
       }
 
-      if (orgPartnerId && studentIds.length > 0) {
-        query = query.or(`student_id.in.(${studentIds.join(',')}),partner_id.eq.${orgPartnerId}`);
-      } else if (orgPartnerId) {
-        query = query.eq('partner_id', orgPartnerId);
-      } else {
-        query = query.in('student_id', studentIds);
-      }
+      // Filter by students referred by the team (consistent with Students API)
+      query = query.in('student_id', studentIds);
     } else if (user.role === 'admin') {
       // Admin sees all applications — no filter
     }
@@ -229,10 +211,19 @@ export async function GET(request: NextRequest) {
     // Fix relations (Supabase returns arrays for has-many)
     const normalizedApplications = applications?.map(app => {
       const parsedSnapshot = app.profile_snapshot || {};
+      // Flatten nested users data into students for frontend compatibility
+      const studentData = Array.isArray(app.students) ? app.students[0] : app.students;
+      const usersData = studentData?.users;
+      const userInfo = Array.isArray(usersData) ? usersData[0] : usersData;
+      const normalizedStudent = studentData ? {
+        ...studentData,
+        full_name: userInfo?.full_name || `${studentData.first_name || ''} ${studentData.last_name || ''}`.trim() || null,
+        email: userInfo?.email || null,
+      } : null;
       return {
         ...app,
         programs: Array.isArray(app.programs) ? app.programs[0] : app.programs,
-        students: Array.isArray(app.students) ? app.students[0] : app.students,
+        students: normalizedStudent,
         personal_statement: parsedSnapshot.personal_statement || '',
         study_plan: parsedSnapshot.study_plan || '',
         intake: parsedSnapshot.intake || ''
@@ -296,8 +287,12 @@ export async function POST(request: NextRequest) {
       intake,
     } = body;
 
-    // Validate required fields
-    if (!program_id && !requested_university_program_note) {
+    // Validate required fields - check for program_id, selected_program_ids, or requested_university_program_note
+    const hasProgramId = !!program_id;
+    const hasSelectedProgramIds = selected_program_ids && selected_program_ids.length > 0;
+    const hasRequestNote = !!requested_university_program_note;
+    
+    if (!hasProgramId && !hasSelectedProgramIds && !hasRequestNote) {
       return NextResponse.json(
         { error: 'Either program or request note is required' },
         { status: 400 }
@@ -402,6 +397,7 @@ export async function POST(request: NextRequest) {
           status: 'draft',
           profile_snapshot: profileSnapshot,
           notes: requested_university_program_note || null,
+          created_by: user.id, // Track which team member created this application
         })
         .select('*')
         .single();

@@ -22,7 +22,141 @@ export async function GET(request: NextRequest) {
     const degreeLevel = searchParams.get('degree_type') || searchParams.get('degree_level') || '';
     const search = searchParams.get('search') || '';
     const partner_id = searchParams.get('partner_id') || ''; // Filter by specific partner
+    const id = searchParams.get('id') || ''; // Single application lookup
     const offset = (page - 1) * limit;
+
+    // Single record lookup mode (for detail pages)
+    if (id) {
+      const { data: singleApp, error: singleError } = await supabaseAdmin
+        .from('applications')
+        .select(`
+          id,
+          status,
+          priority,
+          notes,
+          submitted_at,
+          created_at,
+          updated_at,
+          partner_id,
+          created_by,
+          updated_by,
+          students (
+            id,
+            user_id,
+            nationality,
+            gender,
+            highest_education,
+            users (
+              id,
+              full_name,
+              email,
+              referred_by_partner_id
+            )
+          ),
+          programs (
+            id,
+            name,
+            degree_level,
+            universities (
+              id,
+              name_en,
+              city,
+              province
+            )
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (singleError || !singleApp) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+
+      const student = Array.isArray(singleApp.students) ? singleApp.students[0] : singleApp.students;
+      const studentUser = student?.users
+        ? (Array.isArray(student.users) ? student.users[0] : student.users)
+        : null;
+      const program = Array.isArray(singleApp.programs) ? singleApp.programs[0] : singleApp.programs;
+      const university = program?.universities
+        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+        : null;
+
+      // Get partner info for referred_by_partner, created_by, and updated_by
+      const allPartnerIds: string[] = [
+        studentUser?.referred_by_partner_id,
+        (singleApp as Record<string, unknown>).created_by as string,
+        (singleApp as Record<string, unknown>).updated_by as string,
+      ].filter(Boolean) as string[];
+
+      const partnerInfoMap = new Map<string, { id: string; full_name: string; email: string; company_name?: string }>();
+
+      if (allPartnerIds.length > 0) {
+        const { data: partnerUsers } = await supabaseAdmin
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', allPartnerIds);
+
+        const { data: partnerRecords } = await supabaseAdmin
+          .from('partners')
+          .select('user_id, company_name')
+          .in('user_id', allPartnerIds);
+
+        const partnerCompanyMap = new Map<string, string>();
+        for (const pr of (partnerRecords || [])) {
+          partnerCompanyMap.set(pr.user_id, pr.company_name);
+        }
+
+        for (const pu of (partnerUsers || [])) {
+          partnerInfoMap.set(pu.id, {
+            id: pu.id,
+            full_name: pu.full_name,
+            email: pu.email,
+            company_name: partnerCompanyMap.get(pu.id),
+          });
+        }
+      }
+
+      const createdBy = (singleApp as Record<string, unknown>).created_by as string | null;
+      const updatedBy = (singleApp as Record<string, unknown>).updated_by as string | null;
+
+      return NextResponse.json({
+        application: {
+          id: singleApp.id,
+          status: singleApp.status,
+          priority: singleApp.priority,
+          notes: singleApp.notes,
+          submitted_at: singleApp.submitted_at,
+          created_at: singleApp.created_at,
+          updated_at: singleApp.updated_at,
+          partner_id: singleApp.partner_id,
+          created_by: createdBy,
+          created_by_partner: createdBy ? partnerInfoMap.get(createdBy) || null : null,
+          updated_by: updatedBy,
+          updated_by_partner: updatedBy ? partnerInfoMap.get(updatedBy) || null : null,
+          program: program ? {
+            id: program.id,
+            name: program.name,
+            degree_level: program.degree_level,
+            university: university ? { id: university.id, name_en: university.name_en, city: university.city, province: university.province } : null,
+          } : null,
+          student: {
+            id: student?.id,
+            user_id: student?.user_id,
+            full_name: studentUser?.full_name,
+            email: studentUser?.email,
+            nationality: student?.nationality,
+            gender: student?.gender,
+            highest_education: student?.highest_education,
+            source: 'partner_referred' as const,
+            referred_by_partner: studentUser?.referred_by_partner_id
+              ? partnerInfoMap.get(studentUser.referred_by_partner_id) || null
+              : null,
+          },
+        },
+      });
+    }
+
+
 
     // First get user IDs of partner-referred students
     const { data: partnerUsers } = await supabaseAdmin
@@ -70,6 +204,9 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         partner_id,
+        created_by,
+        updated_by,
+        profile_snapshot,
         students (
           id,
           user_id,
@@ -115,6 +252,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('partner_id', partner_id);
     }
 
+    // Support filtering by student user_id (for detail page "View All Applications")
+    const filterStudentId = searchParams.get('student_id') || '';
+    if (filterStudentId) {
+      query = query.eq('students.user_id', filterStudentId);
+    }
+
     if (search) {
       // Note: Supabase doesn't support complex OR queries with nested relations
       // We'll filter in-memory after fetching for now
@@ -127,37 +270,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
-    // Get partner info for referred students
-    const partnerIds = [...new Set(
-      applications?.map(app => {
+    // Get partner info for referred students, created_by, and updated_by
+    const allPartnerIds = [...new Set(
+      applications?.flatMap(app => {
         const student = Array.isArray(app.students) ? app.students[0] : app.students;
         const studentUser = student?.users
           ? (Array.isArray(student.users) ? student.users[0] : student.users)
           : null;
-        return studentUser?.referred_by_partner_id;
-      }).filter(Boolean) || []
+        return [
+          studentUser?.referred_by_partner_id,
+          (app as Record<string, unknown>).created_by as string,
+          (app as Record<string, unknown>).updated_by as string,
+        ].filter(Boolean);
+      }) || []
     )] as string[];
 
     const partnerMap = new Map<string, { id: string; full_name: string; email: string; company_name?: string }>();
-    
+
     // Only query if there are partner IDs
-    if (partnerIds.length > 0) {
+    if (allPartnerIds.length > 0) {
       const { data: partnerUserDetails } = await supabaseAdmin
         .from('users')
         .select('id, full_name, email')
-        .in('id', partnerIds);
+        .in('id', allPartnerIds);
 
       const { data: partnerRecords } = await supabaseAdmin
         .from('partners')
         .select('user_id, company_name')
-        .in('user_id', partnerIds);
+        .in('user_id', allPartnerIds);
 
       const partnerCompanyMap = new Map<string, string>();
-      
+
       for (const pr of (partnerRecords || [])) {
         partnerCompanyMap.set(pr.user_id, pr.company_name);
       }
-      
+
       for (const pu of (partnerUserDetails || [])) {
         partnerMap.set(pu.id, {
           id: pu.id,
@@ -178,11 +325,14 @@ export async function GET(request: NextRequest) {
       const university = program?.universities
         ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
         : null;
-      
+
+      const createdBy = (app as Record<string, unknown>).created_by as string | null;
+      const updatedBy = (app as Record<string, unknown>).updated_by as string | null;
+
       const referredByPartner = studentUser?.referred_by_partner_id
         ? partnerMap.get(studentUser.referred_by_partner_id) || null
         : null;
-      
+
       return {
         id: app.id,
         status: app.status,
@@ -192,6 +342,11 @@ export async function GET(request: NextRequest) {
         created_at: app.created_at,
         updated_at: app.updated_at,
         partner_id: app.partner_id,
+        intake: (app.profile_snapshot as { intake?: string } | null)?.intake || null,
+        created_by: createdBy,
+        created_by_partner: createdBy ? partnerMap.get(createdBy) || null : null,
+        updated_by: updatedBy,
+        updated_by_partner: updatedBy ? partnerMap.get(updatedBy) || null : null,
         program: program ? {
           id: program.id,
           name: program.name,
@@ -260,5 +415,143 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in partner applications API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/partner-applications
+ * Admin creates an application on behalf of a partner/student.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const adminUser = await requireAdmin(request);
+    if (adminUser instanceof NextResponse) return adminUser;
+
+    const body = await request.json();
+    const supabaseAdmin = getSupabaseClient();
+
+    const {
+      student_id,
+      program_ids,
+      intake_semester,
+      intake_year,
+      priority,
+      notes,
+      partner_id,
+    } = body;
+
+    // Validate required fields
+    if (!student_id) {
+      return NextResponse.json(
+        { error: 'Student ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!program_ids || !Array.isArray(program_ids) || program_ids.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one program must be selected' },
+        { status: 400 }
+      );
+    }
+
+    // Verify student exists and is a partner-referred student
+    const { data: studentRecord, error: studentError } = await supabaseAdmin
+      .from('students')
+      .select(`
+        id,
+        user_id,
+        users!inner (
+          id,
+          role,
+          full_name,
+          referred_by_partner_id
+        )
+      `)
+      .eq('id', student_id)
+      .single();
+
+    if (studentError || !studentRecord) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    const studentUser = Array.isArray(studentRecord.users)
+      ? studentRecord.users[0]
+      : studentRecord.users;
+
+    if (studentUser.role !== 'student') {
+      return NextResponse.json({ error: 'Selected user is not a student' }, { status: 400 });
+    }
+
+    // Determine partner_id from student's referral if not explicitly provided
+    const resolvedPartnerId = partner_id || studentUser.referred_by_partner_id;
+
+    if (!resolvedPartnerId) {
+      return NextResponse.json(
+        { error: 'This student is not assigned to any partner. Please specify a partner_id.' },
+        { status: 400 }
+      );
+    }
+
+    // Verify all programs exist
+    const { data: programs, error: programError } = await supabaseAdmin
+      .from('programs')
+      .select('id, name, degree_level, university_id, universities(id, name_en)')
+      .in('id', program_ids);
+
+    if (programError || !programs || programs.length === 0) {
+      return NextResponse.json({ error: 'One or more selected programs not found' }, { status: 404 });
+    }
+
+    // Create an application record for each selected program
+    const createdApplications = [];
+    for (const program of programs) {
+      const { data: newApp, error: insertError } = await supabaseAdmin
+        .from('applications')
+        .insert({
+          student_id,
+          program_id: program.id,
+          partner_id: resolvedPartnerId,
+          user_id: studentUser.id,
+          status: 'draft',
+          priority: priority || 0,
+          notes: notes || null,
+          intake_semester: intake_semester || null,
+          intake_year: intake_year ? parseInt(intake_year) : null,
+        })
+        .select('id, status, created_at')
+        .single();
+
+      if (insertError) {
+        console.error(`Error creating application for program ${program.id}:`, insertError);
+        continue;
+      }
+
+      createdApplications.push({
+        ...newApp,
+        program_name: program.name,
+        degree_level: program.degree_level,
+        university_name: (program.universities as unknown as { name_en?: string } | null)?.name_en || 'Unknown',
+      });
+    }
+
+    if (createdApplications.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to create any applications' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Created ${createdApplications.length} application(s) for ${studentUser.full_name}`,
+      applications: createdApplications,
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating admin application:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }

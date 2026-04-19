@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12');
     const university_id = searchParams.get('university_id');
     const search = searchParams.get('search');
+    const university_search = searchParams.get('university_search');
     const degree_level = searchParams.get('degree_level') || searchParams.get('degree_type');
     const language = searchParams.get('language');
     const category = searchParams.get('category') || searchParams.get('discipline');
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     const scholarship = searchParams.get('scholarship');
 
     // Generate cache key
-    const cacheKey = `programs:${page}:${limit}:${university_id || 'all'}:${search || 'none'}:${degree_level || 'all'}:${language || 'all'}:${category || 'all'}:${sub_category || 'all'}:${scholarship || 'all'}`;
+    const cacheKey = `programs:${page}:${limit}:${university_id || 'all'}:${search || 'none'}:${university_search || 'none'}:${degree_level || 'all'}:${language || 'all'}:${category || 'all'}:${sub_category || 'all'}:${scholarship || 'all'}`;
     
     // Check cache first
     const cached = apiCache.get(cacheKey);
@@ -94,6 +95,23 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,description_en.ilike.%${search}%`);
+    }
+
+    if (university_search) {
+      // Search universities table first, then filter programs by matching university IDs
+      const { data: matchingUniversities } = await supabase
+        .from('universities')
+        .select('id')
+        .or(`name_en.ilike.%${university_search}%,name_cn.ilike.%${university_search}%`)
+        .limit(100);
+
+      if (matchingUniversities && matchingUniversities.length > 0) {
+        const universityIds = matchingUniversities.map(u => u.id);
+        query = query.in('university_id', universityIds);
+      } else {
+        // No matching universities found, return empty result
+        return NextResponse.json({ programs: [], total: 0, page: 1, totalPages: 0 });
+      }
     }
 
     if (degree_level) {

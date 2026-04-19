@@ -1,311 +1,492 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { verifyPartnerAuth, getPartnerAdminId } from '@/lib/partner-auth-utils';
+import { requirePartner } from '@/lib/auth-utils';
+import type { PartnerStudentDetail } from '@/app/(partner-v2)/partner-v2/students/lib/types';
 
 /**
- * Check if a partner user can access a specific student.
- * - Admin: can access any student from their team (referred by admin or any team member)
- * - Member: can only access students they personally referred
+ * GET /api/partner/students/[id] - Get a single student's details
  */
-async function canAccessStudent(
-  partnerUser: { id: string; partner_role: string | null; partner_id: string | null },
-  studentUserId: string
-): Promise<boolean> {
-  const supabase = getSupabaseClient();
-  const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
-  
-  // Look up the student's referred_by_partner_id
-  const { data: studentUser } = await supabase
-    .from('users')
-    .select('referred_by_partner_id')
-    .eq('id', studentUserId)
-    .maybeSingle();
-
-  if (!studentUser) return false;
-
-  if (isAdmin) {
-    // Admin can access students referred by themselves or any team member
-    const adminId = await getPartnerAdminId(partnerUser.id);
-    return studentUser.referred_by_partner_id === adminId ||
-           studentUser.referred_by_partner_id === partnerUser.id ||
-           // Also check if the referrer is a team member under this admin
-           (adminId != null && studentUser.referred_by_partner_id != null && await isTeamMember(studentUser.referred_by_partner_id, adminId));
-  } else {
-    // Member can only access students they referred
-    return studentUser.referred_by_partner_id === partnerUser.id;
-  }
-}
-
-async function isTeamMember(userId: string, adminId: string): Promise<boolean> {
-  const supabase = getSupabaseClient();
-  const { data } = await supabase
-    .from('users')
-    .select('id')
-    .eq('id', userId)
-    .eq('partner_id', adminId)
-    .eq('role', 'partner')
-    .maybeSingle();
-  return !!data;
-}
-
-// GET /api/partner/students/[id] - Get student detail
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const authResult = await verifyPartnerAuth(request);
-    if ('error' in authResult) return authResult.error;
-    const partnerUser = authResult.user;
+    const user = await requirePartner(request);
+    if (user instanceof NextResponse) return user;
 
-    // Check access
-    const canAccess = await canAccessStudent(partnerUser, id);
-    if (!canAccess) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
+    const { id: studentId } = await params;
     const supabase = getSupabaseClient();
 
-    // Get user details
-    const { data: user, error: userError } = await supabase
+    // Fetch student with all details
+    const { data: student, error } = await supabase
       .from('users')
-      .select('id, email, full_name, phone, avatar_url, created_at')
-      .eq('id', id)
-      .single();
+      .select('*')
+      .eq('id', studentId)
+      .maybeSingle();
 
-    if (userError || !user) {
+    if (error || !student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Get student details
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('user_id', id)
-      .maybeSingle();
-
-    if (studentError) {
-      console.error('Error fetching student details:', studentError);
+    // Verify this is actually a student
+    if (student.role !== 'student') {
+      return NextResponse.json({ error: 'Not a student record' }, { status: 400 });
     }
 
-    // Get applications for this student
+    // Check access control: partner must be able to see this student
+    const { data: fullUser } = await supabase
+      .from('users')
+      .select('id, partner_role, partner_id')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = !fullUser?.partner_role || fullUser.partner_role === 'partner_admin';
+
+    let referrerIds: string[];
+    if (isAdmin) {
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
+        .eq('role', 'partner');
+      referrerIds = (teamMembers || []).map(m => m.id);
+      if (!referrerIds.includes(user.id)) referrerIds.push(user.id);
+    } else {
+      referrerIds = [user.id];
+    }
+
+    // Access control: admin sees team students, member sees only their own
+    // Students with referred_by_partner_id = null are NOT accessible to partner admins
+    // for privacy - only the system/superadmin should access unassigned students
+    const studentReferrer = student.referred_by_partner_id || '';
+    const hasAccess = referrerIds.includes(studentReferrer);
+    
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Get application counts for this student
+    const { data: studentRecord } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    const actualStudentId = studentRecord?.id || studentId;
+
+    // Fetch extended student data from students table (awards, publications, etc.)
+    let studentsData: Record<string, unknown> = {};
+    if (studentRecord) {
+      const { data: extendedData } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentRecord.id)
+        .maybeSingle();
+      if (extendedData) {
+        studentsData = extendedData;
+      }
+    }
+
     const { data: applications } = await supabase
       .from('applications')
-      .select('id, status, created_at, programs (id, name, degree_level, universities (id, name_en, name_cn))')
-      .eq('student_id', student?.id)
-      .neq('status', 'draft')
-      .order('created_at', { ascending: false });
+      .select('status')
+      .eq('student_id', actualStudentId);
 
-    // Get all applications including drafts for stats
-    const { data: allApplications } = await supabase
-      .from('applications')
-      .select('id, status')
-      .eq('student_id', student?.id);
-
-    const stats = {
-      totalApplications: allApplications?.length || 0,
-      accepted: allApplications?.filter(a => a.status === 'accepted').length || 0,
-      rejected: allApplications?.filter(a => a.status === 'rejected').length || 0,
-      pending: allApplications?.filter(a => ['submitted', 'under_review', 'document_request', 'interview_scheduled'].includes(a.status)).length || 0,
+    const appStats = {
+      total: (applications || []).length,
+      pending: (applications || []).filter(a =>
+        ['submitted', 'under_review', 'document_request', 'interview_scheduled'].includes(a.status)
+      ).length,
+      approved: (applications || []).filter(a => a.status === 'accepted').length,
+      rejected: (applications || []).filter(a =>
+        ['rejected', 'withdrawn'].includes(a.status)
+      ).length,
     };
 
-    // Get documents for this student
-    const { data: documents } = await supabase
-      .from('documents')
-      .select('id, type, file_name, file_size, mime_type, status, created_at')
-      .eq('student_id', student?.id)
-      .order('created_at', { ascending: false });
+    // Get documents count
+    let documentsCount = 0;
+    if (actualStudentId) {
+      const { count: docsCount } = await supabase
+        .from('application_documents')
+        .select('*', { count: 'exact', head: true })
+        .or(`entity_type.eq.student,and(entity_id.eq.${actualStudentId},and(user_id.eq.${studentId}))`);
+      documentsCount = docsCount || 0;
+      
+      // Also check partner_documents table
+      try {
+        const { count: partnerDocsCount } = await supabase
+          .from('partner_documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', studentId);
+        documentsCount += partnerDocsCount || 0;
+      } catch {
+        // partner_documents table might not exist
+      }
+    }
 
-    // Calculate document stats
-    const documentStats = {
-      total: documents?.length || 0,
-      verified: documents?.filter(d => d.status === 'verified').length || 0,
-      pending: documents?.filter(d => d.status === 'pending').length || 0,
-      rejected: documents?.filter(d => d.status === 'rejected').length || 0,
+    // Build detailed response
+    const detail: PartnerStudentDetail = {
+      id: student.id,
+      user_id: student.id,
+      email: student.email || '',
+      full_name: student.full_name || '',
+      phone: student.phone || null,
+      avatar_url: student.avatar_url || null,
+      is_active: student.is_active ?? true,
+      referred_by_partner_id: student.referred_by_partner_id || null,
+      created_at: student.created_at,
+      updated_at: student.updated_at,
+      city: student.city || null,
+      country: student.country || null,
+
+      // Personal (from students table)
+      nationality: studentsData.nationality as string | null || null,
+      gender: studentsData.gender as string | null || null,
+      date_of_birth: studentsData.date_of_birth as string | null || null,
+      chinese_name: studentsData.chinese_name as string | null || null,
+      marital_status: studentsData.marital_status as string | null || null,
+      religion: studentsData.religion as string | null || null,
+      current_address: studentsData.current_address as string | null || null,
+      permanent_address: studentsData.permanent_address as string | null || null,
+      postal_code: studentsData.postal_code as string | null || null,
+      wechat_id: studentsData.wechat_id as string | null || null,
+      passport_number: studentsData.passport_number as string | null || null,
+
+      // Emergency contact (from students table)
+      emergency_contact_name: studentsData.emergency_contact_name as string | null || null,
+      emergency_contact_phone: studentsData.emergency_contact_phone as string | null || null,
+      emergency_contact_relationship: studentsData.emergency_contact_relationship as string | null || null,
+
+      // Passport (from students table)
+      passport_expiry_date: studentsData.passport_expiry_date as string | null || null,
+      passport_issuing_country: studentsData.passport_issuing_country as string | null || null,
+
+      // Academic (from students table)
+      education_history: (studentsData.education_history as PartnerStudentDetail['education_history']) || [],
+      work_experience: (studentsData.work_experience as PartnerStudentDetail['work_experience']) || [],
+      highest_education: studentsData.highest_education as string | null || null,
+      institution_name: studentsData.institution_name as string | null || null,
+      field_of_study: studentsData.field_of_study as string | null || null,
+      graduation_date: studentsData.graduation_date as string | null || null,
+      gpa: studentsData.gpa as string | null || null,
+      hsk_level: (studentsData.hsk_level as number | null) ?? null,
+      hsk_score: (studentsData.hsk_score as number | null) ?? null,
+      ielts_score: studentsData.ielts_score as string | null || null,
+      toefl_score: (studentsData.toefl_score as number | null) ?? null,
+
+      // Family & Additional (from students table)
+      family_members: (studentsData.family_members as PartnerStudentDetail['family_members']) || [],
+      extracurricular_activities: (studentsData.extracurricular_activities as PartnerStudentDetail['extracurricular_activities']) || null,
+      awards: (studentsData.awards as PartnerStudentDetail['awards']) || null,
+      publications: (studentsData.publications as PartnerStudentDetail['publications']) || null,
+      research_experience: (studentsData.research_experience as PartnerStudentDetail['research_experience']) || null,
+
+      // Preferences (from students table)
+      study_mode: studentsData.study_mode as string | null || null,
+      funding_source: studentsData.funding_source as string | null || null,
+      scholarship_application: studentsData.scholarship_application as Record<string, unknown> | null || null,
+      financial_guarantee: studentsData.financial_guarantee as Record<string, unknown> | null || null,
+
+      // Computed
+      applications: appStats,
+      documents_count: documentsCount,
     };
 
-    // Get last sign in
-    const { data: authUser } = await supabase.auth.admin.getUserById(id);
+    return NextResponse.json({ success: true, data: detail });
 
-    return NextResponse.json({
-      student: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone ?? student?.phone ?? null,
-        avatar_url: user.avatar_url,
-        nationality: student?.nationality || null,
-        created_at: user.created_at,
-        student_id: student?.id || null,
-        last_sign_in_at: authUser?.user?.last_sign_in_at || null,
-        // Nested profile for CompletionBadge and profile-dependent components
-        profile: student || undefined,
-        applications: applications || [],
-        stats,
-        documents: documents || [],
-        documentStats,
-      },
-    });
   } catch (error) {
-    console.error('Error in partner student GET:', error);
+    console.error('Get student detail API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PUT /api/partner/students/[id] - Update student
+/**
+ * PUT /api/partner/students/[id] - Update an existing student
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const authResult = await verifyPartnerAuth(request);
-    if ('error' in authResult) return authResult.error;
-    const partnerUser = authResult.user;
+    const user = await requirePartner(request);
+    if (user instanceof NextResponse) return user;
 
-    // Check access
-    const canAccess = await canAccessStudent(partnerUser, id);
-    if (!canAccess) {
+    const { id: studentId } = await params;
+    const body = await request.json();
+    const supabase = getSupabaseClient();
+
+    // Verify student exists and belongs to this partner
+    const { data: existingStudent, error: fetchError } = await supabase
+      .from('users')
+      .select('id, role, referred_by_partner_id')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (fetchError || !existingStudent) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    if (existingStudent.role !== 'student') {
+      return NextResponse.json({ error: 'Not a student record' }, { status: 400 });
+    }
+
+    // Check access control
+    const { data: fullUser } = await supabase
+      .from('users')
+      .select('id, partner_role, partner_id')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = !fullUser?.partner_role || fullUser.partner_role === 'partner_admin';
+
+    let referrerIds: string[];
+    if (isAdmin) {
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
+        .eq('role', 'partner');
+      referrerIds = (teamMembers || []).map(m => m.id);
+      if (!referrerIds.includes(user.id)) referrerIds.push(user.id);
+    } else {
+      referrerIds = [user.id];
+    }
+
+    if (!referrerIds.includes(existingStudent.referred_by_partner_id || '')) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const body = await request.json();
-    console.log('[DEBUG PUT partner/students] Received body keys:', Object.keys(body));
-    console.log('[DEBUG PUT partner/students] full_body:', JSON.stringify(body, null, 2));
-    const supabase = getSupabaseClient();
+    // Build update payloads from body directly (no Zod)
+    // Fields that exist in the users table (only these can be updated directly)
+    const usersTableFields = [
+      'full_name', 'phone', 'country', 'city', 'is_active',
+    ];
 
-    // Update user info
-    const userUpdateData: Record<string, unknown> = {};
-    if (body.full_name !== undefined) userUpdateData.full_name = body.full_name;
-    if (body.phone !== undefined) userUpdateData.phone = body.phone;
-    
-    if (Object.keys(userUpdateData).length > 0) {
-      const { error: userUpdateError } = await supabase
-        .from('users')
-        .update(userUpdateData)
-        .eq('id', id);
-
-      if (userUpdateError) {
-        return NextResponse.json({ error: 'Failed to update student', details: userUpdateError.message }, { status: 500 });
-      }
-    }
-
-    // Update student info - check for student_profile wrapper or flat fields
-    const studentFields = [
-      'nationality', 'date_of_birth', 'gender', 'current_address', 'postal_code',
-      'permanent_address', 'chinese_name', 'marital_status', 'religion',
+    // Fields that exist in the students table (everything else)
+    const studentsTableFields = [
+      'chinese_name', 'nationality', 'date_of_birth', 'gender',
+      'marital_status', 'religion',
+      'current_address', 'permanent_address', 'postal_code', 'wechat_id',
       'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
       'passport_number', 'passport_expiry_date', 'passport_issuing_country',
       'education_history', 'work_experience',
-      'highest_education', 'institution_name', 'field_of_study', 'graduation_date', 'gpa',
-      'hsk_level', 'hsk_score', 'ielts_score', 'toefl_score',
-      'family_members', 'extracurricular_activities', 'awards', 'publications',
-      'research_experience', 'scholarship_application', 'financial_guarantee',
-      'study_mode', 'funding_source', 'wechat_id',
+      'highest_education', 'institution_name',
+      'graduation_date', 'hsk_level', 'hsk_score', 'ielts_score', 'toefl_score',
+      'field_of_study', 'gpa',
+      'family_members', 'extracurricular_activities', 'awards', 'publications', 'research_experience',
+      'study_mode', 'funding_source', 'scholarship_application', 'financial_guarantee',
     ];
 
-    // Handle both nested student_profile and flat field formats
-    const studentProfileData = body.student_profile || body;
-    const studentUpdateData: Record<string, unknown> = {};
-    for (const field of studentFields) {
-      if (studentProfileData[field] !== undefined) {
-        studentUpdateData[field] = studentProfileData[field];
+    // Build users table update payload
+    const usersUpdatePayload: Record<string, unknown> = {};
+    for (const field of usersTableFields) {
+      if (body[field] !== undefined) {
+        usersUpdatePayload[field] = body[field] || null;
       }
     }
-    console.log('[DEBUG PUT partner/students] studentUpdateData:', JSON.stringify(studentUpdateData, null, 2));
 
-    if (Object.keys(studentUpdateData).length > 0) {
-      console.log('[DEBUG PUT partner/students] Updating students table with:', Object.keys(studentUpdateData));
-      const { error: studentUpdateError } = await supabase
+    // Add updated timestamp for users table
+    usersUpdatePayload.updated_at = new Date().toISOString();
+    usersUpdatePayload.updated_by = user.id; // Track which team member updated this student
+
+    // Build students table update payload
+    const studentsUpdatePayload: Record<string, unknown> = {};
+    for (const field of studentsTableFields) {
+      if (body[field] !== undefined) {
+        studentsUpdatePayload[field] = body[field] || null;
+      }
+    }
+
+    // Handle field_of_study mapping (form sends field_of_study_legacy)
+    if (body.field_of_study_legacy !== undefined) {
+      studentsUpdatePayload.field_of_study = body.field_of_study_legacy;
+    } else if (body.field_of_study !== undefined) {
+      studentsUpdatePayload.field_of_study = body.field_of_study;
+    }
+
+    // Handle gpa mapping (form sends gpa_legacy)
+    if (body.gpa_legacy !== undefined) {
+      studentsUpdatePayload.gpa = body.gpa_legacy;
+    } else if (body.gpa !== undefined) {
+      studentsUpdatePayload.gpa = body.gpa;
+    }
+
+    // Update users table first
+    const { error: usersUpdateError } = await supabase
+      .from('users')
+      .update(usersUpdatePayload)
+      .eq('id', studentId);
+
+    if (usersUpdateError) {
+      console.error('Error updating student in users table:', usersUpdateError);
+      return NextResponse.json(
+        { error: 'Failed to update student', details: { message: usersUpdateError.message } },
+        { status: 500 }
+      );
+    }
+
+    // Update students table if there are students-specific fields to update
+    if (Object.keys(studentsUpdatePayload).length > 0) {
+      // First check if a students record exists for this user
+      const { data: existingStudentRecord, error: studentRecordError } = await supabase
         .from('students')
-        .update(studentUpdateData)
-        .eq('user_id', id);
+        .select('id')
+        .eq('user_id', studentId)
+        .maybeSingle();
 
-      if (studentUpdateError) {
-        console.error('[DEBUG PUT partner/students] Student update error:', studentUpdateError);
-        return NextResponse.json({ error: 'Failed to update student details', details: studentUpdateError.message }, { status: 500 });
+      if (studentRecordError) {
+        console.error('Error checking students record:', studentRecordError);
+        // Non-fatal error, continue
+      } else if (existingStudentRecord) {
+        // Update existing students record
+        const { error: studentsUpdateError } = await supabase
+          .from('students')
+          .update(studentsUpdatePayload)
+          .eq('id', existingStudentRecord.id);
+
+        if (studentsUpdateError) {
+          console.error('Error updating student in students table:', studentsUpdateError);
+          return NextResponse.json(
+            { error: 'Failed to update student details', details: { message: studentsUpdateError.message } },
+            { status: 500 }
+          );
+        }
       }
-      console.log('[DEBUG PUT partner/students] Student updated successfully');
-    } else {
-      console.log('[DEBUG PUT partner/students] No student fields to update');
+      // If no students record exists, we could create one, but for now we skip it
+      // to avoid creating orphaned records
     }
 
-    // Log activity
-    try {
-      await supabase.from('partner_team_activity').insert({
-        user_id: partnerUser.id,
-        action: 'update_student',
-        entity_type: 'student',
-        entity_id: id,
-      });
-    } catch {
-      // Non-critical
-    }
+    return NextResponse.json({
+      success: true,
+      data: { message: 'Student updated successfully' },
+    });
 
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in partner student PUT:', error);
+    console.error('Update student API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// DELETE /api/partner/students/[id] - Remove student access
+/**
+ * DELETE /api/partner/students/[id] - Delete a student
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const authResult = await verifyPartnerAuth(request);
-    if ('error' in authResult) return authResult.error;
-    const partnerUser = authResult.user;
+    const user = await requirePartner(request);
+    if (user instanceof NextResponse) return user;
 
-    // Only admin can delete students
-    const isAdmin = !partnerUser.partner_role || partnerUser.partner_role === 'partner_admin';
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Only partner admin can remove students' }, { status: 403 });
+    const { id: studentId } = await params;
+    const supabase = getSupabaseClient();
+
+    // Verify student exists and belongs to this partner
+    const { data: existingStudent, error: fetchError } = await supabase
+      .from('users')
+      .select('id, role, referred_by_partner_id')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (fetchError || !existingStudent) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Check access
-    const canAccess = await canAccessStudent(partnerUser, id);
-    if (!canAccess) {
+    if (existingStudent.role !== 'student') {
+      return NextResponse.json({ error: 'Not a student record' }, { status: 400 });
+    }
+
+    // Check access control - only partner_admin can delete students
+    const { data: fullUser } = await supabase
+      .from('users')
+      .select('id, partner_role, partner_id')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = !fullUser?.partner_role || fullUser.partner_role === 'partner_admin';
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Only partner admin can delete students' }, { status: 403 });
+    }
+
+    // Check if student belongs to this partner's team
+    let referrerIds: string[];
+    const { data: teamMembers } = await supabase
+      .from('users')
+      .select('id')
+      .or(`id.eq.${user.id},partner_id.eq.${user.id}`)
+      .eq('role', 'partner');
+    referrerIds = (teamMembers || []).map(m => m.id);
+    if (!referrerIds.includes(user.id)) referrerIds.push(user.id);
+
+    if (!referrerIds.includes(existingStudent.referred_by_partner_id || '')) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const supabase = getSupabaseClient();
-
-    // Clear the referral link (don't actually delete the student)
-    const { error } = await supabase
-      .from('users')
-      .update({ referred_by_partner_id: null })
-      .eq('id', id);
-
-    if (error) {
-      return NextResponse.json({ error: 'Failed to remove student' }, { status: 500 });
-    }
-
-    // Also clear partner_id on student record
-    await supabase
+    // Check for existing applications
+    const { data: studentRecord } = await supabase
       .from('students')
-      .update({ partner_id: null })
-      .eq('user_id', id);
+      .select('id')
+      .eq('user_id', studentId)
+      .maybeSingle();
 
-    // Log activity
-    try {
-      await supabase.from('partner_team_activity').insert({
-        user_id: partnerUser.id,
-        action: 'remove_student',
-        entity_type: 'student',
-        entity_id: id,
-      });
-    } catch {
-      // Non-critical
+    const actualStudentId = studentRecord?.id || studentId;
+
+    const { data: applications } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('student_id', actualStudentId);
+
+    if (applications && applications.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete student with existing applications', details: { message: 'Please withdraw or delete all applications first' } },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true });
+    // Delete from students table first (if exists)
+    if (studentRecord) {
+      const { error: deleteStudentsError } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentRecord.id);
+
+      if (deleteStudentsError) {
+        console.error('Error deleting student record:', deleteStudentsError);
+        return NextResponse.json(
+          { error: 'Failed to delete student record', details: { message: deleteStudentsError.message } },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Delete documents
+    await supabase
+      .from('application_documents')
+      .delete()
+      .or(`user_id.eq.${studentId},and(entity_type.eq.student,entity_id.eq.${actualStudentId})`);
+
+    // Delete from users table
+    const { error: deleteUserError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', studentId);
+
+    if (deleteUserError) {
+      console.error('Error deleting student user:', deleteUserError);
+      return NextResponse.json(
+        { error: 'Failed to delete student', details: { message: deleteUserError.message } },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { message: 'Student deleted successfully' },
+    });
+
   } catch (error) {
-    console.error('Error in partner student DELETE:', error);
+    console.error('Delete student API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

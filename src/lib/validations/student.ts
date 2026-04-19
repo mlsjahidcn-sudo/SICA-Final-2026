@@ -79,10 +79,12 @@ export const createStudentSchema = z.object({
   highest_education: optionalString,
   institution_name: optionalString,
   field_of_study: optionalString,
+  field_of_study_legacy: optionalString,
   graduation_date: z.string().optional().refine((val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val), {
     message: 'Invalid date format (YYYY-MM-DD)',
   }),
   gpa: optionalString,
+  gpa_legacy: optionalString,
   
   // Language scores - allow empty strings
   hsk_level: z.preprocess(

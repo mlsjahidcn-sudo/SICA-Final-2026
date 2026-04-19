@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
+import { usePartner } from '@/contexts/partner-context';
 import { PartnerProfileDocumentsTab } from '@/components/partner-v2/partner-profile-documents-tab';
 
 interface PartnerProfile {
@@ -53,7 +54,7 @@ const DEFAULT_PROFILE: PartnerProfile = {
 
 export default function ProfilePage() {
   const { refreshUser, user: authUser } = useAuth();
-  const isPartnerAdmin = !(authUser as unknown as Record<string, unknown>)?.partner_role || (authUser as unknown as Record<string, unknown>)?.partner_role === 'partner_admin';
+  const { isPartnerAdmin } = usePartner();
   const [profile, setProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [originalProfile, setOriginalProfile] = useState<PartnerProfile>(DEFAULT_PROFILE);
   const [isLoading, setIsLoading] = useState(true);

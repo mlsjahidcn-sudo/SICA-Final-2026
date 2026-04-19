@@ -14,6 +14,11 @@ export interface DocumentTypeConfig {
 }
 
 /**
+ * Type for document type values (keys of DOCUMENT_TYPES)
+ */
+export type DocumentTypeValue = keyof typeof DOCUMENT_TYPES;
+
+/**
  * Unified document types for all applications
  */
 export const DOCUMENT_TYPES: Record<string, DocumentTypeConfig> = {

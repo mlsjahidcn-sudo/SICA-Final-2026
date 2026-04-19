@@ -6,6 +6,8 @@ import type { ApplicationWithPartner } from '@/lib/types/admin-modules';
 /**
  * GET /api/admin/individual-applications
  * Fetch applications from individual students (partner_id IS NULL)
+ *
+ * Query params: page, limit, status, university/university_id, degree_type/degree_level, search, id
  */
 export async function GET(request: NextRequest) {
   try {
@@ -14,13 +16,122 @@ export async function GET(request: NextRequest) {
 
     const supabaseAdmin = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    
+
+    // Support ?id= for single record lookup (detail page)
+    const idParam = searchParams.get('id');
+    if (idParam) {
+      const { data: app, error } = await supabaseAdmin
+        .from('applications')
+        .select(`
+          id,
+          status,
+          priority,
+          notes,
+          submitted_at,
+          created_at,
+          updated_at,
+          partner_id,
+          students (
+            id,
+            user_id,
+            first_name,
+            last_name,
+            nationality,
+            gender,
+            passport_number,
+            date_of_birth,
+            current_address,
+            wechat_id,
+            highest_education,
+            institution_name,
+            users (
+              id,
+              full_name,
+              email,
+              phone,
+              country,
+              city,
+              referred_by_partner_id
+            )
+          ),
+          programs (
+            id,
+            name,
+            degree_level,
+            universities (
+              id,
+              name_en,
+              city,
+              province
+            )
+          )
+        `)
+        .eq('id', idParam)
+        .single();
+
+      if (error || !app) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+
+      const student = Array.isArray(app.students) ? app.students[0] : app.students;
+      const studentUser = student?.users
+        ? (Array.isArray(student.users) ? student.users[0] : student.users)
+        : null;
+      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
+      const university = program?.universities
+        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
+        : null;
+
+      return NextResponse.json({
+        id: app.id,
+        status: app.status,
+        priority: app.priority,
+        notes: app.notes,
+        submitted_at: app.submitted_at,
+        created_at: app.created_at,
+        updated_at: app.updated_at,
+        partner_id: app.partner_id,
+        program: program ? {
+          id: program.id,
+          name: program.name,
+          degree_level: program.degree_level,
+          university: university ? {
+            id: university.id,
+            name_en: university.name_en,
+            city: university.city,
+            province: university.province,
+          } : null,
+        } : null,
+        student: {
+          id: student?.id,
+          user_id: student?.user_id,
+          full_name: studentUser?.full_name,
+          email: studentUser?.email,
+          phone: studentUser?.phone,
+          country: studentUser?.country,
+          city: studentUser?.city,
+          nationality: student?.nationality,
+          gender: student?.gender,
+          passport_number: student?.passport_number,
+          date_of_birth: student?.date_of_birth,
+          current_address: student?.current_address,
+          wechat_id: student?.wechat_id,
+          highest_education: student?.highest_education,
+          institution_name: student?.institution_name,
+          source: 'individual' as const,
+        },
+      });
+    }
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status') || '';
-    const universityId = searchParams.get('university_id') || '';
+    // Accept both 'university' (from frontend) and 'university_id' for compatibility
+    const universityId = searchParams.get('university') || searchParams.get('university_id') || '';
     const degreeLevel = searchParams.get('degree_type') || searchParams.get('degree_level') || '';
     const search = searchParams.get('search') || '';
+    // Support filtering by student user_id (for detail page "View All Applications")
+    const filterStudentId = searchParams.get('student_id') || '';
     const offset = (page - 1) * limit;
 
     // First get user IDs of individual students (not referred by partner)
@@ -28,9 +139,9 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('id')
       .is('referred_by_partner_id', null);
-    
+
     const individualUserIds = (individualUsers || []).map(u => u.id);
-    
+
     // If no individual users, return empty result
     if (individualUserIds.length === 0) {
       return NextResponse.json({
@@ -39,15 +150,15 @@ export async function GET(request: NextRequest) {
         stats: { total: 0, pending: 0, underReview: 0, accepted: 0, rejected: 0 },
       });
     }
-    
+
     // Get student IDs for individual users
     const { data: individualStudentRecords } = await supabaseAdmin
       .from('students')
       .select('id')
       .in('user_id', individualUserIds);
-    
+
     const individualStudentIds = (individualStudentRecords || []).map(s => s.id);
-    
+
     // If no individual students, return empty result
     if (individualStudentIds.length === 0) {
       return NextResponse.json({
@@ -56,8 +167,8 @@ export async function GET(request: NextRequest) {
         stats: { total: 0, pending: 0, underReview: 0, accepted: 0, rejected: 0 },
       });
     }
-    
-    // Query applications from individual students
+
+    // Build base query - filters BEFORE pagination (.range())
     let query = supabaseAdmin
       .from('applications')
       .select(`
@@ -69,6 +180,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at,
         partner_id,
+        profile_snapshot,
         students (
           id,
           user_id,
@@ -94,10 +206,10 @@ export async function GET(request: NextRequest) {
           )
         )
       `, { count: 'exact' })
-      .in('student_id', individualStudentIds) // Only applications from individual students
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .in('student_id', individualStudentIds)
+      .order('created_at', { ascending: false });
 
+    // Apply ALL filters BEFORE .range() for accurate results
     if (status) {
       query = query.eq('status', status);
     }
@@ -111,9 +223,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      // Note: Supabase doesn't support complex OR queries with nested relations
-      // We'll filter in-memory after fetching for now
+      // Apply search at database level using OR across student name and program name
+      query = query.or(`students.users.full_name.ilike.%${search}%,programs.name.ilike.%${search}%`);
     }
+
+    if (filterStudentId) {
+      query = query.eq('students.user_id', filterStudentId);
+    }
+
+    // Apply pagination LAST (after all filters)
+    query = query.range(offset, offset + limit - 1);
 
     const { data: applications, error, count } = await query;
 
@@ -123,7 +242,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data
-    let transformedApplications: ApplicationWithPartner[] = (applications || []).map(app => {
+    const transformedApplications: ApplicationWithPartner[] = (applications || []).map(app => {
       const student = Array.isArray(app.students) ? app.students[0] : app.students;
       const studentUser = student?.users
         ? (Array.isArray(student.users) ? student.users[0] : student.users)
@@ -132,7 +251,7 @@ export async function GET(request: NextRequest) {
       const university = program?.universities
         ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
         : null;
-      
+
       return {
         id: app.id,
         status: app.status,
@@ -142,6 +261,11 @@ export async function GET(request: NextRequest) {
         created_at: app.created_at,
         updated_at: app.updated_at,
         partner_id: app.partner_id,
+        created_by: null,
+        created_by_partner: null,
+        updated_by: null,
+        updated_by_partner: null,
+        intake: (app.profile_snapshot as { intake?: string } | null)?.intake || null,
         program: program ? {
           id: program.id,
           name: program.name,
@@ -166,32 +290,48 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Apply search filter in-memory
-    if (search) {
-      const searchLower = search.toLowerCase();
-      transformedApplications = transformedApplications.filter(app => 
-        app.student?.full_name?.toLowerCase().includes(searchLower) ||
-        app.program?.name?.toLowerCase().includes(searchLower)
-      );
+    // Calculate stats based on current filter criteria
+    let statsQuery = supabaseAdmin
+      .from('applications')
+      .select('status', { count: 'exact', head: true })
+      .in('student_id', individualStudentIds);
+
+    // Re-apply filters for accurate stats
+    if (status) {
+      statsQuery = statsQuery.eq('status', status);
+    }
+    if (universityId) {
+      statsQuery = statsQuery.eq('programs.university_id', universityId); // Note: may need separate approach
     }
 
-    // Get stats - matching frontend expectation
+    // For stats, do a fresh count with same base criteria
+    const { count: totalCount } = await supabaseAdmin
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .in('student_id', individualStudentIds);
+
+    // Get detailed status counts
+    const { data: allAppsForStats } = await supabaseAdmin
+      .from('applications')
+      .select('status')
+      .in('student_id', individualStudentIds);
+
     const stats = {
-      total: count || 0,
+      total: totalCount || 0,
       pending: 0,
       underReview: 0,
       accepted: 0,
       rejected: 0,
     };
 
-    for (const app of (applications || [])) {
-      if (app.status === 'submitted' || app.status === 'draft') {
+    for (const a of (allAppsForStats || [])) {
+      if (a.status === 'submitted' || a.status === 'draft') {
         stats.pending++;
-      } else if (app.status === 'under_review') {
+      } else if (a.status === 'under_review') {
         stats.underReview++;
-      } else if (app.status === 'accepted') {
+      } else if (a.status === 'accepted') {
         stats.accepted++;
-      } else if (app.status === 'rejected') {
+      } else if (a.status === 'rejected') {
         stats.rejected++;
       }
     }
@@ -201,8 +341,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: count ?? transformedApplications.length,
+        totalPages: Math.ceil((count ?? transformedApplications.length) / limit),
       },
       stats,
     });

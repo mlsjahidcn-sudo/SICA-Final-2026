@@ -96,6 +96,7 @@ export async function POST(
     console.log(`Student ${studentId} transferred from ${oldPartnerId} to ${new_partner_id}. Reason: ${reason}`);
 
     return NextResponse.json({
+      success: true,
       message: 'Student transferred successfully',
       student_id: studentId,
       old_partner_id: oldPartnerId,

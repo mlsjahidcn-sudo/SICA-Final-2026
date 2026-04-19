@@ -20,9 +20,17 @@ export interface IndividualStudent {
   phone: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  country: string | null;
+  city: string | null;
   source: typeof STUDENT_SOURCES.INDIVIDUAL;
   nationality: string | null;
   gender: string | null;
+  date_of_birth: string | null;
+  passport_number: string | null;
+  current_address: string | null;
+  wechat_id: string | null;
+  highest_education: string | null;
+  institution_name: string | null;
   created_at: string;
   updated_at: string | null;
   applications: {
@@ -41,8 +49,23 @@ export interface PartnerStudent {
   avatar_url: string | null;
   is_active: boolean;
   source: typeof STUDENT_SOURCES.PARTNER_REFERRED;
-  referred_by_partner_id: string;
+  referred_by_partner_id: string | null;
   referred_by_partner: {
+    id: string;
+    full_name: string;
+    email: string;
+    company_name?: string;
+  } | null;
+  // Track which partner team member created/updated this student
+  created_by: string | null;
+  created_by_partner: {
+    id: string;
+    full_name: string;
+    email: string;
+    company_name?: string;
+  } | null;
+  updated_by: string | null;
+  updated_by_partner: {
     id: string;
     full_name: string;
     email: string;
@@ -71,6 +94,22 @@ export interface ApplicationWithPartner {
   created_at: string;
   updated_at: string;
   partner_id: string | null;
+  intake: string | null;
+  // Track which partner team member created/updated this application
+  created_by: string | null;
+  created_by_partner: {
+    id: string;
+    full_name: string;
+    email: string;
+    company_name?: string;
+  } | null;
+  updated_by: string | null;
+  updated_by_partner: {
+    id: string;
+    full_name: string;
+    email: string;
+    company_name?: string;
+  } | null;
   program: {
     id: string;
     name: string;
