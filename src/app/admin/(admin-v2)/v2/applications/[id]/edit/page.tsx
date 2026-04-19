@@ -2,13 +2,11 @@
 
 import * as React from "react"
 import { useRouter, useParams } from "next/navigation"
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card"
+import { toast } from "sonner"
+import { PageContainer } from "@/components/admin"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,21 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  IconArrowLeft,
-  IconSchool,
-  IconLoader2,
-  IconDeviceFloppy,
-  IconCalendar,
-  IconCheck,
-  IconAlertCircle,
-  IconMapPin,
-  IconClock,
-  IconCash,
-  IconBuilding,
-  IconCertificate
-} from "@tabler/icons-react"
-import { useAutosave, AutosaveStatus } from "@/hooks/use-autosave"
-import { toast } from "sonner"
+  ArrowLeft,
+  GraduationCap,
+  MapPin,
+  Calendar,
+  Clock,
+  FileText,
+} from "lucide-react"
+import { getValidToken } from "@/lib/auth-token"
 
 interface ProgramInfo {
   id: string
@@ -50,7 +41,7 @@ interface ProgramInfo {
   tuition_fee_per_year?: number
   currency?: string
   duration_years?: number
-  universities?: {
+  university?: {
     id: string
     name_en: string
     name_cn?: string
@@ -60,7 +51,7 @@ interface ProgramInfo {
   }
 }
 
-export default function EditApplicationPage() {
+function EditIndividualApplicationContent() {
   const router = useRouter()
   const params = useParams()
   const applicationId = params.id as string
@@ -75,41 +66,30 @@ export default function EditApplicationPage() {
   const [program, setProgram] = React.useState<ProgramInfo | null>(null)
   const [status, setStatus] = React.useState<string>("draft")
   const [createdAt, setCreatedAt] = React.useState<string>("")
-
-  // Autosave hook
-  const autosave = useAutosave({
-    applicationId,
-    delay: 2000, // 2 seconds debounce
-    onSave: () => {
-      // Silent success - status indicator will show
-    },
-    onError: (error) => {
-      toast.error("Failed to autosave: " + error)
-    },
-  })
+  const [notes, setNotes] = React.useState<string>("")
 
   // Fetch application data
   React.useEffect(() => {
     const fetchApplication = async () => {
       try {
-        const { getValidToken } = await import('@/lib/auth-token')
         const token = await getValidToken()
-        const response = await fetch(`/api/student/applications/${applicationId}`, {
+        const response = await fetch(`/api/admin/individual-applications/${applicationId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (response.ok) {
           const data = await response.json()
           setFormData({
-            personal_statement: data.application.personal_statement || "",
-            study_plan: data.application.study_plan || "",
-            intake: data.application.intake || "",
+            personal_statement: data.personal_statement || "",
+            study_plan: data.study_plan || "",
+            intake: data.intake || "",
           })
-          setProgram(data.application.programs)
-          setStatus(data.application.status)
-          setCreatedAt(data.application.created_at)
+          setProgram(data.program)
+          setStatus(data.status)
+          setCreatedAt(data.created_at)
+          setNotes(data.notes || "")
         } else {
           toast.error("Failed to load application")
-          router.push("/student-v2/applications")
+          router.push("/admin/v2/individual-applications")
         }
       } catch (error) {
         console.error("Error fetching application:", error)
@@ -122,33 +102,43 @@ export default function EditApplicationPage() {
     if (applicationId) fetchApplication()
   }, [applicationId, router])
 
-  // Handle manual save (for Save button)
+  // Handle save
   const handleSave = async () => {
     setSaving(true)
     try {
-      await autosave.saveNow(formData)
-      toast.success("Application saved successfully!")
-      router.push(`/student-v2/applications/${applicationId}`)
+      const token = await getValidToken()
+      const response = await fetch(`/api/admin/individual-applications/${applicationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          personal_statement: formData.personal_statement,
+          study_plan: formData.study_plan,
+          intake: formData.intake,
+          notes: notes,
+        }),
+      })
+      if (response.ok) {
+        toast.success("Application saved successfully!")
+        router.push(`/admin/v2/applications/${applicationId}`)
+      } else {
+        const errData = await response.json().catch(() => ({}))
+        toast.error(errData.error || "Failed to save application")
+      }
     } catch (error) {
+      console.error("Error saving application:", error)
       toast.error("Failed to save application")
     } finally {
       setSaving(false)
     }
   }
 
-  // Handle field changes with autosave
+  // Handle field changes
   const handleFieldChange = (field: string, value: string) => {
-    const newData = { ...formData, [field]: value }
-    setFormData(newData)
-    
-    // Trigger autosave
-    autosave.debouncedSave(newData)
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
-
-  // Check if form is valid for submission
-  const isValid = formData.personal_statement.trim() && 
-                  formData.study_plan.trim() && 
-                  formData.intake
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -177,7 +167,7 @@ export default function EditApplicationPage() {
   if (fetching) {
     return (
       <div className="flex items-center justify-center h-64">
-        <IconLoader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -186,27 +176,27 @@ export default function EditApplicationPage() {
     <div className="flex flex-1 flex-col gap-6 p-6">
       {/* Back Button */}
       <Button variant="ghost" size="sm" onClick={() => router.back()}>
-        <IconArrowLeft className="h-4 w-4 mr-2" /> Back
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
-      {/* Header Card - Matching Application Detail Page */}
+      {/* Header Card */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              {program?.universities?.logo_url ? (
+              {program?.university?.logo_url ? (
                 <Avatar className="h-16 w-16 rounded-xl">
                   <AvatarImage
-                    src={program.universities.logo_url}
-                    alt={program.universities.name_en}
+                    src={program.university.logo_url}
+                    alt={program.university.name_en}
                   />
                   <AvatarFallback className="rounded-xl bg-primary/10">
-                    <IconSchool className="h-8 w-8 text-primary" />
+                    <GraduationCap className="h-8 w-8 text-primary" />
                   </AvatarFallback>
                 </Avatar>
               ) : (
                 <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <IconSchool className="h-8 w-8 text-primary" />
+                  <GraduationCap className="h-8 w-8 text-primary" />
                 </div>
               )}
               <div>
@@ -217,36 +207,28 @@ export default function EditApplicationPage() {
                   {getStatusBadge(status)}
                 </div>
                 <CardDescription className="text-base">
-                  {program?.universities?.name_en}
+                  {program?.university?.name_en}
                 </CardDescription>
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  {program?.universities?.city && (
+                  {program?.university?.city && (
                     <div className="flex items-center gap-1">
-                      <IconMapPin className="h-4 w-4" />
-                      {program.universities.city}
-                      {program.universities.province && `, ${program.universities.province}`}
+                      <MapPin className="h-4 w-4" />
+                      {program.university.city}
+                      {program.university.province && `, ${program.university.province}`}
                     </div>
                   )}
                   <div className="flex items-center gap-1">
-                    <IconCertificate className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                     {program?.degree_level || program?.degree_type}
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <AutosaveStatus 
-                isSaving={autosave.isSaving}
-                lastSavedAt={autosave.lastSavedAt}
-                error={autosave.error}
-                hasUnsavedChanges={autosave.hasUnsavedChanges}
-              />
-              <Button onClick={handleSave} disabled={saving || autosave.isSaving}>
+              <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
-                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <IconDeviceFloppy className="h-4 w-4 mr-2" />
-                )}
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
                 Save Changes
               </Button>
             </div>
@@ -256,19 +238,19 @@ export default function EditApplicationPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {createdAt && (
               <div className="flex items-center gap-2 text-sm">
-                <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span>Created: {formatDate(createdAt)}</span>
               </div>
             )}
             {program?.duration_years && (
               <div className="flex items-center gap-2 text-sm">
-                <IconClock className="h-4 w-4 text-muted-foreground" />
+                <Clock className="h-4 w-4 text-muted-foreground" />
                 <span>Duration: {program.duration_years} year{program.duration_years > 1 ? 's' : ''}</span>
               </div>
             )}
             {program?.tuition_fee_per_year && (
               <div className="flex items-center gap-2 text-sm">
-                <IconCash className="h-4 w-4 text-muted-foreground" />
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 <span>
                   {program.currency || 'CNY'} {program.tuition_fee_per_year.toLocaleString()}/year
                 </span>
@@ -276,7 +258,7 @@ export default function EditApplicationPage() {
             )}
             {formData.intake && (
               <div className="flex items-center gap-2 text-sm">
-                <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span>Intake: {formData.intake}</span>
               </div>
             )}
@@ -288,10 +270,10 @@ export default function EditApplicationPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <IconCalendar className="h-5 w-5" />
+            <Calendar className="h-5 w-5" />
             Intake Selection
           </CardTitle>
-          <CardDescription>Choose your preferred intake period</CardDescription>
+          <CardDescription>Choose the preferred intake period</CardDescription>
         </CardHeader>
         <CardContent>
           <Select 
@@ -324,13 +306,13 @@ export default function EditApplicationPage() {
         <CardHeader>
           <CardTitle className="text-lg">Application Details</CardTitle>
           <CardDescription>
-            Write your personal statement and study plan. Changes are saved automatically.
+            Edit the personal statement, study plan, and notes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label>Personal Statement *</Label>
+              <Label>Personal Statement</Label>
               <span className="text-xs text-muted-foreground">
                 {formData.personal_statement.length} characters
               </span>
@@ -339,19 +321,16 @@ export default function EditApplicationPage() {
               rows={8}
               value={formData.personal_statement}
               onChange={(e) => handleFieldChange("personal_statement", e.target.value)}
-              placeholder="Tell us about yourself, your background, achievements, and why you want to study this program..."
+              placeholder="Personal statement..."
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Minimum 200 characters recommended
-            </p>
           </div>
           
           <Separator />
           
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label>Study Plan *</Label>
+              <Label>Study Plan</Label>
               <span className="text-xs text-muted-foreground">
                 {formData.study_plan.length} characters
               </span>
@@ -360,62 +339,62 @@ export default function EditApplicationPage() {
               rows={8}
               value={formData.study_plan}
               onChange={(e) => handleFieldChange("study_plan", e.target.value)}
-              placeholder="Describe your academic goals, research interests, and how this program will help you achieve them..."
+              placeholder="Study plan..."
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Minimum 200 characters recommended
-            </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Validation Summary */}
-      <Card className={isValid ? "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800" : "border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800"}>
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            {isValid ? (
-              <IconCheck className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-            ) : (
-              <IconAlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-            )}
-            <div>
-              <p className={`font-medium ${isValid ? "text-green-700 dark:text-green-400" : "text-yellow-700 dark:text-yellow-400"}`}>
-                {isValid ? "Ready for Submission" : "Incomplete Application"}
-              </p>
-              <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                <li className={formData.personal_statement.trim() ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
-                  {formData.personal_statement.trim() ? "✓" : "○"} Personal statement
-                </li>
-                <li className={formData.study_plan.trim() ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
-                  {formData.study_plan.trim() ? "✓" : "○"} Study plan
-                </li>
-                <li className={formData.intake ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}>
-                  {formData.intake ? "✓" : "○"} Intake selection
-                </li>
-              </ul>
+          <Separator />
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Notes (Internal)</Label>
             </div>
+            <Textarea
+              rows={4}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Internal notes about this application..."
+              className="resize-none"
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Actions */}
       <div className="flex justify-end gap-3">
-   <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
-        <Button
-          onClick={handleSave}
-          disabled={saving || autosave.isSaving}
-        >
+        <Button onClick={handleSave} disabled={saving}>
           {saving ? (
-            <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <IconDeviceFloppy className="h-4 w-4 mr-2" />
-          )}
-          Save & Continue
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : null}
+          Save Changes
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function EditIndividualApplicationPage() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+      </div>
+    )
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null
+  }
+
+  return (
+    <PageContainer title="Edit Application">
+      <EditIndividualApplicationContent />
+    </PageContainer>
   )
 }

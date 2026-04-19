@@ -52,12 +52,13 @@ interface PartnerOption {
 
 const STATUS_CONFIG: Record<string, { label: string; color: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
   draft: { label: 'Draft', color: 'secondary', icon: <Clock className="h-3 w-3" /> },
-  submitted: { label: 'Submitted', color: 'default', icon: <AlertTriangle className="h-3 w-3" /> },
-  under_review: { label: 'Under Review', color: 'default', icon: <Search className="h-3 w-3" /> },
-  accepted: { label: 'Accepted', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-emerald-500" /> },
+  in_progress: { label: 'In Progress', color: 'default', icon: <Clock className="h-3 w-3" /> },
+  submitted_to_university: { label: 'Submitted to University', color: 'default', icon: <AlertTriangle className="h-3 w-3" /> },
+  passed_initial_review: { label: 'Passed Initial Review', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-teal-500" /> },
+  pre_admitted: { label: 'Pre Admitted', color: 'default', icon: <Calendar className="h-3 w-3 text-purple-500" /> },
+  admitted: { label: 'Admitted', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-emerald-500" /> },
+  jw202_released: { label: 'JW202 Released', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-emerald-600" /> },
   rejected: { label: 'Rejected', color: 'destructive', icon: <XCircle className="h-3 w-3" /> },
-  document_request: { label: 'Doc Request', color: 'outline', icon: <FileText className="h-3 w-3" /> },
-  interview_scheduled: { label: 'Interview', color: 'default', icon: <Calendar className="h-3 w-3" /> },
   withdrawn: { label: 'Withdrawn', color: 'secondary', icon: <XCircle className="h-3 w-3" /> },
 };
 

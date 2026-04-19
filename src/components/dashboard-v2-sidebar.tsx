@@ -90,22 +90,6 @@ const navData = {
       ),
     },
     {
-      title: "All Students",
-      url: "/admin/v2/students",
-      icon: (
-        <IconUsers
-        />
-      ),
-    },
-    {
-      title: "All Applications",
-      url: "/admin/v2/applications",
-      icon: (
-        <IconFileDescription
-        />
-      ),
-    },
-    {
       title: "Documents",
       url: "/admin/v2/documents",
       icon: (

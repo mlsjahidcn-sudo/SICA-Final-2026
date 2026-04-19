@@ -27,6 +27,7 @@ import {
   Edit,
   Building2,
   ShieldCheck,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
@@ -90,7 +91,7 @@ function StudentDetailContent() {
         fetch(`/api/admin/individual-students?id=${studentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`/api/admin/individual-applications?limit=50`, {
+        fetch(`/api/admin/individual-applications?student_id=${studentId}&limit=50`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -115,11 +116,8 @@ function StudentDetailContent() {
       // Filter applications for this student
       if (appsRes.ok) {
         const data = await appsRes.json();
+        // Server-side filtering is now used (student_id parameter), so no client-side filter needed
         const studentApps = (data.applications || [])
-          .filter(
-            (a: Record<string, unknown>) =>
-              (a.student as Record<string, unknown>)?.user_id === studentId || (a.student as Record<string, unknown>)?.id === studentId
-          )
           .map((a: Record<string, unknown>) => ({
             id: a.id as string,
             status: a.status as string,
@@ -179,12 +177,13 @@ function StudentDetailContent() {
   const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     const map: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: 'secondary',
-      submitted: 'default',
-      under_review: 'default',
-      accepted: 'default',
+      in_progress: 'default',
+      submitted_to_university: 'default',
+      passed_initial_review: 'default',
+      pre_admitted: 'default',
+      admitted: 'default',
+      jw202_released: 'default',
       rejected: 'destructive',
-      document_request: 'outline',
-      interview_scheduled: 'default',
       withdrawn: 'secondary',
     };
     return map[status] || 'outline';
@@ -329,7 +328,16 @@ function StudentDetailContent() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
+                          {/* Priority Stars */}
+                          <div className="flex items-center gap-0.5">
+                            {Array.from({ length: app.priority || 0 }).map((_, i) => (
+                              <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            ))}
+                            {(!app.priority || app.priority === 0) && (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">
                             {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : 'Draft'}
                           </span>

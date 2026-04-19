@@ -9,6 +9,9 @@ import {
   IconCalendar,
   IconCheck,
   IconX,
+  IconSchool,
+  IconFileCertificate,
+  IconId,
 } from "@tabler/icons-react"
 
 const STATUS_CONFIG: Record<string, { color: string; icon: typeof IconClock; label: string; description: string }> = {
@@ -18,35 +21,41 @@ const STATUS_CONFIG: Record<string, { color: string; icon: typeof IconClock; lab
     label: "Draft",
     description: "Application is being prepared"
   },
-  submitted: {
+  in_progress: {
     color: "bg-blue-500/10 text-blue-600 border-blue-200",
-    icon: IconSend,
-    label: "Submitted",
-    description: "Application has been submitted"
-  },
-  under_review: {
-    color: "bg-amber-500/10 text-amber-600 border-amber-200",
     icon: IconClock,
-    label: "Under Review",
-    description: "Application is being reviewed"
+    label: "In Progress",
+    description: "Application is being processed"
   },
-  document_request: {
-    color: "bg-orange-500/10 text-orange-600 border-orange-200",
-    icon: IconAlertCircle,
-    label: "Document Request",
-    description: "Additional documents required"
+  submitted_to_university: {
+    color: "bg-cyan-500/10 text-cyan-600 border-cyan-200",
+    icon: IconSend,
+    label: "Submitted to University",
+    description: "Application has been submitted to the university"
   },
-  interview_scheduled: {
-    color: "bg-purple-500/10 text-purple-600 border-purple-200",
-    icon: IconCalendar,
-    label: "Interview",
-    description: "Interview has been scheduled"
-  },
-  accepted: {
-    color: "bg-green-500/10 text-green-600 border-green-200",
+  passed_initial_review: {
+    color: "bg-teal-500/10 text-teal-600 border-teal-200",
     icon: IconCheck,
-    label: "Accepted",
-    description: "Application has been accepted"
+    label: "Passed Initial Review",
+    description: "Application passed initial review"
+  },
+  pre_admitted: {
+    color: "bg-purple-500/10 text-purple-600 border-purple-200",
+    icon: IconSchool,
+    label: "Pre Admitted",
+    description: "Pre-admission confirmed"
+  },
+  admitted: {
+    color: "bg-green-500/10 text-green-600 border-green-200",
+    icon: IconFileCertificate,
+    label: "Admitted",
+    description: "Officially admitted"
+  },
+  jw202_released: {
+    color: "bg-emerald-500/10 text-emerald-600 border-emerald-200",
+    icon: IconId,
+    label: "JW202 Released",
+    description: "JW202 form has been issued"
   },
   rejected: {
     color: "bg-red-500/10 text-red-600 border-red-200",

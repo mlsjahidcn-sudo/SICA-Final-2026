@@ -17,109 +17,126 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseClient();
     const { searchParams } = new URL(request.url);
 
-    // Support ?id= for single record lookup (detail page)
+    // Support ?id= for single record lookup (backward compatibility)
+    // Redirects to the dedicated [id] endpoint for step-by-step fetching
     const idParam = searchParams.get('id');
     if (idParam) {
-      const { data: app, error } = await supabaseAdmin
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(idParam)) {
+        return NextResponse.json({ error: 'Invalid application ID format' }, { status: 400 });
+      }
+
+      // Use step-by-step queries (same as [id]/route.ts GET handler)
+      const { data: app, error: appError } = await supabaseAdmin
         .from('applications')
-        .select(`
-          id,
-          status,
-          priority,
-          notes,
-          submitted_at,
-          created_at,
-          updated_at,
-          partner_id,
-          students (
-            id,
-            user_id,
-            first_name,
-            last_name,
-            nationality,
-            gender,
-            passport_number,
-            date_of_birth,
-            current_address,
-            wechat_id,
-            highest_education,
-            institution_name,
-            users (
-              id,
-              full_name,
-              email,
-              phone,
-              country,
-              city,
-              referred_by_partner_id
-            )
-          ),
-          programs (
-            id,
-            name,
-            degree_level,
-            universities (
-              id,
-              name_en,
-              city,
-              province
-            )
-          )
-        `)
+        .select('id, status, priority, notes, submitted_at, created_at, updated_at, partner_id, student_id, program_id, profile_snapshot')
         .eq('id', idParam)
         .single();
 
-      if (error || !app) {
+      if (appError || !app) {
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       }
 
-      const student = Array.isArray(app.students) ? app.students[0] : app.students;
-      const studentUser = student?.users
-        ? (Array.isArray(student.users) ? student.users[0] : student.users)
-        : null;
-      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
-      const university = program?.universities
-        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-        : null;
+      if (app.partner_id) {
+        return NextResponse.json({ error: 'This endpoint is for individual applications only' }, { status: 403 });
+      }
+
+      const snapshot = app.profile_snapshot as Record<string, unknown> | null;
+
+      let studentData: Record<string, unknown> | null = null;
+      if (app.student_id) {
+        const { data: student } = await supabaseAdmin
+          .from('students')
+          .select('id, user_id, first_name, last_name, nationality, gender, passport_number, date_of_birth, current_address, wechat_id, highest_education, institution_name')
+          .eq('id', app.student_id)
+          .single();
+
+        if (student) {
+          const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('id, full_name, email, phone, country, city, referred_by_partner_id')
+            .eq('id', student.user_id)
+            .single();
+
+          studentData = {
+            id: student.id,
+            user_id: student.user_id,
+            full_name: user?.full_name || null,
+            email: user?.email || null,
+            phone: user?.phone || null,
+            country: user?.country || null,
+            city: user?.city || null,
+            nationality: student.nationality || null,
+            gender: student.gender || null,
+            passport_number: student.passport_number || null,
+            date_of_birth: student.date_of_birth || null,
+            current_address: student.current_address || null,
+            wechat_id: student.wechat_id || null,
+            highest_education: student.highest_education || null,
+            institution_name: student.institution_name || null,
+            source: 'individual' as const,
+          };
+        }
+      }
+
+      let programData: Record<string, unknown> | null = null;
+      if (app.program_id) {
+        const { data: program } = await supabaseAdmin
+          .from('programs')
+          .select('id, name, name_fr, degree_level, degree_type, intake_months, tuition_fee_per_year, currency, duration_years, university_id')
+          .eq('id', app.program_id)
+          .single();
+
+        if (program) {
+          let universityData: Record<string, unknown> | null = null;
+          if (program.university_id) {
+            const { data: university } = await supabaseAdmin
+              .from('universities')
+              .select('id, name_en, name_cn, city, province, logo_url')
+              .eq('id', program.university_id)
+              .single();
+
+            if (university) {
+              universityData = {
+                id: university.id,
+                name_en: university.name_en,
+                name_cn: university.name_cn,
+                city: university.city,
+                province: university.province,
+                logo_url: university.logo_url,
+              };
+            }
+          }
+
+          programData = {
+            id: program.id,
+            name: program.name,
+            name_fr: program.name_fr,
+            degree_level: program.degree_level,
+            degree_type: program.degree_type,
+            intake_months: program.intake_months,
+            tuition_fee_per_year: program.tuition_fee_per_year,
+            currency: program.currency,
+            duration_years: program.duration_years,
+            university: universityData,
+          };
+        }
+      }
 
       return NextResponse.json({
         id: app.id,
         status: app.status,
         priority: app.priority,
         notes: app.notes,
+        personal_statement: (snapshot?.personal_statement as string) || null,
+        study_plan: (snapshot?.study_plan as string) || null,
+        intake: (snapshot?.intake as string) || null,
         submitted_at: app.submitted_at,
         created_at: app.created_at,
         updated_at: app.updated_at,
         partner_id: app.partner_id,
-        program: program ? {
-          id: program.id,
-          name: program.name,
-          degree_level: program.degree_level,
-          university: university ? {
-            id: university.id,
-            name_en: university.name_en,
-            city: university.city,
-            province: university.province,
-          } : null,
-        } : null,
-        student: {
-          id: student?.id,
-          user_id: student?.user_id,
-          full_name: studentUser?.full_name,
-          email: studentUser?.email,
-          phone: studentUser?.phone,
-          country: studentUser?.country,
-          city: studentUser?.city,
-          nationality: student?.nationality,
-          gender: student?.gender,
-          passport_number: student?.passport_number,
-          date_of_birth: student?.date_of_birth,
-          current_address: student?.current_address,
-          wechat_id: student?.wechat_id,
-          highest_education: student?.highest_education,
-          institution_name: student?.institution_name,
-          source: 'individual' as const,
-        },
+        program: programData,
+        student: studentData,
       });
     }
 
@@ -134,7 +151,9 @@ export async function GET(request: NextRequest) {
     const filterStudentId = searchParams.get('student_id') || '';
     const offset = (page - 1) * limit;
 
-    // First get user IDs of individual students (not referred by partner)
+    // Build base query - filters BEFORE pagination (.range())
+    // Individual applications = applications from students who registered themselves (NOT referred by any partner)
+    // First get user IDs of truly individual students (not referred by partner)
     const { data: individualUsers } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -168,7 +187,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Build base query - filters BEFORE pagination (.range())
     let query = supabaseAdmin
       .from('applications')
       .select(`

@@ -14,10 +14,34 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, FileText, Calendar, MoreHorizontal, Plus, AlertCircle, X, Filter, Clock, CheckCircle2, XCircle, GraduationCap } from 'lucide-react';
+import { Search, FileText, Calendar, MoreHorizontal, Plus, AlertCircle, X, Filter, Clock, CheckCircle2, XCircle, GraduationCap, RefreshCw, Star, ShieldCheck, ShieldX, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
 import type { ApplicationWithPartner } from '@/lib/types/admin-modules';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
+const STATUS_CONFIG: Record<string, { label: string; color: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
+  draft: { label: 'Draft', color: 'secondary', icon: <Clock className="h-3 w-3" /> },
+  in_progress: { label: 'In Progress', color: 'default', icon: <Clock className="h-3 w-3" /> },
+  submitted_to_university: { label: 'Submitted to University', color: 'default', icon: <AlertTriangle className="h-3 w-3" /> },
+  passed_initial_review: { label: 'Passed Initial Review', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-teal-500" /> },
+  pre_admitted: { label: 'Pre Admitted', color: 'default', icon: <Calendar className="h-3 w-3 text-purple-500" /> },
+  admitted: { label: 'Admitted', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-emerald-500" /> },
+  jw202_released: { label: 'JW202 Released', color: 'default', icon: <CheckCircle2 className="h-3 w-3 text-emerald-600" /> },
+  rejected: { label: 'Rejected', color: 'destructive', icon: <XCircle className="h-3 w-3" /> },
+  withdrawn: { label: 'Withdrawn', color: 'secondary', icon: <XCircle className="h-3 w-3" /> },
+};
 
 function IndividualApplicationsContent() {
   const searchParams = useSearchParams();
@@ -28,6 +52,7 @@ function IndividualApplicationsContent() {
   const [status, setStatus] = useState(searchParams.get('status') || '');
   const [universityId, setUniversityId] = useState(searchParams.get('university_id') || '');
   const [degreeLevel, setDegreeLevel] = useState(searchParams.get('degree_level') || '');
+  const [studentId, setStudentId] = useState(searchParams.get('student_id') || '');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({
@@ -51,6 +76,7 @@ function IndividualApplicationsContent() {
         ...(status && { status }),
         ...(universityId && { university_id: universityId }),
         ...(degreeLevel && { degree_level: degreeLevel }),
+        ...(studentId && { student_id: studentId }),
       });
 
       const response = await fetch(`/api/admin/individual-applications?${params}`, {
@@ -97,17 +123,25 @@ function IndividualApplicationsContent() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, search, status, universityId, degreeLevel]);
+  }, [page, search, status, universityId, degreeLevel, studentId]);
+
+  // Reset page when student_id changes (e.g., navigating from student detail)
+  useEffect(() => {
+    if (studentId) {
+      setPage(1);
+    }
+  }, [studentId]);
 
   const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     const colors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: 'secondary',
-      submitted: 'default',
-      under_review: 'default',
-      accepted: 'default',
+      in_progress: 'default',
+      submitted_to_university: 'default',
+      passed_initial_review: 'default',
+      pre_admitted: 'default',
+      admitted: 'default',
+      jw202_released: 'default',
       rejected: 'destructive',
-      document_request: 'outline',
-      interview_scheduled: 'default',
       withdrawn: 'secondary',
     };
     return colors[status] || 'default';
@@ -122,12 +156,18 @@ function IndividualApplicationsContent() {
             Applications from self-registered students
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/v2/applications/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Application
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchApplications} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button asChild>
+            <Link href="/admin/v2/applications/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Application
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -229,10 +269,14 @@ function IndividualApplicationsContent() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="submitted_to_university">Submitted to University</SelectItem>
+                <SelectItem value="passed_initial_review">Passed Initial Review</SelectItem>
+                <SelectItem value="pre_admitted">Pre Admitted</SelectItem>
+                <SelectItem value="admitted">Admitted</SelectItem>
+                <SelectItem value="jw202_released">JW202 Released</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="withdrawn">Withdrawn</SelectItem>
               </SelectContent>
             </Select>
             <Select value={universityId} onValueChange={(value) => {
@@ -340,58 +384,72 @@ function IndividualApplicationsContent() {
                   <TableHead>Program</TableHead>
                   <TableHead>University</TableHead>
                   <TableHead>Degree</TableHead>
-                  <TableHead>Intake</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((app) => (
-                  <TableRow key={app.id} className="cursor-pointer" onClick={() => window.location.href = `/admin/v2/applications/${app.id}`}>
-                    <TableCell>
-                      <div>
-                        <Link 
-                          href={`/admin/v2/applications/${app.id}`}
-                          className="font-medium hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {app.student?.full_name || 'Unknown'}
+                {applications.map((app) => {
+                  const statusCfg = STATUS_CONFIG[app.status] || STATUS_CONFIG.draft;
+                  return (
+                    <TableRow key={app.id} className="hover:bg-muted/50 transition-colors">
+                      <TableCell>
+                        <Link href={`/admin/v2/applications/${app.id}`} className="flex items-center gap-2 hover:text-primary">
+                          <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary">{app.student?.full_name?.charAt(0)?.toUpperCase() || 'S'}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-sm">{app.student?.full_name || 'Unknown'}</span>
+                            <p className="text-xs text-muted-foreground">{app.student?.email || '-'}</p>
+                          </div>
                         </Link>
-                        <p className="text-xs text-muted-foreground">{app.student?.email || '-'}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{app.program?.name || '-'}</TableCell>
-                    <TableCell className="max-w-[150px] truncate">{app.program?.university?.name_en || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize font-normal">
-                        <GraduationCap className="h-3 w-3 mr-1" />
-                        {app.program?.degree_level?.replace('_', ' ') || 'N/A'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {app.intake || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={getStatusColor(app.status)}
-                        className={app.status === 'accepted' ? 'bg-green-100 text-green-700 hover:bg-green-100' : app.status === 'rejected' ? 'bg-red-100 text-red-700 hover:bg-red-100' : ''}
-                      >
-                        {app.status.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/admin/v2/applications/${app.id}`} onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/admin/v2/applications/${app.id}`} className="hover:text-primary text-sm font-medium">
+                          {app.program?.name || '-'}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{app.program?.university?.name_en || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs font-normal capitalize">
+                          {app.program?.degree_level || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">Direct</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: app.priority || 0 }).map((_, i) => (
+                            <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          ))}
+                          {(!app.priority || app.priority === 0) && <span className="text-xs text-muted-foreground">-</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusCfg.color} className="gap-1 text-xs">
+                          {statusCfg.icon}
+                          {statusCfg.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Link href={`/admin/v2/applications/${app.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

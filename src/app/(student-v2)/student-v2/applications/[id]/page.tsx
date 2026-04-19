@@ -242,11 +242,14 @@ export default function ApplicationDetailPage() {
   const getStatusBadge = (appStatus: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
       draft: { label: "Draft", className: "bg-gray-100 text-gray-700" },
-      submitted: { label: "Submitted", className: "bg-blue-100 text-blue-700" },
-      under_review: { label: "Under Review", className: "bg-yellow-100 text-yellow-700" },
-      interview_scheduled: { label: "Interview Scheduled", className: "bg-purple-100 text-purple-700" },
-      accepted: { label: "Accepted", className: "bg-green-100 text-green-700" },
+      in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700" },
+      submitted_to_university: { label: "Submitted to University", className: "bg-cyan-100 text-cyan-700" },
+      passed_initial_review: { label: "Passed Initial Review", className: "bg-teal-100 text-teal-700" },
+      pre_admitted: { label: "Pre Admitted", className: "bg-purple-100 text-purple-700" },
+      admitted: { label: "Admitted", className: "bg-green-100 text-green-700" },
+      jw202_released: { label: "JW202 Released", className: "bg-emerald-100 text-emerald-700" },
       rejected: { label: "Rejected", className: "bg-red-100 text-red-700" },
+      withdrawn: { label: "Withdrawn", className: "bg-gray-100 text-gray-600" },
     }
     const config = statusConfig[appStatus] || statusConfig.draft
     return <Badge className={config.className}>{config.label}</Badge>

@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 import {
   Card,
@@ -14,6 +15,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AppSidebar,
 } from '@/components/dashboard-v2-sidebar';
@@ -54,10 +62,14 @@ interface ApplicationDetail extends Omit<ApplicationWithPartner, 'notes'> {
 
 const STATUS_FLOW = [
   { key: 'draft', label: 'Draft', icon: Clock },
-  { key: 'submitted', label: 'Submitted', icon: Send },
-  { key: 'under_review', label: 'Under Review', icon: AlertTriangle },
-  { key: 'accepted', label: 'Accepted', icon: CheckCircle2 },
+  { key: 'in_progress', label: 'In Progress', icon: Clock },
+  { key: 'submitted_to_university', label: 'Submitted to University', icon: Send },
+  { key: 'passed_initial_review', label: 'Passed Initial Review', icon: CheckCircle2 },
+  { key: 'pre_admitted', label: 'Pre Admitted', icon: GraduationCap },
+  { key: 'admitted', label: 'Admitted', icon: CheckCircle2 },
+  { key: 'jw202_released', label: 'JW202 Released', icon: FileText },
   { key: 'rejected', label: 'Rejected', icon: XCircle },
+  { key: 'withdrawn', label: 'Withdrawn', icon: XCircle },
 ];
 
 function ApplicationDetailContent() {
@@ -67,6 +79,7 @@ function ApplicationDetailContent() {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isIndividual, setIsIndividual] = useState<boolean>(true);
 
   useEffect(() => {
     async function fetchApplication() {
@@ -75,7 +88,33 @@ function ApplicationDetailContent() {
       setError(null);
       try {
         const token = await getValidToken();
-        const response = await fetch(`/api/admin/individual-applications?id=${appId}`, {
+
+        // Step 1: First call the general API to get basic info and determine application type
+        const basicResponse = await fetch(`/api/admin/applications/${appId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!basicResponse.ok) {
+          if (basicResponse.status === 404) {
+            setError('Application not found');
+          } else {
+            const errData = await basicResponse.json().catch(() => ({}));
+            setError(errData.error || 'Failed to load application');
+          }
+          setLoading(false);
+          return;
+        }
+
+        const basicData = await basicResponse.json();
+        const isIndividualApp = basicData.isIndividual === true || basicData.partner_id === null;
+        setIsIndividual(isIndividualApp);
+
+        // Step 2: Call the appropriate detailed API based on application type
+        const apiEndpoint = isIndividualApp
+          ? `/api/admin/individual-applications/${appId}`
+          : `/api/admin/partner-applications?id=${appId}`;
+
+        const response = await fetch(apiEndpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -102,12 +141,13 @@ function ApplicationDetailContent() {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { color: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
       draft: { color: 'secondary', label: 'Draft' },
-      submitted: { color: 'default', label: 'Submitted' },
-      under_review: { color: 'default', label: 'Under Review' },
-      accepted: { color: 'default', label: 'Accepted' },
+      in_progress: { color: 'default', label: 'In Progress' },
+      submitted_to_university: { color: 'default', label: 'Submitted to University' },
+      passed_initial_review: { color: 'default', label: 'Passed Initial Review' },
+      pre_admitted: { color: 'default', label: 'Pre Admitted' },
+      admitted: { color: 'default', label: 'Admitted' },
+      jw202_released: { color: 'default', label: 'JW202 Released' },
       rejected: { color: 'destructive', label: 'Rejected' },
-      document_request: { color: 'outline', label: 'Document Requested' },
-      interview_scheduled: { color: 'default', label: 'Interview Scheduled' },
       withdrawn: { color: 'secondary', label: 'Withdrawn' },
     };
     const c = config[status] || { color: 'outline' as const, label: status };
@@ -135,6 +175,45 @@ function ApplicationDetailContent() {
 
   const currentStatusIdx = STATUS_FLOW.findIndex((s) => s.key === app.status);
 
+  const isFinal = ['jw202_released', 'rejected', 'withdrawn'].includes(app.status);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === app.status) return;
+    if (confirm(`Change status from "${app.status.replace(/_/g, ' ')}" to "${newStatus.replace(/_/g, ' ')}"?`)) {
+      try {
+        const token = await getValidToken();
+        const statusEndpoint = isIndividual
+          ? `/api/admin/individual-applications/${appId}/status`
+          : `/api/admin/partner-applications/${appId}/status`;
+        const res = await fetch(statusEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (res.ok) {
+          toast.success(`Status changed to ${newStatus.replace(/_/g, ' ')}`);
+          // Refresh application data
+          const refreshEndpoint = isIndividual
+            ? `/api/admin/individual-applications/${appId}`
+            : `/api/admin/partner-applications?id=${appId}`;
+          const refreshRes = await fetch(refreshEndpoint, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            setApp(refreshData);
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          toast.error(errData.error || 'Failed to change status');
+        }
+      } catch (error) {
+        console.error('Error changing status:', error);
+        toast.error('Network error. Please try again.');
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
@@ -156,7 +235,25 @@ function ApplicationDetailContent() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {getStatusBadge(app.status)}
+          {isFinal ? (
+            getStatusBadge(app.status)
+          ) : (
+            <Select value={app.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue>{getStatusBadge(app.status)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="submitted_to_university">Submitted to University</SelectItem>
+                <SelectItem value="passed_initial_review">Passed Initial Review</SelectItem>
+                <SelectItem value="pre_admitted">Pre Admitted</SelectItem>
+                <SelectItem value="admitted">Admitted</SelectItem>
+                <SelectItem value="jw202_released">JW202 Released</SelectItem>
+                <SelectItem value="rejected" className="text-red-600">Rejected</SelectItem>
+                <SelectItem value="withdrawn">Withdrawn</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

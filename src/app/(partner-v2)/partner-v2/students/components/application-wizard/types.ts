@@ -193,11 +193,12 @@ export const PRIORITY_OPTIONS: PriorityOption[] = [
 
 export type ApplicationStatus =
   | 'draft'
-  | 'submitted'
-  | 'under_review'
-  | 'document_request'
-  | 'interview_scheduled'
-  | 'accepted'
+  | 'in_progress'
+  | 'submitted_to_university'
+  | 'passed_initial_review'
+  | 'pre_admitted'
+  | 'admitted'
+  | 'jw202_released'
   | 'rejected'
   | 'withdrawn';
 
@@ -211,11 +212,12 @@ export interface ApplicationStatusConfig {
 
 export const APPLICATION_STATUS_MAP: Record<ApplicationStatus, ApplicationStatusConfig> = {
   draft: { value: 'draft', label: 'Draft', color: 'text-gray-600', bgColor: 'bg-gray-100', dotColor: 'bg-gray-400' },
-  submitted: { value: 'submitted', label: 'Submitted', color: 'text-blue-600', bgColor: 'bg-blue-100', dotColor: 'bg-blue-400' },
-  under_review: { value: 'under_review', label: 'Under Review', color: 'text-amber-600', bgColor: 'bg-amber-100', dotColor: 'bg-amber-400' },
-  document_request: { value: 'document_request', label: 'Documents Requested', color: 'text-purple-600', bgColor: 'bg-purple-100', dotColor: 'bg-purple-400' },
-  interview_scheduled: { value: 'interview_scheduled', label: 'Interview Scheduled', color: 'text-indigo-600', bgColor: 'bg-indigo-100', dotColor: 'bg-indigo-400' },
-  accepted: { value: 'accepted', label: 'Accepted', color: 'text-emerald-600', bgColor: 'bg-emerald-100', dotColor: 'bg-emerald-400' },
+  in_progress: { value: 'in_progress', label: 'In Progress', color: 'text-blue-600', bgColor: 'bg-blue-100', dotColor: 'bg-blue-400' },
+  submitted_to_university: { value: 'submitted_to_university', label: 'Submitted to University', color: 'text-cyan-600', bgColor: 'bg-cyan-100', dotColor: 'bg-cyan-400' },
+  passed_initial_review: { value: 'passed_initial_review', label: 'Passed Initial Review', color: 'text-teal-600', bgColor: 'bg-teal-100', dotColor: 'bg-teal-400' },
+  pre_admitted: { value: 'pre_admitted', label: 'Pre Admitted', color: 'text-purple-600', bgColor: 'bg-purple-100', dotColor: 'bg-purple-400' },
+  admitted: { value: 'admitted', label: 'Admitted', color: 'text-emerald-600', bgColor: 'bg-emerald-100', dotColor: 'bg-emerald-400' },
+  jw202_released: { value: 'jw202_released', label: 'JW202 Released', color: 'text-emerald-700', bgColor: 'bg-emerald-100', dotColor: 'bg-emerald-500' },
   rejected: { value: 'rejected', label: 'Rejected', color: 'text-red-600', bgColor: 'bg-red-100', dotColor: 'bg-red-400' },
   withdrawn: { value: 'withdrawn', label: 'Withdrawn', color: 'text-slate-600', bgColor: 'bg-slate-100', dotColor: 'bg-slate-400' },
 };

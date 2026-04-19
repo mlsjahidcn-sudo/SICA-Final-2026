@@ -88,8 +88,8 @@ interface StudentDetail {
 }
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
-  'draft', 'submitted', 'under_review', 'document_request',
-  'interview_scheduled', 'accepted', 'rejected', 'withdrawn'
+  'draft', 'in_progress', 'submitted_to_university', 'passed_initial_review',
+  'pre_admitted', 'admitted', 'jw202_released', 'rejected', 'withdrawn'
 ];
 
 export default function ApplicationsListPage() {

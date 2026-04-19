@@ -40,22 +40,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
   { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "under_review", label: "Under Review" },
-  { value: "interview_scheduled", label: "Interview Scheduled" },
-  { value: "accepted", label: "Accepted" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "submitted_to_university", label: "Submitted to University" },
+  { value: "passed_initial_review", label: "Passed Initial Review" },
+  { value: "pre_admitted", label: "Pre Admitted" },
+  { value: "admitted", label: "Admitted" },
+  { value: "jw202_released", label: "JW202 Released" },
   { value: "rejected", label: "Rejected" },
+  { value: "withdrawn", label: "Withdrawn" },
 ]
 
 const getStatusBadge = (status: string) => {
   const config: Record<string, { label: string; className: string }> = {
     draft: { label: "Draft", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-    submitted: { label: "Submitted", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-    under_review: { label: "Under Review", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-    interview_scheduled: { label: "Interview", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
-    accepted: { label: "Accepted", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+    in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    submitted_to_university: { label: "Submitted to University", className: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" },
+    passed_initial_review: { label: "Passed Initial Review", className: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
+    pre_admitted: { label: "Pre Admitted", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+    admitted: { label: "Admitted", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+    jw202_released: { label: "JW202 Released", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
     rejected: { label: "Rejected", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-    document_request: { label: "Document Request", className: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
     withdrawn: { label: "Withdrawn", className: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" },
   }
   const c = config[status] || config.draft
