@@ -5,14 +5,25 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
-echo "Building for Hostinger (using pnpm)..."
+echo "Building for Hostinger..."
 
-# Use pnpm as specified in packageManager
+# Clean up pnpm artifacts that conflict with npm
+if [ -d "node_modules/.pnpm" ]; then
+    echo "Removing pnpm artifacts..."
+    rm -rf node_modules/.pnpm
+fi
+
+# Also remove pnpm-lock.yaml if it exists
+if [ -f "pnpm-lock.yaml" ]; then
+    echo "Removing pnpm lock file..."
+    rm -f pnpm-lock.yaml
+fi
+
 echo "Installing dependencies..."
-pnpm install
+npm install --legacy-peer-deps
 
 echo "Building the Next.js project (standalone mode)..."
-pnpm run build:next
+npm run build:next
 
 # Check if standalone output exists
 if [ -d ".next/standalone" ]; then
