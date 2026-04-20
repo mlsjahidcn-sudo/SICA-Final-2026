@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -35,7 +34,6 @@ import {
   Globe,
   Phone,
   Mail,
-  Calendar,
   UserCheck,
   Loader2,
   ExternalLink,

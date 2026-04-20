@@ -4,13 +4,13 @@
 
 import type {
   PartnerStudentDetail,
-  PartnerStudentListItem,
   StudentFormData,
   EducationHistoryEntry,
   WorkExperienceEntry,
   FamilyMemberEntry,
   StudentProfile,
 } from './types';
+import { NATIONALITIES } from './types';
 
 // ==================== Form Data Helpers ====================
 
@@ -245,8 +245,6 @@ export function formatDateForInput(dateString: string | null | undefined): strin
  */
 export function getNationalityLabel(code: string | null | undefined): string {
   if (!code) return '-';
-  // Import dynamically to avoid circular dependency
-  const { NATIONALITIES } = require('./types');
   const found = NATIONALITIES.find((n: { value: string; label: string }) => n.value === code);
   return found ? found.label : code;
 }

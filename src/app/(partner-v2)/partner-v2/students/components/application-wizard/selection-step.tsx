@@ -9,7 +9,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -68,7 +67,9 @@ export function SelectionStep({
   
   // Use ref to store stable callback reference to avoid debounce flickering
   const onSearchProgramsRef = useRef(onSearchPrograms);
-  onSearchProgramsRef.current = onSearchPrograms;
+  useEffect(() => {
+    onSearchProgramsRef.current = onSearchPrograms;
+  }, [onSearchPrograms]);
 
   const handleSearchModeChange = (mode: 'program' | 'university') => {
     if (mode !== searchMode) {
@@ -92,13 +93,13 @@ export function SelectionStep({
   const selectedDegreeLabel = degrees.find(d => d.value === selectedDegree)?.label || selectedDegree;
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-4 md:space-y-5 max-w-3xl mx-auto">
       {/* ===== DEGREE SELECTION ===== */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
-            <GraduationCap className="h-7 w-7 text-primary" />
+        <div className="text-center space-y-1.5">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
+            <GraduationCap className="h-5 w-5 text-primary" />
           </div>
           <h2 className="text-2xl md:text-xl font-bold text-foreground">Select Academic Level</h2>
           <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto">

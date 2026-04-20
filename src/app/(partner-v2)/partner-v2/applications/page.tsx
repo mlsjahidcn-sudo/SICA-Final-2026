@@ -164,6 +164,17 @@ export default function ApplicationsPage() {
     fetchApplications();
   }, [fetchApplications]);
 
+  // Listen for real-time application updates from admin status changes
+  useEffect(() => {
+    const handleApplicationUpdate = () => {
+      fetchApplications();
+    };
+    window.addEventListener('partner-application-update', handleApplicationUpdate);
+    return () => {
+      window.removeEventListener('partner-application-update', handleApplicationUpdate);
+    };
+  }, [fetchApplications]);
+
   const handleNewApplication = () => {
     setFetchingStudents(true);
     setShowStudentPicker(true);

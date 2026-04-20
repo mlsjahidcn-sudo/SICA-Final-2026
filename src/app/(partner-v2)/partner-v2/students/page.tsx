@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 import {
   Card,
@@ -55,7 +55,6 @@ import { formatDate, maskPassportNumber, getNationalityLabel, getStatusVariant }
 
 function StudentsListContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [students, setStudents] = useState<PartnerStudentListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +70,7 @@ function StudentsListContent() {
     withApplications: 0,
   });
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
       const token = await getValidToken();
@@ -98,11 +97,11 @@ function StudentsListContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, nationality, statusFilter, stats]);
 
   useEffect(() => {
     fetchStudents();
-  }, [page, search, nationality, statusFilter]);
+  }, [fetchStudents]);
 
   return (
     <div className="flex flex-col gap-6 p-6">

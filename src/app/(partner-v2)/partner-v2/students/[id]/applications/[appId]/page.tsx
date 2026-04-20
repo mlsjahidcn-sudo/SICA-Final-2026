@@ -7,13 +7,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -35,7 +34,6 @@ import {
   XCircle,
   AlertTriangle,
   Send,
-  Eye,
   Building2,
   Award,
   BookOpen,
@@ -46,12 +44,8 @@ import {
   ExternalLink,
   Pencil,
   RotateCcw,
-  ChevronRight,
   User,
   Hash,
-  Star,
-  Edit,
-  Inbox,
 } from 'lucide-react';
 
 import { getValidToken } from '@/lib/auth-token';
@@ -115,12 +109,14 @@ interface ApplicationDetail {
 }
 
 // ─── Status timeline ────────────────────────
-
+// Must match ApplicationStatus keys from APPLICATION_STATUS_MAP
 const STATUS_FLOW = [
   { key: 'draft', label: 'Draft', icon: Clock },
-  { key: 'submitted', label: 'Submitted', icon: Send },
-  { key: 'under_review', label: 'Under Review', icon: AlertTriangle },
-  { key: 'accepted', label: 'Accepted', icon: CheckCircle2 },
+  { key: 'in_progress', label: 'In Progress', icon: AlertTriangle },
+  { key: 'submitted_to_university', label: 'Submitted to University', icon: Send },
+  { key: 'passed_initial_review', label: 'Passed Initial Review', icon: CheckCircle2 },
+  { key: 'pre_admitted', label: 'Pre Admitted', icon: Award },
+  { key: 'admitted', label: 'Admitted', icon: GraduationCap },
   { key: 'rejected', label: 'Rejected', icon: XCircle },
 ];
 
@@ -128,7 +124,6 @@ const STATUS_FLOW = [
 
 export default function ApplicationDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const appId = params.appId as string;
   const studentId = params.id as string;
 
@@ -200,6 +195,32 @@ export default function ApplicationDetailPage() {
     if (appId) fetchApp();
   }, [appId]);
 
+  // Listen for real-time application updates from admin status changes
+  useEffect(() => {
+    const handleApplicationUpdate = () => {
+      async function fetchApp() {
+        try {
+          const token = await getValidToken();
+          const res = await fetch(`/api/applications?pageSize=200`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const result = await res.json();
+            const found = (result.applications || []).find(
+              (a: ApplicationDetail) => String(a.id) === String(appId)
+            );
+            if (found) setApp(found);
+          }
+        } catch (err) {
+          console.error('Error fetching application:', err);
+        }
+      }
+      fetchApp();
+    };
+    window.addEventListener('partner-application-update', handleApplicationUpdate);
+    return () => window.removeEventListener('partner-application-update', handleApplicationUpdate);
+  }, [appId]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -214,7 +235,7 @@ export default function ApplicationDetailPage() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
         <h3 className="text-xl font-semibold">Application Not Found</h3>
-        <p className="text-muted-foreground mt-2">This application may have been deleted or you don't have access.</p>
+        <p className="text-muted-foreground mt-2">This application may have been deleted or you don&apos;t have access.</p>
         <Button className="mt-4" asChild>
           <Link href={`/partner-v2/students/${studentId}/applications`}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applications
@@ -389,8 +410,11 @@ export default function ApplicationDetailPage() {
                               }
                             </p>
                           )}
-                          {idx === currentStatusIdx && app.status === 'accepted' && (
-                            <p className="text-xs text-emerald-600 font-medium mt-1">Application approved</p>
+                          {idx === currentStatusIdx && app.status === 'admitted' && (
+                            <p className="text-xs text-emerald-600 font-medium mt-1">Application admitted</p>
+                          )}
+                          {idx === currentStatusIdx && app.status === 'jw202_released' && (
+                            <p className="text-xs text-emerald-600 font-medium mt-1">JW202 Released</p>
                           )}
                           {idx === currentStatusIdx && app.status === 'rejected' && (
                             <p className="text-xs text-red-600 font-medium mt-1">Application rejected</p>
@@ -537,27 +561,12 @@ export default function ApplicationDetailPage() {
                   <Separator className="my-2" />
                 </>
               )}
-              {(app.status === 'submitted' || app.status === 'under_review') && (
+              {(app.status === 'submitted_to_university' || app.status === 'passed_initial_review' || app.status === 'pre_admitted' || app.status === 'in_progress') && (
                 <Button variant="outline" size="sm" className="w-full text-amber-600 hover:text-amber-700">
                   <RotateCcw className="mr-2 h-4 w-4" /> Withdraw Application
                 </Button>
               )}
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href={`/partner-v2/students/${studentId}`}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Student
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href={`/partner-v2/students/${studentId}/applications`}>
-                  <ChevronRight className="mr-2 h-4 w-4" /> All Applications
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href={`/partner-v2/students/${studentId}/apply`}>
-                  <GraduationCap className="mr-2 h-4 w-4" /> New Application
-                </Link>
-              </Button>
-            </CardContent>
+</CardContent>
           </Card>
         </div>
       </div>

@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Calendar,
   Clock,
@@ -52,11 +51,11 @@ export function DetailsSubmitStep({
   const selectedDegreeLabel = DEGREE_OPTIONS.find(d => d.value === formData.selectedDegree)?.label || formData.selectedDegree;
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-4 md:space-y-5 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
-          <FileText className="h-7 w-7 text-primary" />
+      <div className="text-center space-y-1.5">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5">
+          <FileText className="h-5 w-5 text-primary" />
         </div>
         <h2 className="text-2xl md:text-xl font-bold text-foreground">Review & Submit</h2>
         <p className="text-sm md:text-base text-muted-foreground">
@@ -74,9 +73,9 @@ export function DetailsSubmitStep({
           </h3>
         </div>
 
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5">
+        <div className="p-3 md:p-4 space-y-3">
           {/* Quick stats row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             {/* Degree */}
             <div className="bg-muted/40 rounded-xl p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Degree</p>
@@ -156,7 +155,7 @@ export function DetailsSubmitStep({
           </h3>
         </div>
 
-        <div className="p-4 md:p-6 space-y-5 md:space-y-6">
+        <div className="p-3 md:p-4 space-y-4">
           {/* Intake selection */}
           <div className="space-y-3">
             <label className="text-sm font-semibold text-foreground flex items-center gap-2">

@@ -321,7 +321,7 @@ export function ApplicationWizard({ studentId, studentName, userId }: Applicatio
       </header>
 
       {/* ===== MAIN CONTENT AREA ===== */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-28">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-28">
         {/* Step title bar */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground">

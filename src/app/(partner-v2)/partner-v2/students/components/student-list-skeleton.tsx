@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 /**
  * Loading skeleton for student list
@@ -142,12 +143,12 @@ export function EmptyStudentList({ hasSearch }: { hasSearch?: boolean }) {
           </p>
           {!hasSearch && (
             <div className="flex justify-center">
-              <a
+              <Link
                 href="/partner-v2/students/new"
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
               >
                 Add Your First Student
-              </a>
+              </Link>
             </div>
           )}
         </div>

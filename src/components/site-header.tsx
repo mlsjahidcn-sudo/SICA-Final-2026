@@ -46,12 +46,25 @@ function getPageTitle(pathname: string): string {
     return routeTitles[pathname];
   }
 
-  // Dynamic route matching
+  // Dynamic route matching — most specific paths first to avoid partial matches
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/applications\/[^/]+\/documents/)) return 'Application Documents';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/applications\/[^/]+/)) return 'Application Details';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/applications$/)) return 'Applications';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/documents/)) return 'Student Documents';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/edit/)) return 'Edit Student';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+\/apply/)) return 'New Application';
+  if (pathname.match(/\/partner-v2\/students\/[^/]+/)) return 'Student Details';
   if (pathname.match(/\/partner-v2\/applications\/[^/]+\/documents/)) return 'Application Documents';
   if (pathname.match(/\/partner-v2\/applications\/[^/]+/)) return 'Application Details';
-  if (pathname.match(/\/partner-v2\/students\/[^/]+/)) return 'Student Details';
   if (pathname.match(/\/partner-v2\/universities\/[^/]+/)) return 'University Details';
   if (pathname.match(/\/partner-v2\/meetings\/[^/]+/)) return 'Meeting Details';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/applications\/[^/]+\/documents/)) return 'Application Documents';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/applications\/[^/]+/)) return 'Application Details';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/applications$/)) return 'Applications';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/documents/)) return 'Student Documents';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/edit/)) return 'Edit Student';
+  if (pathname.match(/\/student-v2\/students\/[^/]+\/apply/)) return 'New Application';
+  if (pathname.match(/\/student-v2\/students\/[^/]+/)) return 'Student Details';
   if (pathname.match(/\/student-v2\/applications\/[^/]+\/documents/)) return 'Application Documents';
   if (pathname.match(/\/student-v2\/applications\/[^/]+\/edit/)) return 'Edit Application';
   if (pathname.match(/\/student-v2\/applications\/[^/]+/)) return 'Application Details';
@@ -59,6 +72,11 @@ function getPageTitle(pathname: string): string {
   if (pathname.match(/\/student-v2\/programs\/[^/]+/)) return 'Program Details';
   if (pathname.match(/\/student-v2\/meetings\/[^/]+/)) return 'Meeting Details';
   if (pathname.match(/\/student-v2\/templates\/[^/]+/)) return 'Template Details';
+  if (pathname.match(/\/admin\/v2\/students\/[^/]+\/applications\/[^/]+\/documents/)) return 'Application Documents';
+  if (pathname.match(/\/admin\/v2\/students\/[^/]+\/applications\/[^/]+/)) return 'Application Details';
+  if (pathname.match(/\/admin\/v2\/students\/[^/]+\/applications$/)) return 'Applications';
+  if (pathname.match(/\/admin\/v2\/students\/[^/]+\/documents/)) return 'Student Documents';
+  if (pathname.match(/\/admin\/v2\/students\/[^/]+\/edit/)) return 'Edit Student';
   if (pathname.match(/\/admin\/v2\/students\/[^/]+/)) return 'Student Details';
   if (pathname.match(/\/admin\/v2\/applications\/[^/]+/)) return 'Application Details';
   if (pathname.match(/\/admin\/v2\/universities\/[^/]+/)) return 'University Details';

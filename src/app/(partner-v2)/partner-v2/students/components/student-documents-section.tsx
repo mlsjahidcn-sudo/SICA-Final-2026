@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -52,7 +52,6 @@ import {
   Loader2,
   X,
   FileIcon,
-  AlertCircle,
 } from 'lucide-react';
 import { getValidToken } from '@/lib/auth-token';
 import { toast } from 'sonner';
@@ -90,7 +89,7 @@ export function StudentDocumentsSection({
   const [expiresAt, setExpiresAt] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const token = await getValidToken();
       if (!token) return;
@@ -111,11 +110,11 @@ export function StudentDocumentsSection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [studentId]);
+  }, [fetchDocuments]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -156,13 +156,15 @@ export default function ApplicationsListPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'accepted': return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+      case 'admitted':
+      case 'jw202_released': return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
       case 'rejected': return <XCircle className="h-3.5 w-3.5 text-red-500" />;
-      case 'under_review':
-      case 'interview_scheduled':
-      case 'document_request':
+      case 'in_progress':
+      case 'submitted_to_university':
+      case 'passed_initial_review':
+      case 'pre_admitted':
         return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
-      case 'submitted': return <Clock className="h-3.5 w-3.5 text-blue-500" />;
+      case 'draft': return <Clock className="h-3.5 w-3.5 text-blue-500" />;
       default: return <Inbox className="h-3.5 w-3.5 text-gray-400" />;
     }
   };
@@ -220,7 +222,7 @@ export default function ApplicationsListPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/partner-v2/students/${studentId}`}>
+              <Link href="/partner-v2/students">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="sr-only">Back</span>
               </Link>
@@ -241,12 +243,12 @@ export default function ApplicationsListPage() {
       )}
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
         <MiniStat label="Total" value={stats.total} variant="default" />
         <MiniStat label="Draft" value={stats['draft'] || 0} variant="gray" />
-        <MiniStat label="Submitted" value={stats['submitted'] || 0} variant="blue" />
-        <MiniStat label="Reviewing" value={stats['under_review'] || 0} variant="amber" />
-        <MiniStat label="Accepted" value={stats['accepted'] || 0} variant="green" />
+        <MiniStat label="Submitted" value={(stats['submitted_to_university'] || 0) + (stats['in_progress'] || 0)} variant="blue" />
+        <MiniStat label="Reviewing" value={(stats['passed_initial_review'] || 0) + (stats['pre_admitted'] || 0)} variant="amber" />
+        <MiniStat label="Admitted" value={(stats['admitted'] || 0) + (stats['jw202_released'] || 0)} variant="green" />
         <MiniStat label="Rejected" value={stats['rejected'] || 0} variant="red" />
       </div>
 
