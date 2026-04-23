@@ -52,7 +52,7 @@ interface RecentApplication {
     universities: {
       name_en: string;
       city: string;
-    };
+    } | null;
   };
 }
 
@@ -204,7 +204,7 @@ export default function PartnerV2DashboardPage() {
                           {app.passport_first_name} {app.passport_last_name}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{app.programs.universities.name_en}</span>
+                          <span>{app.programs.universities?.name_en || 'Unknown'}</span>
                           <span>•</span>
                           <span>{app.programs.name}</span>
                         </div>
