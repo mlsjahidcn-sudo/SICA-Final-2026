@@ -545,22 +545,6 @@ function InfoSidebarCard({ university }: { university: University }) {
         </Card>
       )}
 
-      {/* University Type */}
-      {university.type && university.type.length > 0 && (
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Type</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {university.type.map((type) => (
-              <Badge key={type} variant="outline" className={getTypeBadgeStyle(type)}>
-                {getTypeLabel(type)}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Contact */}
       {(university.contact_email || university.contact_phone) && (
         <Card size="sm">
