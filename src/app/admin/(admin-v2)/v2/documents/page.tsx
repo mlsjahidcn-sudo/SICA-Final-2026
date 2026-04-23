@@ -55,6 +55,12 @@ interface Document {
     name: string
     email: string
   }
+  partner?: {
+    id: string
+    name: string
+    email: string
+  }
+  is_partner_document?: boolean
 }
 
 export default function AdminDocumentsPage() {
@@ -63,6 +69,7 @@ export default function AdminDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [sourceFilter, setSourceFilter] = useState("all")
   
   // Pagination
   const [page, setPage] = useState(1)
@@ -85,6 +92,7 @@ export default function AdminDocumentsPage() {
       if (searchQuery) queryParams.append('search', searchQuery)
       if (statusFilter && statusFilter !== 'all') queryParams.append('status', statusFilter)
       if (typeFilter && typeFilter !== 'all') queryParams.append('type', typeFilter)
+      if (sourceFilter && sourceFilter !== 'all') queryParams.append('source', sourceFilter)
 
       const response = await fetch(`/api/admin/documents?${queryParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -104,7 +112,7 @@ export default function AdminDocumentsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, searchQuery, statusFilter, typeFilter])
+  }, [page, searchQuery, statusFilter, typeFilter, sourceFilter])
 
   useEffect(() => {
     // Debounce search
@@ -177,6 +185,7 @@ export default function AdminDocumentsPage() {
     setSearchQuery("")
     setStatusFilter("all")
     setTypeFilter("all")
+    setSourceFilter("all")
     setPage(1)
   }
 
@@ -244,7 +253,18 @@ export default function AdminDocumentsPage() {
                       </SelectContent>
                     </Select>
 
-                    {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all') && (
+                    <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setPage(1); }}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        <SelectItem value="partner">Partner Applications</SelectItem>
+                        <SelectItem value="individual">Individual Applications</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || sourceFilter !== 'all') && (
                       <Button variant="ghost" onClick={resetFilters} className="px-2">
                         <FilterX className="h-4 w-4 mr-2" />
                         Clear
@@ -263,6 +283,7 @@ export default function AdminDocumentsPage() {
                     <TableRow>
                       <TableHead>Document</TableHead>
                       <TableHead>Student</TableHead>
+                      <TableHead>Partner</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Uploaded</TableHead>
@@ -272,14 +293,14 @@ export default function AdminDocumentsPage() {
                   <TableBody>
                     {loading && documents.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                           <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
                           Loading documents...
                         </TableCell>
                       </TableRow>
                     ) : documents.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                           <FileText className="h-8 w-8 mx-auto mb-2 opacity-20" />
                           No documents found matching your filters.
                         </TableCell>
@@ -317,6 +338,23 @@ export default function AdminDocumentsPage() {
                               <span className="text-muted-foreground flex items-center gap-1">
                                 <User className="h-3 w-3" /> Unknown
                               </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {doc.partner ? (
+                              <div className="flex flex-col">
+                                <Link
+                                  href={`/admin/v2/partners/${doc.partner.id}`}
+                                  className="font-medium hover:underline text-violet-600"
+                                >
+                                  {doc.partner.name}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">{doc.partner.email}</span>
+                              </div>
+                            ) : doc.is_partner_document ? (
+                              <span className="text-muted-foreground text-xs">Partner doc</span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
                             )}
                           </TableCell>
                           <TableCell>

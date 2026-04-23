@@ -7,6 +7,10 @@ import { getDocumentTypeLabel } from '@/lib/document-types';
  * GET /api/admin/documents
  *
  * List documents with filtering, sorting, and pagination.
+ *
+ * Query params:
+ * - source: 'all' | 'partner' | 'individual' - Filter by application source
+ * - partner_id: string - Filter by specific partner
  */
 export async function GET(request: NextRequest) {
   try {
@@ -30,10 +34,28 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const type = searchParams.get('type');
     const search = searchParams.get('search') || '';
+    const source = searchParams.get('source') || 'all'; // 'all', 'partner', 'individual'
+    const filterPartnerId = searchParams.get('partner_id');
 
     const supabase = getSupabaseClient();
 
-    // Step 1: Build document query (without nested relations)
+    // Step 1: If filtering by partner source, get application IDs first
+    let partnerApplicationIds: string[] = [];
+    if (source === 'partner' || filterPartnerId) {
+      let appQuery = supabase
+        .from('applications')
+        .select('id')
+        .not('partner_id', 'is', null);
+      
+      if (filterPartnerId) {
+        appQuery = appQuery.eq('partner_id', filterPartnerId);
+      }
+      
+      const { data: partnerApps } = await appQuery;
+      partnerApplicationIds = (partnerApps || []).map(a => a.id);
+    }
+
+    // Step 2: Build document query (without nested relations)
     let query = supabase
       .from('documents')
       .select('id, student_id, application_id, type, file_name, file_url, file_key, file_size, status, rejection_reason, uploaded_by, verified_by, notes, uploaded_at, created_at, updated_at', { count: 'exact' });
@@ -42,6 +64,26 @@ export async function GET(request: NextRequest) {
     if (applicationId) query = query.eq('application_id', applicationId);
     if (status && status !== 'all') query = query.eq('status', status);
     if (type && type !== 'all') query = query.eq('type', type);
+
+    // Filter by source
+    if (source === 'partner') {
+      // Documents from partner applications
+      if (partnerApplicationIds.length > 0) {
+        query = query.in('application_id', partnerApplicationIds);
+      } else {
+        // No partner applications, return empty
+        return NextResponse.json({
+          documents: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+    } else if (source === 'individual') {
+      // Documents NOT from partner applications
+      if (partnerApplicationIds.length > 0) {
+        query = query.not('application_id', 'in', `(${partnerApplicationIds.map(id => `"${id}"`).join(',')})`);
+      }
+      // Also include documents with no application_id (standalone uploads)
+    }
 
     // Sorting
     const allowedSortColumns = ['created_at', 'updated_at', 'file_name', 'status', 'type'];
@@ -68,12 +110,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Step 2: Get student IDs from documents
-    // NOTE: Some documents may have users.id in student_id (partner upload fallback)
-    // instead of students.id. We need to lookup by both id and user_id.
+    // Step 3: Get student IDs from documents
     const docStudentIds = [...new Set(documents.map(d => d.student_id).filter(Boolean))] as string[];
 
-    // Step 3: Fetch students by id
+    // Step 4: Fetch students by id and by user_id fallback
     let studentsById: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
     let studentsByUserId: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
 
@@ -88,7 +128,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Step 4: For IDs that didn't match students.id, try matching by user_id
+    // Also try matching by user_id for unmatched IDs
     const unmatchedIds = docStudentIds.filter(id => !studentsById[id]);
     if (unmatchedIds.length > 0) {
       const { data: studentsByUid } = await supabase
@@ -115,13 +155,13 @@ export async function GET(request: NextRequest) {
       (users || []).forEach(u => { usersData[u.id] = u; });
     }
 
-    // Step 6: Get application IDs for related applications
+    // Step 6: Get application IDs for related applications (including partner_id)
     const applicationIds = [...new Set(documents.map(d => d.application_id).filter(Boolean))] as string[];
-    let applicationsData: Record<string, { id: string; status: string; program_id: string | null }> = {};
+    let applicationsData: Record<string, { id: string; status: string; program_id: string | null; partner_id: string | null }> = {};
     if (applicationIds.length > 0) {
       const { data: apps } = await supabase
         .from('applications')
-        .select('id, status, program_id')
+        .select('id, status, program_id, partner_id')
         .in('id', applicationIds);
       (apps || []).forEach(a => { applicationsData[a.id] = a; });
     }
@@ -137,15 +177,26 @@ export async function GET(request: NextRequest) {
       (programs || []).forEach(p => { programsData[p.id] = p; });
     }
 
-    // Step 8: Merge all data
+    // Step 8: Get partner names for partner applications
+    const partnerIds = Object.values(applicationsData).map(a => a.partner_id).filter(Boolean) as string[];
+    let partnersData: Record<string, { full_name: string; email: string }> = {};
+    if (partnerIds.length > 0) {
+      const { data: partners } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', partnerIds);
+      (partners || []).forEach(p => { partnersData[p.id] = p; });
+    }
+
+    // Step 9: Merge all data
     const enrichedDocuments = documents.map(doc => {
-      // Look up student by id first, then by user_id fallback
       const student = doc.student_id
         ? (studentsById[doc.student_id] || studentsByUserId[doc.student_id])
         : null;
       const user = student?.user_id ? usersData[student.user_id] : null;
       const app = doc.application_id ? applicationsData[doc.application_id] : null;
       const program = app?.program_id ? programsData[app.program_id] : null;
+      const partner = app?.partner_id ? partnersData[app.partner_id] : null;
 
       return {
         id: doc.id,
@@ -178,7 +229,14 @@ export async function GET(request: NextRequest) {
           id: app.id,
           status: app.status,
           program_name: program?.name || '',
+          partner_id: app.partner_id,
         } : null,
+        partner: partner ? {
+          id: app!.partner_id,
+          name: partner.full_name,
+          email: partner.email,
+        } : null,
+        is_partner_document: !!app?.partner_id,
       };
     });
 
@@ -191,7 +249,8 @@ export async function GET(request: NextRequest) {
         const matchStudent = doc.student && (
           (doc.student.first_name + ' ' + doc.student.last_name).toLowerCase().includes(term)
         );
-        return matchFile || matchStudent;
+        const matchPartner = doc.partner?.name?.toLowerCase().includes(term);
+        return matchFile || matchStudent || matchPartner;
       });
     }
 
