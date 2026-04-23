@@ -83,12 +83,6 @@ function IndividualStudentsContent() {
             Self-registered students without partner referral
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/v2/students/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Student
-          </Link>
-        </Button>
       </div>
 
       {/* Stats Cards */}
