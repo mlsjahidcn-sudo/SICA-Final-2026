@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // First get user IDs of partner-referred students
+    // Get partner-referred student IDs (students who were referred by a partner)
     const { data: partnerUsers } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -179,24 +179,28 @@ export async function GET(request: NextRequest) {
     
     const partnerUserIds = (partnerUsers || []).map(u => u.id);
     
-    // If no partner users, return empty result
-    if (partnerUserIds.length === 0) {
-      return NextResponse.json({
-        applications: [],
-        pagination: { page, limit, total: 0, totalPages: 0 },
-        stats: { total: 0, pending: 0, underReview: 0, accepted: 0, rejected: 0 },
-      });
-    }
+    const { data: partnerStudentRecords } = partnerUserIds.length > 0
+      ? await supabaseAdmin
+          .from('students')
+          .select('id, user_id')
+          .in('user_id', partnerUserIds)
+      : { data: [] };
     
-    // Get student IDs for partner-referred users
-    const { data: partnerStudentRecords } = await supabaseAdmin
-      .from('students')
-      .select('id, user_id')
-      .in('user_id', partnerUserIds);
+    const referredStudentIds = (partnerStudentRecords || []).map(s => s.id);
     
-    const partnerStudentIds = (partnerStudentRecords || []).map(s => s.id);
+    // ALSO get student IDs from applications that have partner_id set
+    // (partner-created applications for non-referred students)
+    const { data: partnerAppRecords } = await supabaseAdmin
+      .from('applications')
+      .select('student_id')
+      .not('partner_id', 'is', null);
     
-    // If no partner students, return empty result
+    const partnerAppStudentIds = [...new Set((partnerAppRecords || []).map(a => a.student_id).filter(Boolean))];
+    
+    // Merge both sets
+    const partnerStudentIds = [...new Set([...referredStudentIds, ...partnerAppStudentIds])];
+    
+    // If no partner-related students, return empty result
     if (partnerStudentIds.length === 0) {
       return NextResponse.json({
         applications: [],
@@ -254,6 +258,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: applications, error: fetchError } = await dataQuery;
+
 
     if (fetchError) {
       console.error('Error fetching partner applications:', fetchError);
