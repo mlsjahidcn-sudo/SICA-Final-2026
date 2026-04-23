@@ -168,8 +168,7 @@ export function Footer() {
               <li className="flex items-start gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <address className="not-italic leading-relaxed">
-                  128 City Road<br />
-                  London EC1V 2NX
+                  Guangzhou, China
                 </address>
               </li>
             </ul>

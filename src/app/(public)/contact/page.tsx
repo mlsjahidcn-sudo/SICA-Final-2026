@@ -241,7 +241,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-medium mb-1">Address</h3>
                       <p className="text-sm text-muted-foreground">
-                        Haidian District, Beijing, China
+                        Guangzhou, China
                       </p>
                     </div>
                   </div>
