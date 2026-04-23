@@ -73,13 +73,14 @@ export async function GET(request: NextRequest) {
 
     const userMap = new Map(usersData?.map(u => [u.id, u]) || []);
 
-    // Fetch applications for these students
+    // Fetch applications for these students (only those created by this partner or referred by them)
     const { data: applications, error, count } = await supabase
       .from('applications')
       .select(
         'id, status, priority, notes, submitted_at, created_at, updated_at, profile_snapshot, student_id, program_id',
         { count: 'exact' }
       )
+      .or(`partner_id.eq.${effectivePartnerId},referred_by_partner_id.eq.${effectivePartnerId}`)
       .in('student_id', studentIds)
       .order('created_at', { ascending: false });
 

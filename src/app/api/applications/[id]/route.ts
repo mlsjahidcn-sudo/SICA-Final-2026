@@ -368,7 +368,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Build update data - only allow specific fields that exist in the DB
     // program_id and notes are direct columns; personal_statement/study_plan/intake go into profile_snapshot
+    // Admin and partner can also update status
     const allowedDirectFields = ['program_id', 'notes'];
+    if (user.role === 'admin' || user.role === 'partner') {
+      allowedDirectFields.push('status');
+    }
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id, // Track which team member updated this application

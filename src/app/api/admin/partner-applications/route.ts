@@ -210,10 +210,12 @@ export async function GET(request: NextRequest) {
     }
     
     // Build base query without range first for counting
+    // Only include applications created by a partner (partner_id IS NOT NULL)
     let baseQuery = supabaseAdmin
       .from('applications')
       .select('id', { count: 'exact', head: true })
-      .in('student_id', partnerStudentIds);
+      .in('student_id', partnerStudentIds)
+      .not('partner_id', 'is', null);
 
     if (status) baseQuery = baseQuery.eq('status', status);
     if (partner_id) baseQuery = baseQuery.eq('partner_id', partner_id);
@@ -227,7 +229,7 @@ export async function GET(request: NextRequest) {
 
     const { count: totalCount } = await baseQuery;
 
-    // Now get applications data
+    // Now get applications data (only partner-created applications)
     let dataQuery = supabaseAdmin
       .from('applications')
       .select(`
@@ -246,6 +248,7 @@ export async function GET(request: NextRequest) {
         program_id
       `)
       .in('student_id', partnerStudentIds)
+      .not('partner_id', 'is', null)
       .order('created_at', { ascending: false });
 
     if (status) dataQuery = dataQuery.eq('status', status);

@@ -245,7 +245,6 @@ export async function POST(request: NextRequest) {
 
     const applicationData: Record<string, unknown> = {
       student_id: studentId,
-      user_id: user.id,
       program_id,
       university_id: targetUniversityId,
       partner_id: partner_id || null,
