@@ -542,18 +542,21 @@ export async function POST(request: NextRequest) {
     // Use students.id (studentRecord.id) for student_id field, not users.id
     const createdApplications = [];
     for (const program of programs) {
+      const defaultIntake = intake_semester && intake_year
+        ? `${intake_semester} ${intake_year}`
+        : `Fall ${new Date().getFullYear()}`;
+
       const { data: newApp, error: insertError } = await supabaseAdmin
         .from('applications')
         .insert({
           student_id: studentRecord.id,
           program_id: program.id,
           partner_id: resolvedPartnerId,
-          user_id: studentUser.id,
+          submitted_by: studentUser.id,
+          intake: defaultIntake,
           status: 'draft',
           priority: priority || 0,
           notes: notes || null,
-          intake_semester: intake_semester || null,
-          intake_year: intake_year ? parseInt(intake_year) : null,
         })
         .select('id, status, created_at')
         .single();

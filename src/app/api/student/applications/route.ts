@@ -248,6 +248,8 @@ export async function POST(request: NextRequest) {
       program_id,
       university_id: targetUniversityId,
       partner_id: partner_id || null,
+      submitted_by: user.id,
+      intake: targetIntake,
       status: 'draft',
       profile_snapshot: profileSnapshot,
     };

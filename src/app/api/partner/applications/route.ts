@@ -73,16 +73,26 @@ export async function GET(request: NextRequest) {
 
     const userMap = new Map(usersData?.map(u => [u.id, u]) || []);
 
-    // Fetch applications for these students (only those created by this partner or referred by them)
-    const { data: applications, error, count } = await supabase
+    // Build query: partner sees apps for their referred students OR apps they created
+    let appQuery = supabase
       .from('applications')
       .select(
         'id, status, priority, notes, submitted_at, created_at, updated_at, profile_snapshot, student_id, program_id',
         { count: 'exact' }
       )
-      .or(`partner_id.eq.${effectivePartnerId},referred_by_partner_id.eq.${effectivePartnerId}`)
-      .in('student_id', studentIds)
       .order('created_at', { ascending: false });
+
+    if (partnerRecordId && studentIds.length > 0) {
+      appQuery = appQuery.or(`partner_id.eq.${partnerRecordId},student_id.in.(${studentIds.join(',')})`);
+    } else if (partnerRecordId) {
+      appQuery = appQuery.eq('partner_id', partnerRecordId);
+    } else if (studentIds.length > 0) {
+      appQuery = appQuery.in('student_id', studentIds);
+    } else {
+      return NextResponse.json({ applications: [], total: 0, page: 1, pageSize: 10 });
+    }
+
+    const { data: applications, error, count } = await appQuery;
 
     if (error) {
       console.error('Error fetching partner applications:', error);

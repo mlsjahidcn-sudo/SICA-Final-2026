@@ -28,15 +28,42 @@ export async function GET(
 
     const partnerUserId = partnerUser.id;
 
-    // Fetch application - must belong to this partner
+    // Fetch partner record ID (applications.partner_id references partners.id)
+    const { data: partnerRecord } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('user_id', partnerUserId)
+      .maybeSingle();
+    const partnerRecordId = partnerRecord?.id || null;
+
+    // Fetch application
     const { data: app, error: appError } = await supabase
       .from('applications')
       .select('*')
       .eq('id', id)
-      .or(`partner_id.eq.${partnerUserId},referred_by_partner_id.eq.${partnerUserId}`)
       .single();
 
     if (appError || !app) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Verify partner has access: either created the app or the student is referred by them
+    const { data: studentData } = await supabase
+      .from('students')
+      .select('user_id')
+      .eq('id', app.student_id)
+      .single();
+
+    const { data: studentUserRecord } = await supabase
+      .from('users')
+      .select('referred_by_partner_id')
+      .eq('id', studentData?.user_id || '')
+      .single();
+
+    const isReferredByPartner = studentUserRecord?.referred_by_partner_id === partnerUserId;
+    const isCreatedByPartner = partnerRecordId ? app.partner_id === partnerRecordId : false;
+
+    if (!isReferredByPartner && !isCreatedByPartner) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
@@ -58,21 +85,35 @@ export async function GET(
     if (app.program_id) {
       const { data: prog } = await supabase
         .from('programs')
-        .select('id, name, universities(id, name_en)')
+        .select('id, name')
         .eq('id', app.program_id)
         .single();
-      program = prog;
+      if (prog) {
+        const { data: univ } = await supabase
+          .from('universities')
+          .select('id, name_en')
+          .eq('id', app.university_id || '')
+          .maybeSingle();
+        program = { ...prog, universities: univ ? [univ] : [] };
+      }
     }
 
     // Fetch partner info
     let partner = null;
     if (app.partner_id) {
-      const { data: p } = await supabase
-        .from('users')
-        .select('id, full_name, email')
+      const { data: partnerRec } = await supabase
+        .from('partners')
+        .select('id, company_name, user_id')
         .eq('id', app.partner_id)
         .single();
-      partner = p;
+      if (partnerRec?.user_id) {
+        const { data: pUser } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('id', partnerRec.user_id)
+          .single();
+        partner = pUser;
+      }
     }
 
     return NextResponse.json({
@@ -126,15 +167,42 @@ export async function PATCH(
 
     const partnerUserId = partnerUser.id;
 
-    // Verify application belongs to this partner
-    const { data: existing } = await supabase
-      .from('applications')
+    // Fetch partner record ID (applications.partner_id references partners.id)
+    const { data: partnerRecord } = await supabase
+      .from('partners')
       .select('id')
+      .eq('user_id', partnerUserId)
+      .maybeSingle();
+    const partnerRecordId = partnerRecord?.id || null;
+
+    // Fetch application to verify ownership
+    const { data: existingApp } = await supabase
+      .from('applications')
+      .select('student_id, partner_id')
       .eq('id', id)
-      .or(`partner_id.eq.${partnerUserId},referred_by_partner_id.eq.${partnerUserId}`)
       .single();
 
-    if (!existing) {
+    if (!existingApp) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    // Verify partner has access
+    const { data: studentData } = await supabase
+      .from('students')
+      .select('user_id')
+      .eq('id', existingApp.student_id)
+      .single();
+
+    const { data: studentUserRecord } = await supabase
+      .from('users')
+      .select('referred_by_partner_id')
+      .eq('id', studentData?.user_id || '')
+      .single();
+
+    const isReferredByPartner = studentUserRecord?.referred_by_partner_id === partnerUserId;
+    const isCreatedByPartner = partnerRecordId ? existingApp.partner_id === partnerRecordId : false;
+
+    if (!isReferredByPartner && !isCreatedByPartner) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 

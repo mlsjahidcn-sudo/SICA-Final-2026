@@ -20,17 +20,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const upcoming = searchParams.get('upcoming') === 'true';
 
-    // Get student record id (meetings.student_id references students.id)
-    const { data: studentRecord } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    const studentId = studentRecord?.id;
-    if (!studentId) {
-      return NextResponse.json({ meetings: [] });
-    }
+    // meetings.student_id references users.id directly
+    const studentId = user.id;
 
     let query = supabase
       .from('meetings')

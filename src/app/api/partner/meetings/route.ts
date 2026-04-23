@@ -99,28 +99,39 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Step 6: Fetch students data
-    let studentsData: Record<string, { first_name: string; last_name: string; email: string }> = {};
+    // Step 6: Fetch student users data (meetings.student_id references users.id)
+    let studentsData: Record<string, { full_name: string; email: string }> = {};
 
     if (studentIds.length > 0) {
-      const { data: students } = await supabase
-        .from('students')
-        .select('id, first_name, last_name, email')
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, full_name, email')
         .in('id', studentIds);
 
-      (students || []).forEach(s => {
-        studentsData[s.id] = s;
+      (users || []).forEach(u => {
+        studentsData[u.id] = u;
       });
     }
 
-    // Step 7: Filter by partner scope and normalize data
+    // Step 7: Get partner record ID for correct filtering
+    let partnerRecordId: string | null = null;
+    if (user.role === 'partner') {
+      const { data: partnerRecord } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      partnerRecordId = partnerRecord?.id || null;
+    }
+
+    // Step 8: Filter by partner scope and normalize data
     let filteredMeetings = meetings;
 
     if (user.role === 'partner') {
       // Partners can only see meetings related to their applications
       filteredMeetings = meetings.filter(m => {
         const app = m.application_id ? applicationsData[m.application_id] : null;
-        return app?.partner_id === user.id;
+        return app?.partner_id === partnerRecordId;
       });
     }
 
@@ -147,7 +158,7 @@ export async function GET(request: NextRequest) {
         created_at: meeting.created_at,
         updated_at: meeting.updated_at,
         // Flattened related data
-        student_name: [student?.first_name, student?.last_name].filter(Boolean).join(' ') || 'Unknown',
+        student_name: student?.full_name || 'Unknown',
         student_email: student?.email || '',
         program_name: program?.name || '',
         university_name: university?.name_en || university?.name || '',

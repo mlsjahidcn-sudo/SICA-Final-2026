@@ -384,12 +384,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Default intake
+      const now = new Date();
+      const defaultIntake = `Fall ${now.getFullYear()}`;
+
       const { data: application, error } = await supabase
         .from('applications')
         .insert({
           student_id: finalStudentId,
           program_id: pid,
           partner_id: partnerUserId,
+          submitted_by: user.id,
+          intake: defaultIntake,
           status: 'draft',
           profile_snapshot: profileSnapshot,
           notes: requested_university_program_note || null,

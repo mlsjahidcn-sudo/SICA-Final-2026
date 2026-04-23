@@ -20,17 +20,8 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabaseClient();
 
-    // Get student record id (meetings.student_id references students.id)
-    const { data: studentRecord } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    const studentId = studentRecord?.id;
-    if (!studentId) {
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
-    }
+    // meetings.student_id references users.id directly
+    const studentId = user.id;
 
     const { data: meetingRaw, error } = await supabase
       .from('meetings')
