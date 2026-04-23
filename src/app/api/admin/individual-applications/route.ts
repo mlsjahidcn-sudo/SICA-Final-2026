@@ -383,3 +383,134 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/**
+ * POST /api/admin/individual-applications
+ * Admin creates an application for an individual student (no partner).
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const adminUser = await requireAdmin(request);
+    if (adminUser instanceof NextResponse) return adminUser;
+
+    const body = await request.json();
+    const supabaseAdmin = getSupabaseClient();
+
+    const {
+      student_id,
+      program_ids,
+      intake_semester,
+      intake_year,
+      priority,
+      notes,
+    } = body;
+
+    // Validate required fields
+    if (!student_id) {
+      return NextResponse.json(
+        { error: 'Student ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!program_ids || !Array.isArray(program_ids) || program_ids.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one program must be selected' },
+        { status: 400 }
+      );
+    }
+
+    // Verify student exists and is an individual student
+    const { data: studentRecord, error: studentError } = await supabaseAdmin
+      .from('students')
+      .select('id, user_id')
+      .eq('id', student_id)
+      .single();
+
+    if (studentError || !studentRecord) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // Verify the student's user is truly individual (not partner-referred)
+    const { data: studentUser } = await supabaseAdmin
+      .from('users')
+      .select('id, role, full_name, referred_by_partner_id')
+      .eq('id', studentRecord.user_id)
+      .single();
+
+    if (studentUser?.role !== 'student') {
+      return NextResponse.json({ error: 'Selected user is not a student' }, { status: 400 });
+    }
+
+    // Verify all programs exist
+    const { data: programs, error: programError } = await supabaseAdmin
+      .from('programs')
+      .select('id, name, degree_level, university_id')
+      .in('id', program_ids);
+
+    if (programError || !programs || programs.length === 0) {
+      return NextResponse.json({ error: 'One or more selected programs not found' }, { status: 404 });
+    }
+
+    // Get university info for response
+    const universityIds = [...new Set(programs.map(p => p.university_id).filter(Boolean))];
+    const { data: universities } = universityIds.length > 0
+      ? await supabaseAdmin
+          .from('universities')
+          .select('id, name_en')
+          .in('id', universityIds)
+      : { data: [] };
+    const universityMap = new Map(universities?.map(u => [u.id, u.name_en]) || []);
+
+    // Create an application record for each selected program
+    const createdApplications = [];
+    for (const program of programs) {
+      const { data: newApp, error: insertError } = await supabaseAdmin
+        .from('applications')
+        .insert({
+          student_id,
+          program_id: program.id,
+          partner_id: null, // Individual application - no partner
+          user_id: studentRecord.user_id,
+          status: 'draft',
+          priority: priority || 0,
+          notes: notes || null,
+          intake_semester: intake_semester || null,
+          intake_year: intake_year ? parseInt(intake_year) : null,
+        })
+        .select('id, status, created_at')
+        .single();
+
+      if (insertError) {
+        console.error(`Error creating application for program ${program.id}:`, insertError);
+        continue;
+      }
+
+      createdApplications.push({
+        ...newApp,
+        program_name: program.name,
+        degree_level: program.degree_level,
+        university_name: program.university_id ? universityMap.get(program.university_id) || 'Unknown' : 'Unknown',
+      });
+    }
+
+    if (createdApplications.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to create any applications' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Created ${createdApplications.length} application(s) for ${studentUser?.full_name || 'student'}`,
+      applications: createdApplications,
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating individual application:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
