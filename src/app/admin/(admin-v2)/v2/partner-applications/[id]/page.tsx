@@ -38,6 +38,9 @@ import {
   Edit,
   ChevronRight,
   Download,
+  Eye,
+  Trash2,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
@@ -98,6 +101,15 @@ function ApplicationDetailContent() {
   const [rejectNote, setRejectNote] = useState('');
   const [documents, setDocuments] = useState<any[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+
+  const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [docToChange, setDocToChange] = useState<any>(null);
+  const [changeOpen, setChangeOpen] = useState(false);
+  const [changeFile, setChangeFile] = useState<File | null>(null);
+  const [changing, setChanging] = useState(false);
 
   useEffect(() => {
     if (appId) fetchApplication();
@@ -223,6 +235,65 @@ function ApplicationDetailContent() {
   const currentStatusIdx = getStatusIndex(application.status);
   // JW202 Released is the final status - no more actions needed
   const isFinal = ['jw202_released', 'rejected', 'withdrawn'].includes(application.status);
+
+  const handleDeleteDoc = async () => {
+    if (!docToDelete) return;
+    setDeleting(true);
+    try {
+      const token = await getValidToken();
+      const res = await fetch(`/api/documents?id=${docToDelete.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDocuments((prev) => prev.filter((d) => d.id !== docToDelete.id));
+        toast.success('Document deleted');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to delete document');
+      }
+    } catch (e) {
+      toast.error('Failed to delete document');
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+      setDocToDelete(null);
+    }
+  };
+
+  const handleChangeDoc = async () => {
+    if (!docToChange || !changeFile) return;
+    setChanging(true);
+    try {
+      const token = await getValidToken();
+      const formData = new FormData();
+      formData.append('student_id', docToChange.student_id);
+      formData.append('document_type', docToChange.document_type || docToChange.type);
+      formData.append('file', changeFile);
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments((prev) =>
+          prev.map((d) => (d.id === docToChange.id ? { ...d, ...data.document } : d))
+        );
+        toast.success('Document updated');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to update document');
+      }
+    } catch (e) {
+      toast.error('Failed to update document');
+    } finally {
+      setChanging(false);
+      setChangeOpen(false);
+      setDocToChange(null);
+      setChangeFile(null);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -541,13 +612,33 @@ function ApplicationDetailContent() {
                       <Badge variant={doc.status === 'verified' ? 'default' : doc.status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs shrink-0 capitalize">
                         {doc.status}
                       </Badge>
-                      {doc.file_url && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
-                            <Download className="h-4 w-4" />
-                          </a>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {doc.file_url && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild title="View">
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Change"
+                          onClick={() => { setDocToChange(doc); setChangeOpen(true); }}
+                        >
+                          <Upload className="h-3.5 w-3.5" />
                         </Button>
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          title="Delete"
+                          onClick={() => { setDocToDelete(doc); setDeleteOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -680,6 +771,53 @@ function ApplicationDetailContent() {
           </Card>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg border shadow-lg p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-semibold">Delete Document</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Are you sure you want to delete <strong>{docToDelete?.file_name}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" size="sm" onClick={() => { setDeleteOpen(false); setDocToDelete(null); }}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleDeleteDoc} disabled={deleting}>
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Document Dialog */}
+      {changeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg border shadow-lg p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-semibold">Change Document</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Replace <strong>{docToChange?.file_name}</strong> with a new file.
+            </p>
+            <input
+              type="file"
+              className="mt-4 block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              onChange={(e) => setChangeFile(e.target.files?.[0] || null)}
+            />
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" size="sm" onClick={() => { setChangeOpen(false); setDocToChange(null); setChangeFile(null); }}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleChangeDoc} disabled={!changeFile || changing}>
+                {changing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                Update
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
