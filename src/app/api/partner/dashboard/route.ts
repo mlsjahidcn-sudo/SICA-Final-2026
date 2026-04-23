@@ -103,52 +103,71 @@ export async function GET(request: NextRequest) {
       }).length || 0,
     };
     
-    // Get recent applications with program and university details
-    const recentQuery = supabase
+    // Step 1: Get recent applications (basic fields only)
+    const { data: recentApplications, error: recentError } = await supabase
       .from('applications')
-      .select(`
-        id,
-        status,
-        submitted_at,
-        created_at,
-        students (
-          first_name,
-          last_name,
-          nationality,
-          user_id,
-          users (
-            email
-          )
-        ),
-        programs (
-          name,
-          degree_level,
-          universities (
-            name,
-            name_en,
-            city
-          )
-        )
-      `)
+      .select('id, status, submitted_at, created_at, student_id, program_id')
       .not('status', 'eq', 'draft')
       .in('student_id', studentIds)
       .order('created_at', { ascending: false })
       .limit(5);
-    
-    const { data: recentApplications, error: recentError } = await recentQuery;
-    
+
     if (recentError) {
       console.error('Error fetching recent applications:', recentError);
     }
 
-    // Normalize recent applications (handle arrays from Supabase relations)
-    const normalizedRecent = recentApplications?.map(app => {
-      const student = Array.isArray(app.students) ? app.students[0] : app.students;
-      const studentUser = student?.users ? (Array.isArray(student.users) ? student.users[0] : student.users) : null;
-      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
-      const university = program?.universities 
-        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-        : null;
+    // Step 2: Fetch related data in batches
+    const recentStudentIds = (recentApplications || []).map(a => a.student_id).filter((id): id is string => !!id);
+    const recentProgramIds = (recentApplications || []).map(a => a.program_id).filter((id): id is string => !!id);
+
+    // Fetch students
+    let studentsData: Record<string, { first_name: string; last_name: string; nationality: string; user_id: string }> = {};
+    if (recentStudentIds.length > 0) {
+      const { data: students } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, nationality, user_id')
+        .in('id', recentStudentIds);
+      (students || []).forEach(s => { studentsData[s.id] = s; });
+    }
+
+    // Fetch student users (emails)
+    const studentUserIds = Object.values(studentsData).map(s => s.user_id).filter((id): id is string => !!id);
+    let usersData: Record<string, { email: string }> = {};
+    if (studentUserIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, email')
+        .in('id', studentUserIds);
+      (users || []).forEach(u => { usersData[u.id] = u; });
+    }
+
+    // Fetch programs
+    let programsData: Record<string, { name: string; degree_level: string; university_id: string }> = {};
+    if (recentProgramIds.length > 0) {
+      const { data: programs } = await supabase
+        .from('programs')
+        .select('id, name, degree_level, university_id')
+        .in('id', recentProgramIds);
+      (programs || []).forEach(p => { programsData[p.id] = p; });
+    }
+
+    // Fetch universities
+    const universityIds = Object.values(programsData).map(p => p.university_id).filter((id): id is string => !!id);
+    let universitiesData: Record<string, { name: string; name_en: string; city: string }> = {};
+    if (universityIds.length > 0) {
+      const { data: universities } = await supabase
+        .from('universities')
+        .select('id, name, name_en, city')
+        .in('id', universityIds);
+      (universities || []).forEach(u => { universitiesData[u.id] = u; });
+    }
+
+    // Normalize recent applications
+    const normalizedRecent = (recentApplications || []).map(app => {
+      const student = app.student_id ? studentsData[app.student_id] : null;
+      const studentUser = student?.user_id ? usersData[student.user_id] : null;
+      const program = app.program_id ? programsData[app.program_id] : null;
+      const university = program?.university_id ? universitiesData[program.university_id] : null;
 
       return {
         id: app.id,
@@ -157,14 +176,14 @@ export async function GET(request: NextRequest) {
         created_at: app.created_at,
         first_name: student?.first_name,
         last_name: student?.last_name,
-        passport_first_name: student?.first_name, // backward compatibility
-        passport_last_name: student?.last_name, // backward compatibility
+        passport_first_name: student?.first_name,
+        passport_last_name: student?.last_name,
         nationality: student?.nationality,
         email: studentUser?.email,
         programs: program ? {
           name_en: program.name,
           name: program.name,
-          degree_type: program.degree_level, // backward compatibility
+          degree_type: program.degree_level,
           degree_level: program.degree_level,
           universities: university ? {
             name_en: university.name_en || university.name,
@@ -173,7 +192,7 @@ export async function GET(request: NextRequest) {
           } : null
         } : null
       };
-    }) || [];
+    });
     
     return NextResponse.json({
       stats,

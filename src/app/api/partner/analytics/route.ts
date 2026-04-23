@@ -65,39 +65,41 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const lastPeriodStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
     
-    // Fetch all applications with related data, filtered by partner_id
-    const appsQuery = supabase
+    // Step 1: Fetch applications (basic fields only)
+    const { data: applications, error: appsError } = await supabase
       .from('applications')
-      .select(`
-        id,
-        status,
-        created_at,
-        submitted_at,
-        program_id,
-        programs (
-          id,
-          name,
-          name_en,
-          degree_level,
-          university_id,
-          universities (
-            id,
-            name,
-            name_en
-          )
-        )
-      `)
+      .select('id, status, created_at, submitted_at, program_id')
       .not('status', 'eq', 'draft')
       .eq('partner_id', partnerId);
-    
-    const { data: applications, error: appsError } = await appsQuery;
-    
+
     if (appsError) {
       console.error('Error fetching applications:', appsError);
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
-    const apps = (applications as unknown as ApplicationWithRelations[]) || [];
+    const apps = applications || [];
+
+    // Step 2: Fetch related programs and universities
+    const programIds = apps.map(a => a.program_id).filter((id): id is string => !!id);
+
+    let programsData: Record<string, { name: string; name_en: string | null; degree_level: string; university_id: string }> = {};
+    if (programIds.length > 0) {
+      const { data: programs } = await supabase
+        .from('programs')
+        .select('id, name, name_en, degree_level, university_id')
+        .in('id', programIds);
+      (programs || []).forEach(p => { programsData[p.id] = p; });
+    }
+
+    const universityIds = Object.values(programsData).map(p => p.university_id).filter((id): id is string => !!id);
+    let universitiesData: Record<string, { name: string; name_en: string | null }> = {};
+    if (universityIds.length > 0) {
+      const { data: universities } = await supabase
+        .from('universities')
+        .select('id, name, name_en')
+        .in('id', universityIds);
+      (universities || []).forEach(u => { universitiesData[u.id] = u; });
+    }
 
     // Calculate Overview Stats
     const totalApplications = apps.length;
@@ -167,10 +169,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate University Rankings
     const universityMap = new Map<string, { name: string; applications: number; accepted: number }>();
-    
+
     apps.forEach(app => {
-      const universityData = app.programs?.universities;
-      const uniName = universityData?.name_en || universityData?.name || 'Unknown';
+      const program = app.program_id ? programsData[app.program_id] : null;
+      const university = program?.university_id ? universitiesData[program.university_id] : null;
+      const uniName = university?.name_en || university?.name || 'Unknown';
       const entry = universityMap.get(uniName) || { name: uniName, applications: 0, accepted: 0 };
       entry.applications++;
       if (app.status === 'accepted') entry.accepted++;
@@ -187,16 +190,16 @@ export async function GET(request: NextRequest) {
 
     // Calculate Program Analytics
     const programMap = new Map<string, { name: string; degree: string; applications: number }>();
-    
+
     apps.forEach(app => {
-      const programData = app.programs;
+      const programData = app.program_id ? programsData[app.program_id] : null;
       const progName = programData?.name_en || programData?.name || 'Unknown';
       const degreeType = programData?.degree_level || 'Unknown';
       const key = `${progName}-${degreeType}`;
-      const entry = programMap.get(key) || { 
-        name: progName, 
-        degree: degreeType, 
-        applications: 0 
+      const entry = programMap.get(key) || {
+        name: progName,
+        degree: degreeType,
+        applications: 0
       };
       entry.applications++;
       programMap.set(key, entry);

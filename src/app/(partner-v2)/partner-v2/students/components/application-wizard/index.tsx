@@ -147,13 +147,13 @@ export function ApplicationWizard({ studentId, studentName, userId }: Applicatio
       }
 
       const body = {
-        user_id: userId,
+        student_id: userId,
         selected_program_ids: formData.selectedProgramIds,
         intake: formData.intake,
         notes: formData.notes || undefined,
       };
 
-      const res = await fetch('/api/applications', {
+      const res = await fetch('/api/partner/applications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

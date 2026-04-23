@@ -16,45 +16,10 @@ export async function GET(
     const supabase = getSupabaseClient();
     const { id } = await params;
 
-    // Fetch meeting with related data
+    // Step 1: Fetch meeting with basic fields only
     const { data: meeting, error } = await supabase
       .from('meetings')
-      .select(`
-        id,
-        application_id,
-        student_id,
-        title,
-        meeting_date,
-        duration_minutes,
-        platform,
-        meeting_url,
-        meeting_id_text,
-        meeting_password,
-        status,
-        created_by,
-        created_at,
-        updated_at,
-        applications (
-          id,
-          partner_id,
-          programs (
-            name,
-            degree_level,
-            universities (
-              name,
-              name_en
-            )
-          ),
-          students (
-            first_name,
-            last_name,
-            user_id,
-            users (
-              email
-            )
-          )
-        )
-      `)
+      .select('id, application_id, student_id, title, meeting_date, duration_minutes, platform, meeting_url, meeting_id_text, meeting_password, status, created_by, created_at, updated_at')
       .eq('id', id)
       .maybeSingle();
 
@@ -67,31 +32,74 @@ export async function GET(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
+    // Step 2: Fetch related data
+    let applicationData: { partner_id: string | null; program_id: string | null } | null = null;
+    if (meeting.application_id) {
+      const { data: app } = await supabase
+        .from('applications')
+        .select('partner_id, program_id')
+        .eq('id', meeting.application_id)
+        .maybeSingle();
+      applicationData = app;
+    }
+
     // Verify partner has access to this meeting
     if (user.role === 'partner') {
-      // Get partner record (applications.partner_id references partners.id, not users.id)
       const { data: partnerRecord, error: partnerError } = await supabase
         .from('partners')
         .select('id')
         .eq('user_id', user.id)
         .single();
-      
+
       if (partnerError || !partnerRecord) {
         return NextResponse.json({ error: 'Partner record not found' }, { status: 403 });
       }
-      
-      const app = meeting.applications as unknown as Record<string, unknown> | null;
-      if (app?.partner_id !== partnerRecord.id) {
+
+      if (applicationData?.partner_id !== partnerRecord.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
-    // Normalize meeting data
-    const appData = (meeting.applications as unknown as Record<string, unknown> | null) || {};
-    const student = (appData.students as unknown as Record<string, unknown> | null) || {};
-    const studentUser = student?.users ? (Array.isArray(student.users) ? student.users[0] : student.users) : null;
-    const program = (appData.programs as unknown as Record<string, unknown> | null) || {};
-    const university = (program.universities as unknown as Record<string, unknown> | null) || {};
+    // Step 3: Fetch program, university, and student data
+    let programData: { name: string; degree_level: string; university_id: string | null } | null = null;
+    if (applicationData?.program_id) {
+      const { data: program } = await supabase
+        .from('programs')
+        .select('name, degree_level, university_id')
+        .eq('id', applicationData.program_id)
+        .maybeSingle();
+      programData = program;
+    }
+
+    let universityData: { name: string; name_en: string | null } | null = null;
+    if (programData?.university_id) {
+      const { data: university } = await supabase
+        .from('universities')
+        .select('name, name_en')
+        .eq('id', programData.university_id)
+        .maybeSingle();
+      universityData = university;
+    }
+
+    let studentData: { first_name: string; last_name: string; user_id: string | null } | null = null;
+    let studentUserEmail = '';
+    if (meeting.student_id) {
+      const { data: student } = await supabase
+        .from('students')
+        .select('first_name, last_name, user_id')
+        .eq('id', meeting.student_id)
+        .maybeSingle();
+      studentData = student;
+
+      if (student?.user_id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('email')
+          .eq('id', student.user_id)
+          .maybeSingle();
+        studentUserEmail = userData?.email || '';
+      }
+    }
 
     const normalizedMeeting = {
       id: meeting.id,
@@ -108,11 +116,11 @@ export async function GET(
       created_by: meeting.created_by,
       created_at: meeting.created_at,
       updated_at: meeting.updated_at,
-      student_name: [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Unknown',
-      student_email: studentUser?.email || '',
-      program_name: program.name || '',
-      degree_type: program.degree_level || '',
-      university_name: university.name_en || university.name || '',
+      student_name: [studentData?.first_name, studentData?.last_name].filter(Boolean).join(' ') || 'Unknown',
+      student_email: studentUserEmail,
+      program_name: programData?.name || '',
+      degree_type: programData?.degree_level || '',
+      university_name: universityData?.name_en || universityData?.name || '',
     };
 
     return NextResponse.json({ meeting: normalizedMeeting });

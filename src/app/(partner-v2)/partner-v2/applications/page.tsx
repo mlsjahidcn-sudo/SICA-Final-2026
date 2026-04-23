@@ -136,7 +136,7 @@ export default function ApplicationsPage() {
     setLoading(true);
     try {
       const token = await getValidToken();
-      const res = await fetch(`/api/applications?pageSize=100`, {
+      const res = await fetch(`/api/partner/applications?pageSize=100`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

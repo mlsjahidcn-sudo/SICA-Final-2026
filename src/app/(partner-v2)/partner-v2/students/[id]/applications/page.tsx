@@ -116,14 +116,15 @@ export default function ApplicationsListPage() {
           setStudent(studentData);
         }
 
-        // Fetch applications
-        const res = await fetch(`/api/applications?pageSize=100`, {
+        // Fetch applications from partner API
+        const res = await fetch(`/api/partner/applications?pageSize=100`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
           const result = await res.json();
+          // Filter by student user_id (URL id is users.id, students.user_id is users.id)
           const apps: ApplicationItem[] = (result.applications || []).filter(
-            (app: ApplicationItem) => app.students && String(app.students.id) === studentId
+            (app: ApplicationItem) => app.students && String(app.students.user_id) === studentId
           );
           
           // Calculate stats by iterating through apps

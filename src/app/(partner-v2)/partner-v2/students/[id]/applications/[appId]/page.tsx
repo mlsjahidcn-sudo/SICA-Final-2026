@@ -149,7 +149,7 @@ export default function ApplicationDetailPage() {
 
       if (response.ok) {
         toast.success('Application submitted successfully!');
-        const res = await fetch(`/api/applications?pageSize=200`, {
+        const res = await fetch(`/api/partner/applications?pageSize=200`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -175,7 +175,7 @@ export default function ApplicationDetailPage() {
     async function fetchApp() {
       try {
         const token = await getValidToken();
-        const res = await fetch(`/api/applications?pageSize=200`, {
+        const res = await fetch(`/api/partner/applications?pageSize=200`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

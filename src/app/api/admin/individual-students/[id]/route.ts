@@ -66,6 +66,10 @@ export async function GET(
       finalUser = fallbackUser;
     }
 
+    if (!finalUser) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
     // Fetch student record for additional fields
     const { data: studentRecord } = await supabaseAdmin
       .from('students')

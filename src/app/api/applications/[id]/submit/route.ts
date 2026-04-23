@@ -25,14 +25,7 @@ export async function POST(
     // Fetch the application to verify ownership and status
     const { data: application, error: fetchError } = await supabase
       .from('applications')
-      .select(`
-        id,
-        student_id,
-        status,
-        programs (
-          id
-        )
-      `)
+      .select('id, student_id, status, program_id')
       .eq('id', applicationId)
       .single();
 
