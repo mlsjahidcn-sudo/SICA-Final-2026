@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { ApplicationPaymentSection } from '@/app/admin/(admin-v2)/v2/components/application-payment-section';
 
 import {
   Card,
@@ -85,14 +86,27 @@ function ApplicationDetailContent() {
   const [error, setError] = useState<string | null>(null);
   const [isIndividual, setIsIndividual] = useState<boolean>(true);
 
-  const [documents, setDocuments] = useState<any[]>([]);
+  interface DocumentItem {
+    id: string;
+    file_name: string;
+    document_type_label?: string;
+    type?: string;
+    status?: string;
+    url?: string;
+    file_url?: string;
+    uploaded_at: string;
+    student_id?: string;
+    document_type?: string;
+  }
+
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
 
-  const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [docToDelete, setDocToDelete] = useState<DocumentItem | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [docToChange, setDocToChange] = useState<any>(null);
+  const [docToChange, setDocToChange] = useState<DocumentItem | null>(null);
   const [changeOpen, setChangeOpen] = useState(false);
   const [changeFile, setChangeFile] = useState<File | null>(null);
   const [changing, setChanging] = useState(false);
@@ -170,7 +184,7 @@ function ApplicationDetailContent() {
           }),
         ]);
 
-        let allDocs: any[] = [];
+        let allDocs: DocumentItem[] = [];
         if (appRes.ok) {
           const appData = await appRes.json();
           allDocs = [...(appData.documents || [])];
@@ -178,8 +192,8 @@ function ApplicationDetailContent() {
         if (studentRes.ok) {
           const studentData = await studentRes.json();
           const studentDocs = studentData.documents || [];
-          const seen = new Set(allDocs.map((d: any) => d.id));
-          studentDocs.forEach((d: any) => {
+          const seen = new Set(allDocs.map((d) => d.id));
+          studentDocs.forEach((d: DocumentItem) => {
             if (!seen.has(d.id)) {
               allDocs.push(d);
               seen.add(d.id);
@@ -243,8 +257,8 @@ function ApplicationDetailContent() {
     try {
       const token = await getValidToken();
       const formData = new FormData();
-      formData.append('student_id', docToChange.student_id);
-      formData.append('document_type', docToChange.document_type || docToChange.type);
+      formData.append('student_id', docToChange.student_id || '');
+      formData.append('document_type', docToChange.document_type || docToChange.type || '');
       formData.append('file', changeFile);
       const res = await fetch('/api/documents', {
         method: 'POST',
@@ -467,7 +481,7 @@ function ApplicationDetailContent() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {documents.map((doc: any) => (
+                  {documents.map((doc) => (
                     <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/40 transition-colors">
                       <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         <FileText className="h-4 w-4 text-primary" />
@@ -605,6 +619,11 @@ function ApplicationDetailContent() {
               )}
             </CardContent>
           </Card>
+
+          {/* Payment Tracking */}
+          {app && (
+            <ApplicationPaymentSection applicationId={app.id} />
+          )}
 
           {/* Quick Actions */}
           <Card>

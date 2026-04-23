@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ApplicationPaymentSection } from '@/app/(partner-v2)/partner-v2/components/application-payment-section';
 
 import {
   Card,
@@ -537,6 +538,9 @@ export default function ApplicationDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Payment Tracking */}
+          <ApplicationPaymentSection applicationId={appId} />
 
           {/* Actions Card */}
           <Card>
