@@ -241,13 +241,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get partner record ID
-    const { data: partnerRec } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('user_id', effectivePartnerId)
-      .maybeSingle();
-
-    const partnerRecordId = partnerRec?.id || null;
+    // NOTE: applications.partner_id FK references users(id), NOT partners(id)
+    // So we use effectivePartnerId (users.id) directly
+    const partnerUserId = effectivePartnerId;
 
     // Determine program IDs to create applications for
     const programIdsToCreate: string[] = [];
@@ -274,7 +270,7 @@ export async function POST(request: NextRequest) {
         .insert({
           student_id: actualStudentId,
           program_id: pid,
-          partner_id: partnerRecordId,
+          partner_id: partnerUserId,
           status: 'draft',
           profile_snapshot: {
             ...(intake ? { intake } : {}),
@@ -297,7 +293,7 @@ export async function POST(request: NextRequest) {
         .from('applications')
         .insert({
           student_id: actualStudentId,
-          partner_id: partnerRecordId,
+          partner_id: partnerUserId,
           status: 'draft',
           notes: requested_university_program_note,
           profile_snapshot: {

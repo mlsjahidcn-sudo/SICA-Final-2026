@@ -259,22 +259,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // For partner users, verify access and resolve partner record
-    let partnerRecordId: string | null = null;
+    // For partner users, verify access and resolve partner user ID
+    // NOTE: applications.partner_id FK references users(id), NOT partners(id)
+    let partnerUserId: string | null = null;
     if (user.role === 'partner') {
       const authResult = await verifyPartnerAuth(request);
       if ('error' in authResult) return authResult.error;
       const partnerUser = authResult.user;
-      
+
       // Member can only create applications for students they referred
       // Admin can create applications for any student in their team
       const adminId = await getPartnerAdminId(partnerUser.id);
-      const { data: partnerRec } = await supabase
-        .from('partners')
-        .select('id')
-        .eq('user_id', adminId || partnerUser.id)
-        .maybeSingle();
-      partnerRecordId = partnerRec?.id || null;
+      partnerUserId = adminId || partnerUser.id;
     }
 
     const body = await request.json();
@@ -393,7 +389,7 @@ export async function POST(request: NextRequest) {
         .insert({
           student_id: finalStudentId,
           program_id: pid,
-          partner_id: partnerRecordId,
+          partner_id: partnerUserId,
           status: 'draft',
           profile_snapshot: profileSnapshot,
           notes: requested_university_program_note || null,
