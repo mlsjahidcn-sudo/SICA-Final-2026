@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const creatorIds = [...new Set(meetings.map(m => m.created_by).filter(Boolean))];
     const allUserIds = [...new Set([...studentUserIds, ...creatorIds])];
 
-    let usersData: Record<string, { id: string; full_name: string; email: string }> = {};
+    const usersData: Record<string, { id: string; full_name: string; email: string }> = {};
     if (allUserIds.length > 0) {
       const { data: users } = await supabase.from('users').select('id, full_name, email').in('id', allUserIds);
       (users || []).forEach(u => { usersData[u.id] = u; });
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Step 3: Fetch applications
     const appIds = [...new Set(meetings.map(m => m.application_id).filter(Boolean))];
-    let appsData: Record<string, { id: string; status: string; program_id: string | null; student_id: string | null }> = {};
+    const appsData: Record<string, { id: string; status: string; program_id: string | null; student_id: string | null }> = {};
     if (appIds.length > 0) {
       const { data: apps } = await supabase.from('applications').select('id, status, program_id, student_id').in('id', appIds);
       (apps || []).forEach(a => { appsData[a.id] = a; });
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // Step 4: Fetch programs
     const programIds = [...new Set(Object.values(appsData).map(a => a.program_id).filter(Boolean))];
-    let programsData: Record<string, { id: string; name: string; university_id: string | null }> = {};
+    const programsData: Record<string, { id: string; name: string; university_id: string | null }> = {};
     if (programIds.length > 0) {
       const { data: programs } = await supabase.from('programs').select('id, name, university_id').in('id', programIds);
       (programs || []).forEach(p => { programsData[p.id] = p; });
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     // Step 5: Fetch universities
     const universityIds = [...new Set(Object.values(programsData).map(p => p.university_id).filter(Boolean))];
-    let universitiesData: Record<string, { id: string; name_en: string | null }> = {};
+    const universitiesData: Record<string, { id: string; name_en: string | null }> = {};
     if (universityIds.length > 0) {
       const { data: universities } = await supabase.from('universities').select('id, name_en').in('id', universityIds);
       (universities || []).forEach(u => { universitiesData[u.id] = u; });

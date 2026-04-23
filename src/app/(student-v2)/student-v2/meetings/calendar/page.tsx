@@ -42,13 +42,21 @@ export default function CalendarPage() {
   const [meetings, setMeetings] = React.useState<Meeting[]>([])
 
   React.useEffect(() => {
-    // Mock meetings
-    setMeetings([
-      { id: "1", title: "Initial Interview", meeting_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), platform: "Zoom", status: "scheduled" },
-      { id: "2", title: "Program Discussion", meeting_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), platform: "Google Meet", status: "scheduled" },
-      { id: "3", title: "Follow-up Interview", meeting_date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(), platform: "Teams", status: "scheduled" },
-      { id: "4", title: "Final Review", meeting_date: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(), platform: "Zoom", status: "scheduled" },
-    ])
+    const fetchMeetings = async () => {
+      try {
+        const response = await fetch('/api/student/meetings')
+        if (response.ok) {
+          const data = await response.json()
+          setMeetings(data.meetings || [])
+        } else {
+          setMeetings([])
+        }
+      } catch (error) {
+        console.error('Error fetching meetings:', error)
+        setMeetings([])
+      }
+    }
+    fetchMeetings()
   }, [])
 
   const monthStart = startOfMonth(currentMonth)

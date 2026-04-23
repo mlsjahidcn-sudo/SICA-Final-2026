@@ -69,64 +69,8 @@ export default function MeetingsPage() {
     )
     
     if (error) {
-      // Use mock data for development if unauthorized or other errors
       console.error("Error fetching meetings:", error)
-      setMeetings([
-        {
-          id: "1",
-          title: "Initial Interview",
-          meeting_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          duration_minutes: 30,
-          platform: "Zoom",
-          meeting_url: "https://zoom.us/j/123456",
-          status: "scheduled",
-          created_at: new Date().toISOString(),
-          applications: {
-            id: "app1",
-            programs: {
-              id: "prog1",
-              name: "Computer Science",
-              universities: { id: "u1", name_en: "Tsinghua University", logo_url: undefined }
-            }
-          }
-        },
-        {
-          id: "2",
-          title: "Program Discussion",
-          meeting_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          duration_minutes: 45,
-          platform: "Google Meet",
-          meeting_url: "https://meet.google.com/abc-defg-hij",
-          status: "scheduled",
-          created_at: new Date().toISOString(),
-          applications: {
-            id: "app2",
-            programs: {
-              id: "prog2",
-              name: "Data Science",
-              universities: { id: "u2", name_en: "Peking University", logo_url: undefined }
-            }
-          }
-        },
-        {
-          id: "3",
-          title: "Document Review",
-          meeting_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          duration_minutes: 20,
-          platform: "Microsoft Teams",
-          meeting_url: "https://teams.microsoft.com/meet/xyz",
-          status: "completed",
-          created_at: new Date().toISOString(),
-          applications: {
-            id: "app3",
-            programs: {
-              id: "prog3",
-              name: "International Business",
-              universities: { id: "u3", name_en: "Fudan University", logo_url: undefined }
-            }
-          }
-        }
-      ])
+      setMeetings([])
     } else if (data) {
       setMeetings(data.meetings || [])
     }

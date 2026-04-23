@@ -71,34 +71,7 @@ export default function MeetingDetailPage() {
           const data = await response.json()
           setMeeting(data.meeting)
         } else {
-          // Mock data
-          setMeeting({
-            id: meetingId,
-            title: "Initial Interview",
-            meeting_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            duration_minutes: 30,
-            platform: "Zoom",
-            meeting_url: "https://zoom.us/j/123456789",
-            meeting_id: "123 456 789",
-            meeting_password: "abc123",
-            status: "scheduled",
-            notes: "Please prepare to discuss your academic background and research interests. Have your portfolio ready if applicable.",
-            interviewer_name: "Dr. Wang Wei",
-            interviewer_email: "wang.wei@tsinghua.edu.cn",
-            applications: {
-              id: "app1",
-              programs: {
-                id: "prog1",
-                name_en: "Computer Science",
-                degree_type: "Master",
-                universities: {
-                  id: "uni1",
-                  name_en: "Tsinghua University",
-                  logo_url: null
-                }
-              }
-            }
-          })
+          setMeeting(null)
         }
       } catch (error) {
         console.error("Error fetching meeting:", error)
