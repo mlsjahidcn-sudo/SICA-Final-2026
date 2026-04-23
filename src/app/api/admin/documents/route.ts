@@ -114,13 +114,13 @@ export async function GET(request: NextRequest) {
     const docStudentIds = [...new Set(documents.map(d => d.student_id).filter(Boolean))] as string[];
 
     // Step 4: Fetch students by id and by user_id fallback
-    let studentsById: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
-    let studentsByUserId: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
+    let studentsById: Record<string, { id: string; full_name: string | null; first_name: string | null; last_name: string | null; user_id: string; nationality: string | null }> = {};
+    let studentsByUserId: Record<string, { id: string; full_name: string | null; first_name: string | null; last_name: string | null; user_id: string; nationality: string | null }> = {};
 
     if (docStudentIds.length > 0) {
       const { data: students } = await supabase
         .from('students')
-        .select('id, first_name, last_name, user_id, nationality')
+        .select('id, full_name, first_name, last_name, user_id, nationality')
         .in('id', docStudentIds);
       (students || []).forEach(s => {
         studentsById[s.id] = s;
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     if (unmatchedIds.length > 0) {
       const { data: studentsByUid } = await supabase
         .from('students')
-        .select('id, first_name, last_name, user_id, nationality')
+        .select('id, full_name, first_name, last_name, user_id, nationality')
         .in('user_id', unmatchedIds);
       (studentsByUid || []).forEach(s => {
         studentsByUserId[s.user_id] = s;
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
           id: student.id,
           first_name: student.first_name,
           last_name: student.last_name,
-          name: `${student.first_name} ${student.last_name}`.trim(),
+          name: student.full_name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student',
           email: user?.email || '',
           nationality: student.nationality,
         } : null,
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
         } : null,
         partner: partner ? {
           id: app!.partner_id,
-          name: partner.full_name,
+          name: partner.full_name || partner.email || 'Unknown Partner',
           email: partner.email,
         } : null,
         is_partner_document: !!app?.partner_id,
