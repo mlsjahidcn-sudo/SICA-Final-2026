@@ -392,29 +392,29 @@ function RelatedUniversityCard({ university }: { university: RelatedUniversity }
 function DeadlineCard({ deadline, timeLeft }: { deadline: string; timeLeft: { days: number; hours: number; minutes: number; seconds: number } | null }) {
   return (
     <Card size="sm" className="border-primary/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <IconCalendar className="h-4 w-4" />
+      <CardHeader className="pb-1.5 pt-3 px-3">
+        <CardTitle className="flex items-center gap-1.5 text-xs">
+          <IconCalendar className="h-3.5 w-3.5" />
           Application Deadline
         </CardTitle>
         <CardAction>
-          <Badge variant="secondary" className="rounded-full text-xs">
+          <Badge variant="secondary" className="rounded-full text-[10px]">
             {timeLeft ? "Open" : "Closed"}
           </Badge>
         </CardAction>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        <div className="text-lg font-bold">
+      <CardContent className="space-y-2 px-3 pb-3">
+        <div className="text-sm font-bold">
           {new Date(deadline).toLocaleDateString('en-US', {
             year: 'numeric',
-            month: 'long',
+            month: 'short',
             day: 'numeric'
           })}
         </div>
 
         {timeLeft ? (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
             {[
               { value: timeLeft.days, label: 'Days' },
               { value: timeLeft.hours, label: 'Hrs' },
@@ -422,16 +422,16 @@ function DeadlineCard({ deadline, timeLeft }: { deadline: string; timeLeft: { da
               { value: timeLeft.seconds, label: 'Secs' },
             ].map(({ value, label }) => (
               <div key={label} className="text-center">
-                <Kbd className="text-base font-bold w-full justify-center mb-1">
+                <Kbd className="text-sm font-bold w-full justify-center mb-0.5 py-0.5 px-1">
                   {value}
                 </Kbd>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-4 border-2 border-dashed rounded-lg">
-            <IconClock className="h-5 w-5 text-muted-foreground mx-auto mb-1.5" />
+          <div className="text-center py-2 border-2 border-dashed rounded-lg">
+            <IconClock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
             <div className="text-xs text-muted-foreground">Applications are currently closed</div>
           </div>
         )}
