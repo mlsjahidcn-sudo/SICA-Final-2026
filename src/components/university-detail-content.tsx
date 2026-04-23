@@ -786,19 +786,29 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                   </div>
                 </div>
                 
-                {/* Type Badges */}
-                {university.type && university.type.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {university.type.map((type) => (
-                      <Badge key={type} variant="outline" className={cn(
-                        "text-sm px-3 py-1",
-                        getTypeBadgeStyle(type)
-                      )}>
-                        {getTypeLabel(type)}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                {/* Type Badges + Ranks */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {university.type && university.type.length > 0 && university.type.map((type) => (
+                    <Badge key={type} variant="outline" className={cn(
+                      "text-sm px-3 py-1",
+                      getTypeBadgeStyle(type)
+                    )}>
+                      {getTypeLabel(type)}
+                    </Badge>
+                  ))}
+                  {university.ranking_national && (
+                    <Badge variant="outline" className="text-sm px-3 py-1 bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-400">
+                      <IconTrophy className="h-3.5 w-3.5 mr-1 text-amber-500" />
+                      National Rank #{university.ranking_national}
+                    </Badge>
+                  )}
+                  {university.ranking_international && (
+                    <Badge variant="outline" className="text-sm px-3 py-1 bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400">
+                      <IconGlobe className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                      Global Rank #{university.ranking_international}
+                    </Badge>
+                  )}
+                </div>
                 
                 {/* CTA Buttons */}
                 <div className="flex flex-wrap gap-3 mt-4 justify-center lg:justify-start">
