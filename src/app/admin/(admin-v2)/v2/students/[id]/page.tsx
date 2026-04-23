@@ -88,7 +88,7 @@ function StudentDetailContent() {
 
       // Fetch student data and applications in parallel
       const [studentRes, appsRes] = await Promise.all([
-        fetch(`/api/admin/individual-students?id=${studentId}`, {
+        fetch(`/api/admin/individual-students/${studentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`/api/admin/individual-applications?student_id=${studentId}&limit=50`, {

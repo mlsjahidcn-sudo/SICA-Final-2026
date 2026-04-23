@@ -94,9 +94,9 @@ function StudentDetailContent() {
       const token = await getValidToken();
       console.log('[StudentDetail] Fetching student with ID:', studentId);
 
-      // Use dedicated single-record API with ?id= parameter
+      // Use dedicated single-record API route
       const [studentRes, appsRes] = await Promise.all([
-        fetch(`/api/admin/partner-students?id=${studentId}`, {
+        fetch(`/api/admin/partner-students/${studentId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`/api/admin/partner-applications?limit=50`, {
