@@ -928,14 +928,6 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                       <div className="md:hidden space-y-3">
                         {programs.map((program) => (
                           <Card key={program.id} className="overflow-hidden group">
-                            {/* Degree Level Color Strip */}
-                            <div className={cn(
-                              "h-1 w-full",
-                              program.degree_level?.toLowerCase() === 'bachelor' ? 'bg-emerald-500' :
-                              program.degree_level?.toLowerCase() === 'master' ? 'bg-blue-500' :
-                              program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'bg-purple-500' :
-                              'bg-muted-foreground/30'
-                            )} />
                             <CardContent className="p-4">
                               <div className="space-y-3">
                                 {/* Header: Badge + Name */}
