@@ -93,11 +93,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Get partner info for referred_by_partner, created_by, and updated_by
+      // Get partner info for referred_by_partner, created_by, updated_by, and partner_id
       const allPartnerIds: string[] = [
         studentUser?.referred_by_partner_id,
         (singleApp as Record<string, unknown>).created_by as string,
         (singleApp as Record<string, unknown>).updated_by as string,
+        (singleApp as Record<string, unknown>).partner_id as string,
       ].filter(Boolean) as string[];
 
       const partnerInfoMap = new Map<string, { id: string; full_name: string; email: string; company_name?: string }>();
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
           updated_at: singleApp.updated_at,
           partner_id: singleApp.partner_id,
           created_by: createdBy,
-          created_by_partner: createdBy ? partnerInfoMap.get(createdBy) || null : null,
+          created_by_partner: createdBy ? partnerInfoMap.get(createdBy) || null : (singleApp.partner_id ? partnerInfoMap.get(singleApp.partner_id) || null : null),
           updated_by: updatedBy,
           updated_by_partner: updatedBy ? partnerInfoMap.get(updatedBy) || null : null,
           intake: (singleApp.profile_snapshot as { intake?: string } | null)?.intake || null,
@@ -293,11 +294,12 @@ export async function GET(request: NextRequest) {
     const programMap = new Map(programsData?.map(p => [p.id, p]) || []);
     const universityMap = new Map(universitiesData?.map(u => [u.id, u]) || []);
 
-    // Get partner info for referred students, created_by, and updated_by
+    // Get partner info for referred students, created_by, updated_by, and partner_id
     const allPartnerIds = [...new Set([
       ...(studentUsersData?.map(u => u.referred_by_partner_id).filter(Boolean) || []),
       ...(applications?.map(a => (a as Record<string, unknown>).created_by).filter(Boolean) || []),
       ...(applications?.map(a => (a as Record<string, unknown>).updated_by).filter(Boolean) || []),
+      ...(applications?.map(a => (a as Record<string, unknown>).partner_id).filter(Boolean) || []),
     ])] as string[];
 
     const partnerMap = new Map<string, { id: string; full_name: string; email: string; company_name?: string }>();
@@ -352,7 +354,7 @@ export async function GET(request: NextRequest) {
         partner_id: app.partner_id,
         intake: (app.profile_snapshot as { intake?: string } | null)?.intake || null,
         created_by: createdBy,
-        created_by_partner: createdBy ? partnerMap.get(createdBy) || null : null,
+        created_by_partner: createdBy ? partnerMap.get(createdBy) || null : (app.partner_id ? partnerMap.get(app.partner_id) || null : null),
         updated_by: updatedBy,
         updated_by_partner: updatedBy ? partnerMap.get(updatedBy) || null : null,
         program: program ? {
