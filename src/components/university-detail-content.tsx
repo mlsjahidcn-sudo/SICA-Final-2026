@@ -927,47 +927,91 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                       {/* Mobile Card View */}
                       <div className="md:hidden space-y-3">
                         {programs.map((program) => (
-                          <Card key={program.id} className="overflow-hidden">
+                          <Card key={program.id} className="overflow-hidden group">
+                            {/* Degree Level Color Strip */}
+                            <div className={cn(
+                              "h-1 w-full",
+                              program.degree_level?.toLowerCase() === 'bachelor' ? 'bg-emerald-500' :
+                              program.degree_level?.toLowerCase() === 'master' ? 'bg-blue-500' :
+                              program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'bg-purple-500' :
+                              'bg-muted-foreground/30'
+                            )} />
                             <CardContent className="p-4">
                               <div className="space-y-3">
                                 {/* Header: Badge + Name */}
                                 <div className="space-y-2">
-                                  <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px]">
-                                    {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
-                                     program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
-                                     program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
-                                     program.degree_level || 'N/A'}
-                                  </Badge>
-                                  <Link 
+                                  <div className="flex items-center justify-between">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        "font-semibold px-2.5 py-0.5 text-[11px] uppercase tracking-wide",
+                                        program.degree_level?.toLowerCase() === 'bachelor' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' :
+                                        program.degree_level?.toLowerCase() === 'master' ? 'border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' :
+                                        program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400' :
+                                        'border-muted-foreground/20'
+                                      )}
+                                    >
+                                      {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' :
+                                       program.degree_level?.toLowerCase() === 'master' ? 'Master' :
+                                       program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' :
+                                       program.degree_level || 'N/A'}
+                                    </Badge>
+                                    {program.tuition_fee_per_year && (
+                                      <span className="text-sm font-bold text-foreground">
+                                        {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}
+                                        <span className="text-[10px] text-muted-foreground font-normal">/yr</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <Link
                                     href={
-                                      university.slug && program.slug 
-                                        ? `/universities/${university.slug}/programs/${program.slug}` 
+                                      university.slug && program.slug
+                                        ? `/universities/${university.slug}/programs/${program.slug}`
                                         : `/programs/${program.id}`
-                                    } 
-                                    className="font-medium text-base hover:underline block line-clamp-2"
+                                    }
+                                    className="font-semibold text-base hover:text-primary transition-colors block line-clamp-2 leading-snug"
                                   >
                                     {program.name}
                                   </Link>
                                 </div>
 
-                                {/* Metadata */}
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1.5">
-                                    <IconLanguage className="h-4 w-4" />
-                                    {program.language}
-                                  </span>
-                                  {program.tuition_fee_per_year && (
-                                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                                      <IconCoinYuan className="h-4 w-4" />
-                                      {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}/year
+                                {/* Info Chips */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {program.language && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                                      <IconLanguage className="h-3 w-3" />
+                                      {program.language}
+                                    </span>
+                                  )}
+                                  {(program as any).duration_years && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                                      <IconClock className="h-3 w-3" />
+                                      {(program as any).duration_years} year{(program as any).duration_years > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                  {(program as any).scholarship_available && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400">
+                                      <IconAward className="h-3 w-3" />
+                                      Scholarship
                                     </span>
                                   )}
                                 </div>
 
-                                {/* Apply Button */}
-                                <Button size="sm" variant="default" className="w-full" asChild>
-                                  <Link href={`/apply?program_id=${program.id}`}>Apply Now</Link>
-                                </Button>
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2 pt-1">
+                                  <Button size="sm" variant="outline" className="flex-1 text-xs" asChild>
+                                    <Link href={
+                                      university.slug && program.slug
+                                        ? `/universities/${university.slug}/programs/${program.slug}`
+                                        : `/programs/${program.id}`
+                                    }>
+                                      View Details
+                                    </Link>
+                                  </Button>
+                                  <Button size="sm" variant="default" className="flex-1 text-xs" asChild>
+                                    <Link href={`/apply?program_id=${program.id}`}>Apply Now</Link>
+                                  </Button>
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
