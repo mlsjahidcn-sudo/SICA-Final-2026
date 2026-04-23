@@ -65,7 +65,7 @@ export const ORGANIZATION_SCHEMA = {
   ],
   contactPoint: {
     '@type': 'ContactPoint',
-    telephone: '+86-xxx-xxxx-xxxx',
+    telephone: '+86-173-2576-4171',
     contactType: 'customer service',
     availableLanguage: ['English', 'Chinese'],
   },

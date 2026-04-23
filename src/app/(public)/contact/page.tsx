@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -226,9 +225,9 @@ export default function ContactPage() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-medium mb-1">Phone</h3>
-                      <a href="tel:+861012345678" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                        +86 10 1234 5678
+                      <h3 className="font-medium mb-1">Phone / WhatsApp / WeChat</h3>
+                      <a href="tel:+8617325764171" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                        +86 173 2576 4171
                       </a>
                     </div>
                   </div>
