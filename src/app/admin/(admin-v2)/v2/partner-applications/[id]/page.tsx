@@ -37,6 +37,7 @@ import {
   User,
   Edit,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
@@ -95,9 +96,33 @@ function ApplicationDetailContent() {
   const [actioning, setActioning] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectNote, setRejectNote] = useState('');
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
 
   useEffect(() => {
     if (appId) fetchApplication();
+  }, [appId]);
+
+  useEffect(() => {
+    async function fetchDocs() {
+      if (!appId) return;
+      setDocsLoading(true);
+      try {
+        const token = await getValidToken();
+        const res = await fetch(`/api/admin/documents?application_id=${appId}&limit=50`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDocuments(data.documents || []);
+        }
+      } catch (e) {
+        console.error('Error fetching documents:', e);
+      } finally {
+        setDocsLoading(false);
+      }
+    }
+    fetchDocs();
   }, [appId]);
 
   const fetchApplication = async () => {
@@ -457,6 +482,59 @@ function ApplicationDetailContent() {
               </CardContent>
             </Card>
           )}
+
+          {/* Documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                Documents
+                {documents.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">{documents.length}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {docsLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  No documents uploaded yet
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/40 transition-colors">
+                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">{doc.document_type_label || doc.type}</span>
+                          <span className="text-xs text-muted-foreground">&middot;</span>
+                          <span className="text-xs text-muted-foreground">{new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <Badge variant={doc.status === 'verified' ? 'default' : doc.status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs shrink-0 capitalize">
+                        {doc.status}
+                      </Badge>
+                      {doc.file_url && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Sidebar */}
