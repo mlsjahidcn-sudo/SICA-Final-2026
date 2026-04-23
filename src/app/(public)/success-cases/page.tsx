@@ -118,7 +118,7 @@ export default function SuccessCasesPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                 {cases.map((caseItem) => (
-                  <Link key={caseItem.id} href={`/success-cases/${caseItem.id}`}>
+                  <Link key={caseItem.id} href={`/success-cases/${caseItem.id}`} className="block h-full">
                     <Card className="group h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
                       <div className="flex md:block h-full">
                         {/* Image */}
