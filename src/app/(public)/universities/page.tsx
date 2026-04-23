@@ -291,7 +291,7 @@ function UniversityCard({ university }: { university: University }) {
               <span className="text-[10px] sm:text-xs text-muted-foreground">Tuition on request</span>
             )}
           </div>
-          <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] sm:text-xs font-medium text-muted-foreground group-hover:border-primary group-hover:text-primary transition-colors">
+          <span className="inline-flex items-center gap-1 rounded-md border border-blue-500 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
             View
             <IconChevronRight className="h-3 w-3" />
           </span>
