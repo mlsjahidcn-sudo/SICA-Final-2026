@@ -100,7 +100,7 @@ export default function AdminDocumentsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setDocuments(data.data || [])
+        setDocuments(data.documents || [])
         setTotalPages(data.pagination?.totalPages || 1)
         setTotalItems(data.pagination?.total || 0)
       } else {
