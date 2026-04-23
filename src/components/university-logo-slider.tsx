@@ -41,7 +41,7 @@ export function UniversityLogoSlider() {
     const scrollContainer = scrollRef.current;
     let animationId: number;
     let scrollPosition = 0;
-    const scrollSpeed = 0.5; // Pixels per frame
+    const scrollSpeed = 0.3; // Pixels per frame
 
     const animate = () => {
       scrollPosition += scrollSpeed;
