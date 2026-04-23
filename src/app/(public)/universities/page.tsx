@@ -279,7 +279,7 @@ function UniversityCard({ university }: { university: University }) {
           </div>
         </div>
 
-        {/* Footer: Tuition */}
+        {/* Footer: Tuition + View */}
         <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 border-t flex justify-between items-center">
           <div className="text-xs sm:text-sm">
             {university.tuition_min ? (
@@ -291,7 +291,10 @@ function UniversityCard({ university }: { university: University }) {
               <span className="text-[10px] sm:text-xs text-muted-foreground">Tuition on request</span>
             )}
           </div>
-          <IconChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] sm:text-xs font-medium text-muted-foreground group-hover:border-primary group-hover:text-primary transition-colors">
+            View
+            <IconChevronRight className="h-3 w-3" />
+          </span>
         </div>
       </div>
     </Link>
