@@ -19,7 +19,6 @@ import {
   Calendar,
   GraduationCap,
   Languages,
-  Download,
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";

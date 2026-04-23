@@ -57,8 +57,19 @@ export async function GET(request: NextRequest) {
       success: true,
       application: {
         ...application,
-        status_history: statusHistory || [],
-        report,
+        submitted_at: application.created_at,
+        status_history: (statusHistory || []).map((h: Record<string, unknown>) => ({
+          ...h,
+          old_status: h.old_status || null,
+          new_status: h.new_status || h.status || null,
+        })),
+        report: report
+          ? {
+              ...report,
+              report_content: (report as Record<string, unknown>).content || null,
+              generated_at: (report as Record<string, unknown>).created_at || null,
+            }
+          : null,
       },
     });
   } catch (error) {

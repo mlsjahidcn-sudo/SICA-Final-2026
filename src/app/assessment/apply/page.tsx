@@ -218,7 +218,7 @@ export default function AssessmentApplyPage() {
     });
   }, []);
 
-  const uploadDocuments = async (assessmentId: string): Promise<UploadStatus[]> => {
+  const uploadDocuments = useCallback(async (assessmentId: string): Promise<UploadStatus[]> => {
     // Initialize upload statuses
     const initialStatuses: UploadStatus[] = uploadedFiles.map((file) => ({
       documentType: file.documentType,
@@ -298,7 +298,7 @@ export default function AssessmentApplyPage() {
         error: 'Upload failed',
       };
     });
-  };
+  }, [uploadedFiles]);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -356,7 +356,7 @@ export default function AssessmentApplyPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, uploadedFiles, toast]);
+  }, [formData, uploadedFiles, uploadDocuments]);
 
   if (submitted) {
     const successfulUploads = uploadStatuses.filter((s) => s.status === 'success');

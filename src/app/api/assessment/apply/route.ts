@@ -83,6 +83,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Insert initial status history
+    try {
+      await supabase
+        .from("assessment_status_history")
+        .insert({
+          assessment_id: application.id,
+          new_status: "pending",
+          status: "pending",
+          notes: "Assessment application submitted",
+        });
+    } catch (historyError) {
+      console.error("Error creating status history:", historyError);
+      // Don't fail the request if status history fails
+    }
+
     // Send confirmation email
     try {
       const emailPayload = getAssessmentSubmittedTemplate({
