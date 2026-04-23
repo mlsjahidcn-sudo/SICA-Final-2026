@@ -275,7 +275,6 @@ export async function POST(request: NextRequest) {
           student_id: actualStudentId,
           program_id: pid,
           partner_id: partnerRecordId,
-          user_id: student_id,
           status: 'draft',
           profile_snapshot: {
             ...(intake ? { intake } : {}),
@@ -299,7 +298,6 @@ export async function POST(request: NextRequest) {
         .insert({
           student_id: actualStudentId,
           partner_id: partnerRecordId,
-          user_id: student_id,
           status: 'draft',
           notes: requested_university_program_note,
           profile_snapshot: {
