@@ -58,7 +58,6 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconMenu2,
-  IconX,
   IconAward,
   IconGlobe,
   IconSend,
@@ -373,18 +372,6 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[360px] p-0 flex flex-col">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-
-              {/* Close Bar */}
-              <div className="flex items-center justify-end px-4 py-3 border-b">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsOpen(false)}
-                  className="h-8 w-8 rounded-full hover:bg-muted"
-                >
-                  <IconX className="h-4 w-4" />
-                </Button>
-              </div>
 
               <div className="flex-1 overflow-y-auto">
                 <div className="px-4 py-5 space-y-5">
