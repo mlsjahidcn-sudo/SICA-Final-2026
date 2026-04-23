@@ -482,28 +482,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify student exists and is a partner-referred student
+    // student_id from frontend is the users.id (user_id), not students.id
     const { data: studentRecord, error: studentError } = await supabaseAdmin
       .from('students')
-      .select(`
-        id,
-        user_id,
-        users!inner (
-          id,
-          role,
-          full_name,
-          referred_by_partner_id
-        )
-      `)
-      .eq('id', student_id)
+      .select('id, user_id')
+      .eq('user_id', student_id)
       .single();
 
     if (studentError || !studentRecord) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    const studentUser = Array.isArray(studentRecord.users)
-      ? studentRecord.users[0]
-      : studentRecord.users;
+    // Fetch user info separately to avoid nested query issues
+    const { data: studentUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, role, full_name, referred_by_partner_id')
+      .eq('id', studentRecord.user_id)
+      .single();
+
+    if (userError || !studentUser) {
+      return NextResponse.json({ error: 'Student user not found' }, { status: 404 });
+    }
 
     if (studentUser.role !== 'student') {
       return NextResponse.json({ error: 'Selected user is not a student' }, { status: 400 });
@@ -530,12 +529,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create an application record for each selected program
+    // Use students.id (studentRecord.id) for student_id field, not users.id
     const createdApplications = [];
     for (const program of programs) {
       const { data: newApp, error: insertError } = await supabaseAdmin
         .from('applications')
         .insert({
-          student_id,
+          student_id: studentRecord.id,
           program_id: program.id,
           partner_id: resolvedPartnerId,
           user_id: studentUser.id,

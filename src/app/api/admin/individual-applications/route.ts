@@ -421,10 +421,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify student exists and is an individual student
+    // student_id from frontend is the users.id (user_id), not students.id
     const { data: studentRecord, error: studentError } = await supabaseAdmin
       .from('students')
       .select('id, user_id')
-      .eq('id', student_id)
+      .eq('user_id', student_id)
       .single();
 
     if (studentError || !studentRecord) {
@@ -463,12 +464,13 @@ export async function POST(request: NextRequest) {
     const universityMap = new Map(universities?.map(u => [u.id, u.name_en]) || []);
 
     // Create an application record for each selected program
+    // Use students.id (studentRecord.id) for student_id field, not users.id
     const createdApplications = [];
     for (const program of programs) {
       const { data: newApp, error: insertError } = await supabaseAdmin
         .from('applications')
         .insert({
-          student_id,
+          student_id: studentRecord.id,
           program_id: program.id,
           partner_id: null, // Individual application - no partner
           user_id: studentRecord.user_id,
