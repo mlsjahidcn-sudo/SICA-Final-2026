@@ -128,9 +128,6 @@ export default function ApplicationsPage() {
   const [degreeFilter, setDegreeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState<Record<string, number>>({ total: 0 });
-  const [showStudentPicker, setShowStudentPicker] = useState(false);
-  const [students, setStudents] = useState<StudentInfo[]>([]);
-  const [fetchingStudents, setFetchingStudents] = useState(false);
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
@@ -176,26 +173,7 @@ export default function ApplicationsPage() {
   }, [fetchApplications]);
 
   const handleNewApplication = () => {
-    setFetchingStudents(true);
-    setShowStudentPicker(true);
-    
-    async function fetchStudents() {
-      try {
-        const token = await getValidToken();
-        const res = await fetch('/api/partner/students?pageSize=100', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const result = await res.json();
-          setStudents(result.students || []);
-        }
-      } catch (err) {
-        console.error('Error fetching students:', err);
-      } finally {
-        setFetchingStudents(false);
-      }
-    }
-    fetchStudents();
+    router.push('/partner-v2/applications/new');
   };
 
   const filteredApps = applications.filter((a) => {
