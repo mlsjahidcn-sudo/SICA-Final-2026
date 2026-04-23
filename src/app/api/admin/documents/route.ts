@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     // Step 2: Build document query (without nested relations)
     let query = supabase
       .from('documents')
-      .select('id, student_id, application_id, type, file_name, file_url, file_key, file_size, status, rejection_reason, uploaded_by, verified_by, notes, uploaded_at, created_at, updated_at', { count: 'exact' });
+      .select('id, student_id, application_id, type, file_name, file_url, file_key, file_size, status, rejection_reason, uploaded_by, verified_by, uploaded_at, created_at, updated_at', { count: 'exact' });
 
     if (studentId) query = query.eq('student_id', studentId);
     if (applicationId) query = query.eq('application_id', applicationId);
@@ -213,7 +213,6 @@ export async function GET(request: NextRequest) {
         rejection_reason: doc.rejection_reason,
         uploaded_by: doc.uploaded_by,
         verified_by: doc.verified_by,
-        notes: doc.notes,
         uploaded_at: doc.uploaded_at || doc.created_at,
         created_at: doc.created_at,
         updated_at: doc.updated_at,
