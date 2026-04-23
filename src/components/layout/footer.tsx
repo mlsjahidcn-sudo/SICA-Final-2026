@@ -229,19 +229,17 @@ export function Footer() {
       </div>
 
       {/* Copyright Bar */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="flex flex-row justify-between items-center gap-2">
+          <p className="text-[10px] sm:text-sm text-muted-foreground whitespace-nowrap">
             © {new Date().getFullYear()} Study in China Academy. All rights reserved.
           </p>
-          <div className="flex items-center gap-8">
-            <Link
-              href="/contact"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Contact Us
-            </Link>
-          </div>
+          <Link
+            href="/contact"
+            className="text-[10px] sm:text-sm text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+          >
+            Contact Us
+          </Link>
         </div>
       </div>
     </footer>
