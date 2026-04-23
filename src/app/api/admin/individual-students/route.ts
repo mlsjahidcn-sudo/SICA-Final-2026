@@ -104,8 +104,8 @@ export async function GET(request: NextRequest) {
     const nationality = searchParams.get('nationality') || '';
     const offset = (page - 1) * limit;
 
-    // Build base query with country/city fields included
-    let query = supabaseAdmin
+    // First get all individual students without nested query for nationality
+    let baseQuery = supabaseAdmin
       .from('users')
       .select(`
         id,
@@ -117,53 +117,59 @@ export async function GET(request: NextRequest) {
         country,
         city,
         created_at,
-        updated_at,
-        students!left (
-          id,
-          first_name,
-          last_name,
-          nationality,
-          passport_number,
-          date_of_birth,
-          gender,
-          current_address,
-          wechat_id,
-          highest_education,
-          institution_name
-        )
+        updated_at
       `, { count: 'exact' })
       .eq('role', 'student')
       .is('referred_by_partner_id', null)
       .order('created_at', { ascending: false });
 
-    // Apply nationality filter at DATABASE level (before pagination)
-    if (nationality) {
-      query = query.ilike('students.nationality', `%${nationality}%`);
-    }
-
-    // Apply search filter at DATABASE level (before pagination)
     if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+      baseQuery = baseQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    // Fetch ALL matching records (for accurate counting + application enrichment)
-    const { data: allStudents, error: fetchError } = await query;
+    const { data: allUserRecords, error: fetchError, count: totalCount } = await baseQuery;
 
     if (fetchError) {
       console.error('Error fetching individual students:', fetchError);
       return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
     }
 
-    // Manual pagination on FILTERED results
-    const paginatedStudents = (allStudents || []).slice(offset, offset + limit);
-    const filteredCount = allStudents?.length || 0;
+    const userIds = (allUserRecords || []).map(u => u.id);
+    
+    // Now get all student records for these users
+    const { data: studentRecords } = userIds.length > 0
+      ? await supabaseAdmin
+          .from('students')
+          .select('id, user_id, nationality, passport_number, date_of_birth, gender, current_address, wechat_id, highest_education, institution_name')
+          .in('user_id', userIds)
+      : { data: [] };
+
+    // Build user -> student record map
+    const userStudentMap = new Map();
+    for (const sr of (studentRecords || [])) {
+      userStudentMap.set(sr.user_id, sr);
+    }
+
+    // Apply nationality filter (in-memory)
+    let filteredUserRecords = allUserRecords || [];
+    if (nationality) {
+      filteredUserRecords = filteredUserRecords.filter(user => {
+        const sr = userStudentMap.get(user.id);
+        return sr?.nationality?.toLowerCase() === nationality.toLowerCase();
+      });
+    }
+
+    const filteredCount = filteredUserRecords.length;
+
+    // Manual pagination
+    const paginatedUsers = filteredUserRecords.slice(offset, offset + limit);
 
     // Build user -> student record mapping for application lookups
     const userToStudentMap = new Map<string, string>();
-    for (const s of (allStudents || [])) {
-      const studentRecord = Array.isArray(s.students) ? s.students[0] : s.students;
-      if (s.id && studentRecord?.id) {
-        userToStudentMap.set(s.id, studentRecord.id);
+    for (const user of paginatedUsers) {
+      const sr = userStudentMap.get(user.id);
+      if (user.id && sr?.id) {
+        userToStudentMap.set(user.id, sr.id);
       }
     }
     const studentRecordIds = [...new Set(userToStudentMap.values())];
@@ -194,18 +200,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to IndividualStudent type with all fields
-    const enrichedStudents: IndividualStudent[] = paginatedStudents.map(student => {
-      const studentRecord = Array.isArray(student.students) ? student.students[0] : student.students;
+    const enrichedStudents: IndividualStudent[] = paginatedUsers.map(user => {
+      const studentRecord = userStudentMap.get(user.id);
       return {
-        id: student.id,
-        user_id: student.id,
-        email: student.email,
-        full_name: student.full_name,
-        phone: student.phone,
-        avatar_url: student.avatar_url,
-        is_active: student.is_active,
-        country: student.country || null,
-        city: student.city || null,
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone,
+        avatar_url: user.avatar_url,
+        is_active: user.is_active,
+        country: user.country || null,
+        city: user.city || null,
         source: 'individual' as const,
         nationality: studentRecord?.nationality || null,
         gender: studentRecord?.gender || null,
@@ -215,56 +221,19 @@ export async function GET(request: NextRequest) {
         wechat_id: studentRecord?.wechat_id || null,
         highest_education: studentRecord?.highest_education || null,
         institution_name: studentRecord?.institution_name || null,
-        created_at: student.created_at,
-        updated_at: student.updated_at,
-        applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        applications: applicationMap.get(user.id) || { total: 0, pending: 0 },
       };
     });
 
-    // Get stats (based on filtered criteria where applicable)
-    let statsQuery = supabaseAdmin
+    // Get stats (always global stats)
+    const { count: activeCount } = await supabaseAdmin
       .from('users')
       .select('id', { count: 'exact', head: true })
       .eq('role', 'student')
-      .is('referred_by_partner_id', null);
-
-    if (nationality) {
-      // For stats with nationality filter, use a different approach via students table
-      const { count: activeCount } = await supabaseAdmin
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'student')
-        .is('referred_by_partner_id', null)
-        .eq('is_active', true);
-
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const { count: newThisMonthCount } = await supabaseAdmin
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'student')
-        .is('referred_by_partner_id', null)
-        .gte('created_at', startOfMonth.toISOString());
-
-      return NextResponse.json({
-        students: enrichedStudents,
-        pagination: {
-          page,
-          limit,
-          total: filteredCount,
-          totalPages: Math.ceil(filteredCount / limit),
-        },
-        stats: {
-          total: filteredCount,
-          active: activeCount || 0,
-          newThisMonth: newThisMonthCount || 0,
-          withApplications: applicationMap.size,
-        },
-      });
-    }
-
-    const { count: activeCount } = await statsQuery.eq('is_active', true);
+      .is('referred_by_partner_id', null)
+      .eq('is_active', true);
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -281,11 +250,11 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total: filteredCount,
-        totalPages: Math.ceil(filteredCount / limit),
+        total: nationality ? filteredCount : (totalCount || 0),
+        totalPages: Math.ceil((nationality ? filteredCount : (totalCount || 0)) / limit),
       },
       stats: {
-        total: filteredCount,
+        total: nationality ? filteredCount : (totalCount || 0),
         active: activeCount || 0,
         newThisMonth: newThisMonthCount || 0,
         withApplications: applicationMap.size,

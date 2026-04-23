@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const partner_id = searchParams.get('partner_id') || ''; // Filter by specific partner
     const id = searchParams.get('id') || ''; // Single application lookup
+    const filterStudentId = searchParams.get('student_id') || '';
     const offset = (page - 1) * limit;
 
     // Single record lookup mode (for detail pages)
@@ -40,30 +41,9 @@ export async function GET(request: NextRequest) {
           partner_id,
           created_by,
           updated_by,
-          students (
-            id,
-            user_id,
-            nationality,
-            gender,
-            highest_education,
-            users (
-              id,
-              full_name,
-              email,
-              referred_by_partner_id
-            )
-          ),
-          programs (
-            id,
-            name,
-            degree_level,
-            universities (
-              id,
-              name_en,
-              city,
-              province
-            )
-          )
+          profile_snapshot,
+          student_id,
+          program_id
         `)
         .eq('id', id)
         .single();
@@ -72,14 +52,46 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       }
 
-      const student = Array.isArray(singleApp.students) ? singleApp.students[0] : singleApp.students;
-      const studentUser = student?.users
-        ? (Array.isArray(student.users) ? student.users[0] : student.users)
-        : null;
-      const program = Array.isArray(singleApp.programs) ? singleApp.programs[0] : singleApp.programs;
-      const university = program?.universities
-        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-        : null;
+      // Step-by-step fetching to avoid nested query issues
+      let student = null;
+      let studentUser = null;
+      if (singleApp.student_id) {
+        const { data: studentData } = await supabaseAdmin
+          .from('students')
+          .select('id, user_id, nationality, gender, highest_education')
+          .eq('id', singleApp.student_id)
+          .single();
+        student = studentData;
+        
+        if (student?.user_id) {
+          const { data: userData } = await supabaseAdmin
+            .from('users')
+            .select('id, full_name, email, referred_by_partner_id')
+            .eq('id', student.user_id)
+            .single();
+          studentUser = userData;
+        }
+      }
+
+      let program = null;
+      let university = null;
+      if (singleApp.program_id) {
+        const { data: programData } = await supabaseAdmin
+          .from('programs')
+          .select('id, name, degree_level, university_id')
+          .eq('id', singleApp.program_id)
+          .single();
+        program = programData;
+        
+        if (program?.university_id) {
+          const { data: universityData } = await supabaseAdmin
+            .from('universities')
+            .select('id, name_en, city, province')
+            .eq('id', program.university_id)
+            .single();
+          university = universityData;
+        }
+      }
 
       // Get partner info for referred_by_partner, created_by, and updated_by
       const allPartnerIds: string[] = [
@@ -118,6 +130,9 @@ export async function GET(request: NextRequest) {
 
       const createdBy = (singleApp as Record<string, unknown>).created_by as string | null;
       const updatedBy = (singleApp as Record<string, unknown>).updated_by as string | null;
+      const referredByPartner = studentUser?.referred_by_partner_id
+        ? partnerInfoMap.get(studentUser.referred_by_partner_id) || null
+        : null;
 
       return NextResponse.json({
         application: {
@@ -133,30 +148,27 @@ export async function GET(request: NextRequest) {
           created_by_partner: createdBy ? partnerInfoMap.get(createdBy) || null : null,
           updated_by: updatedBy,
           updated_by_partner: updatedBy ? partnerInfoMap.get(updatedBy) || null : null,
+          intake: (singleApp.profile_snapshot as { intake?: string } | null)?.intake || null,
           program: program ? {
             id: program.id,
             name: program.name,
             degree_level: program.degree_level,
             university: university ? { id: university.id, name_en: university.name_en, city: university.city, province: university.province } : null,
           } : null,
-          student: {
-            id: student?.id,
-            user_id: student?.user_id,
-            full_name: studentUser?.full_name,
-            email: studentUser?.email,
-            nationality: student?.nationality,
-            gender: student?.gender,
-            highest_education: student?.highest_education,
+          student: student ? {
+            id: student.id,
+            user_id: student.user_id,
+            full_name: studentUser?.full_name || null,
+            email: studentUser?.email || null,
+            nationality: student.nationality,
+            gender: student.gender,
+            highest_education: student.highest_education,
             source: 'partner_referred' as const,
-            referred_by_partner: studentUser?.referred_by_partner_id
-              ? partnerInfoMap.get(studentUser.referred_by_partner_id) || null
-              : null,
-          },
+            referred_by_partner: referredByPartner,
+          } : null as any,
         },
       });
     }
-
-
 
     // First get user IDs of partner-referred students
     const { data: partnerUsers } = await supabaseAdmin
@@ -178,7 +190,7 @@ export async function GET(request: NextRequest) {
     // Get student IDs for partner-referred users
     const { data: partnerStudentRecords } = await supabaseAdmin
       .from('students')
-      .select('id')
+      .select('id, user_id')
       .in('user_id', partnerUserIds);
     
     const partnerStudentIds = (partnerStudentRecords || []).map(s => s.id);
@@ -192,8 +204,26 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Query applications from partner-referred students
-    let query = supabaseAdmin
+    // Build base query without range first for counting
+    let baseQuery = supabaseAdmin
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .in('student_id', partnerStudentIds);
+
+    if (status) baseQuery = baseQuery.eq('status', status);
+    if (partner_id) baseQuery = baseQuery.eq('partner_id', partner_id);
+    if (filterStudentId) {
+      // Find student record ID from user ID
+      const studentRec = partnerStudentRecords?.find(s => s.user_id === filterStudentId);
+      if (studentRec) {
+        baseQuery = baseQuery.eq('student_id', studentRec.id);
+      }
+    }
+
+    const { count: totalCount } = await baseQuery;
+
+    // Now get applications data
+    let dataQuery = supabaseAdmin
       .from('applications')
       .select(`
         id,
@@ -207,87 +237,71 @@ export async function GET(request: NextRequest) {
         created_by,
         updated_by,
         profile_snapshot,
-        students (
-          id,
-          user_id,
-          nationality,
-          gender,
-          highest_education,
-          users (
-            id,
-            full_name,
-            email,
-            referred_by_partner_id
-          )
-        ),
-        programs (
-          id,
-          name,
-          degree_level,
-          universities (
-            id,
-            name_en,
-            city,
-            province
-          )
-        )
-      `, { count: 'exact' })
-      .in('student_id', partnerStudentIds) // Only applications from partner-referred students
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+        student_id,
+        program_id
+      `)
+      .in('student_id', partnerStudentIds)
+      .order('created_at', { ascending: false });
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    if (universityId) {
-      query = query.eq('programs.university_id', universityId);
-    }
-
-    if (degreeLevel) {
-      query = query.eq('programs.degree_level', degreeLevel);
-    }
-
-    if (partner_id) {
-      query = query.eq('partner_id', partner_id);
-    }
-
-    // Support filtering by student user_id (for detail page "View All Applications")
-    const filterStudentId = searchParams.get('student_id') || '';
+    if (status) dataQuery = dataQuery.eq('status', status);
+    if (partner_id) dataQuery = dataQuery.eq('partner_id', partner_id);
     if (filterStudentId) {
-      query = query.eq('students.user_id', filterStudentId);
+      const studentRec = partnerStudentRecords?.find(s => s.user_id === filterStudentId);
+      if (studentRec) {
+        dataQuery = dataQuery.eq('student_id', studentRec.id);
+      }
     }
 
-    if (search) {
-      // Note: Supabase doesn't support complex OR queries with nested relations
-      // We'll filter in-memory after fetching for now
-    }
+    const { data: applications, error: fetchError } = await dataQuery;
 
-    const { data: applications, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching partner applications:', error);
+    if (fetchError) {
+      console.error('Error fetching partner applications:', fetchError);
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
+    // Collect all IDs for batch fetching
+    const studentIds = [...new Set(applications?.map(a => a.student_id).filter(Boolean) || [])];
+    const programIds = [...new Set(applications?.map(a => a.program_id).filter(Boolean) || [])];
+
+    // Batch fetch students
+    const { data: studentsData } = studentIds.length > 0
+      ? await supabaseAdmin.from('students').select('id, user_id, nationality, gender, highest_education').in('id', studentIds)
+      : { data: [] };
+    
+    const studentUserIds = [...new Set(studentsData?.map(s => s.user_id).filter(Boolean) || [])];
+    
+    // Batch fetch student users
+    const { data: studentUsersData } = studentUserIds.length > 0
+      ? await supabaseAdmin.from('users').select('id, full_name, email, referred_by_partner_id').in('id', studentUserIds)
+      : { data: [] };
+
+    // Batch fetch programs
+    const { data: programsData } = programIds.length > 0
+      ? await supabaseAdmin.from('programs').select('id, name, degree_level, university_id').in('id', programIds)
+      : { data: [] };
+    
+    const universityIds = [...new Set(programsData?.map(p => p.university_id).filter(Boolean) || [])];
+    
+    // Batch fetch universities
+    const { data: universitiesData } = universityIds.length > 0
+      ? await supabaseAdmin.from('universities').select('id, name_en, city, province').in('id', universityIds)
+      : { data: [] };
+
+    // Build maps for quick lookup
+    const studentMap = new Map(studentsData?.map(s => [s.id, s]) || []);
+    const studentUserMap = new Map(studentUsersData?.map(u => [u.id, u]) || []);
+    const programMap = new Map(programsData?.map(p => [p.id, p]) || []);
+    const universityMap = new Map(universitiesData?.map(u => [u.id, u]) || []);
+
     // Get partner info for referred students, created_by, and updated_by
-    const allPartnerIds = [...new Set(
-      applications?.flatMap(app => {
-        const student = Array.isArray(app.students) ? app.students[0] : app.students;
-        const studentUser = student?.users
-          ? (Array.isArray(student.users) ? student.users[0] : student.users)
-          : null;
-        return [
-          studentUser?.referred_by_partner_id,
-          (app as Record<string, unknown>).created_by as string,
-          (app as Record<string, unknown>).updated_by as string,
-        ].filter(Boolean);
-      }) || []
-    )] as string[];
+    const allPartnerIds = [...new Set([
+      ...(studentUsersData?.map(u => u.referred_by_partner_id).filter(Boolean) || []),
+      ...(applications?.map(a => (a as Record<string, unknown>).created_by).filter(Boolean) || []),
+      ...(applications?.map(a => (a as Record<string, unknown>).updated_by).filter(Boolean) || []),
+    ])] as string[];
 
     const partnerMap = new Map<string, { id: string; full_name: string; email: string; company_name?: string }>();
 
-    // Only query if there are partner IDs
     if (allPartnerIds.length > 0) {
       const { data: partnerUserDetails } = await supabaseAdmin
         .from('users')
@@ -300,7 +314,6 @@ export async function GET(request: NextRequest) {
         .in('user_id', allPartnerIds);
 
       const partnerCompanyMap = new Map<string, string>();
-
       for (const pr of (partnerRecords || [])) {
         partnerCompanyMap.set(pr.user_id, pr.company_name);
       }
@@ -317,18 +330,13 @@ export async function GET(request: NextRequest) {
 
     // Transform data
     let transformedApplications: ApplicationWithPartner[] = (applications || []).map(app => {
-      const student = Array.isArray(app.students) ? app.students[0] : app.students;
-      const studentUser = student?.users
-        ? (Array.isArray(student.users) ? student.users[0] : student.users)
-        : null;
-      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
-      const university = program?.universities
-        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-        : null;
+      const student = studentMap.get(app.student_id);
+      const studentUser = student?.user_id ? studentUserMap.get(student.user_id) : null;
+      const program = programMap.get(app.program_id);
+      const university = program?.university_id ? universityMap.get(program.university_id) : null;
 
       const createdBy = (app as Record<string, unknown>).created_by as string | null;
       const updatedBy = (app as Record<string, unknown>).updated_by as string | null;
-
       const referredByPartner = studentUser?.referred_by_partner_id
         ? partnerMap.get(studentUser.referred_by_partner_id) || null
         : null;
@@ -358,39 +366,57 @@ export async function GET(request: NextRequest) {
             province: university.province,
           } : null,
         } : null,
-        student: {
-          id: student?.id,
-          user_id: student?.user_id,
-          full_name: studentUser?.full_name,
-          email: studentUser?.email,
-          nationality: student?.nationality,
-          gender: student?.gender,
-          highest_education: student?.highest_education,
+        student: student ? {
+          id: student.id,
+          user_id: student.user_id,
+          full_name: studentUser?.full_name || null,
+          email: studentUser?.email || null,
+          nationality: student.nationality,
+          gender: student.gender,
+          highest_education: student.highest_education,
           source: 'partner_referred' as const,
           referred_by_partner: referredByPartner,
-        },
+        } : null as any,
       };
     });
 
     // Apply search filter in-memory
+    let filteredApplications = transformedApplications;
     if (search) {
       const searchLower = search.toLowerCase();
-      transformedApplications = transformedApplications.filter(app => 
+      filteredApplications = transformedApplications.filter(app => 
         app.student?.full_name?.toLowerCase().includes(searchLower) ||
         app.program?.name?.toLowerCase().includes(searchLower)
       );
     }
 
-    // Get stats - matching frontend expectation
+    // Apply university filter in-memory
+    if (universityId) {
+      filteredApplications = filteredApplications.filter(app => 
+        app.program?.university?.id === universityId
+      );
+    }
+
+    // Apply degree level filter in-memory
+    if (degreeLevel) {
+      filteredApplications = filteredApplications.filter(app => 
+        app.program?.degree_level?.toLowerCase() === degreeLevel.toLowerCase()
+      );
+    }
+
+    // Manual pagination after all filters
+    const paginatedApplications = filteredApplications.slice(offset, offset + limit);
+
+    // Get stats based on filtered data
     const stats = {
-      total: count || 0,
+      total: filteredApplications.length,
       pending: 0,
       underReview: 0,
       accepted: 0,
       rejected: 0,
     };
 
-    for (const app of (applications || [])) {
+    for (const app of filteredApplications) {
       if (app.status === 'submitted' || app.status === 'draft') {
         stats.pending++;
       } else if (app.status === 'under_review') {
@@ -403,12 +429,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      applications: transformedApplications,
+      applications: paginatedApplications,
       pagination: {
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        total: filteredApplications.length,
+        totalPages: Math.ceil(filteredApplications.length / limit),
       },
       stats,
     });

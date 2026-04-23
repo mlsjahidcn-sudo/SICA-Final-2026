@@ -185,8 +185,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Query partner-referred students
-    let query = supabaseAdmin
+    // Step 1: Get all partner-referred student IDs with basic filters
+    let baseQuery = supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'student')
+      .not('referred_by_partner_id', 'is', null);
+
+    if (partner_id) baseQuery = baseQuery.eq('referred_by_partner_id', partner_id);
+    if (status === 'active') baseQuery = baseQuery.eq('is_active', true);
+    else if (status === 'inactive') baseQuery = baseQuery.eq('is_active', false);
+    if (search) baseQuery = baseQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+
+    const { count: totalCount } = await baseQuery;
+
+    // Step 2: Get all student data with students relation
+    let dataQuery = supabaseAdmin
       .from('users')
       .select(`
         id,
@@ -211,38 +225,28 @@ export async function GET(request: NextRequest) {
           date_of_birth,
           gender,
           current_address,
-          wechat_id
+          wechat_id,
+          highest_education,
+          institution_name
         )
-      `, { count: 'exact' })
+      `)
       .eq('role', 'student')
-      .not('referred_by_partner_id', 'is', null) // Only partner-referred students
+      .not('referred_by_partner_id', 'is', null)
       .order('created_at', { ascending: false });
 
-    // Filter by specific partner if provided
-    if (partner_id) {
-      query = query.eq('referred_by_partner_id', partner_id);
-    }
+    if (partner_id) dataQuery = dataQuery.eq('referred_by_partner_id', partner_id);
+    if (status === 'active') dataQuery = dataQuery.eq('is_active', true);
+    else if (status === 'inactive') dataQuery = dataQuery.eq('is_active', false);
+    if (search) dataQuery = dataQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
 
-    // Apply status filter at database level (before pagination)
-    if (status === 'active') {
-      query = query.eq('is_active', true);
-    } else if (status === 'inactive') {
-      query = query.eq('is_active', false);
-    }
-
-    // Apply search filter
-    if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-    }
-
-    const { data: allStudents, error: fetchError } = await query;
+    const { data: allStudents, error: fetchError } = await dataQuery;
 
     if (fetchError) {
       console.error('Error fetching partner students:', fetchError);
       return NextResponse.json({ error: 'Failed to fetch students' }, { status: 500 });
     }
 
-    // Apply nationality filter BEFORE pagination
+    // Apply nationality filter (in-memory since we can't filter on nested relation)
     let filteredStudents = allStudents || [];
     if (nationality) {
       filteredStudents = filteredStudents.filter(s => {
@@ -251,30 +255,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Manual pagination (after all filters)
+    // Manual pagination after all filters
     const paginatedStudents = filteredStudents.slice(offset, offset + limit);
-    
-    // Get total count matching current filters (not raw count)
-    // Build base count query with same filters as data query
-    let countQuery = supabaseAdmin
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'student')
-      .not('referred_by_partner_id', 'is', null);
-    
-    if (partner_id) countQuery = countQuery.eq('referred_by_partner_id', partner_id);
-    if (status === 'active') countQuery = countQuery.eq('is_active', true);
-    else if (status === 'inactive') countQuery = countQuery.eq('is_active', false);
-    if (search) countQuery = countQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-    
-    const { count: totalCount } = await countQuery;
 
     // Get partner info for referred_by_partner, created_by, and updated_by
     const allPartnerIds = [
       ...new Set([
-        ...(allStudents?.map(s => s.referred_by_partner_id).filter(Boolean) || []),
-        ...(allStudents?.map(s => (s as Record<string, unknown>).created_by).filter(Boolean) || []),
-        ...(allStudents?.map(s => (s as Record<string, unknown>).updated_by).filter(Boolean) || []),
+        ...(filteredStudents?.map(s => s.referred_by_partner_id).filter(Boolean) || []),
+        ...(filteredStudents?.map(s => (s as Record<string, unknown>).created_by).filter(Boolean) || []),
+        ...(filteredStudents?.map(s => (s as Record<string, unknown>).updated_by).filter(Boolean) || []),
       ])
     ] as string[];
 
@@ -310,7 +299,7 @@ export async function GET(request: NextRequest) {
 
     // Get application counts using student_id (applications uses student_id, not user_id)
     const userToStudentMap = new Map<string, string>();
-    for (const s of (allStudents || [])) {
+    for (const s of (filteredStudents || [])) {
       const studentRecord = Array.isArray(s.students) ? s.students[0] : s.students;
       if (s.id && studentRecord?.id) {
         userToStudentMap.set(s.id, studentRecord.id);
@@ -367,6 +356,14 @@ export async function GET(request: NextRequest) {
         updated_by_partner: updatedBy ? partnerMap.get(updatedBy) || null : null,
         nationality: studentRecord?.nationality || null,
         gender: studentRecord?.gender || null,
+        date_of_birth: studentRecord?.date_of_birth || null,
+        country: student.country || null,
+        city: student.city || null,
+        current_address: studentRecord?.current_address || null,
+        wechat_id: studentRecord?.wechat_id || null,
+        passport_number: studentRecord?.passport_number || null,
+        highest_education: studentRecord?.highest_education || null,
+        institution_name: studentRecord?.institution_name || null,
         created_at: student.created_at,
         updated_at: student.updated_at,
         applications: applicationMap.get(student.id) || { total: 0, pending: 0 },
@@ -391,16 +388,18 @@ export async function GET(request: NextRequest) {
       .not('referred_by_partner_id', 'is', null)
       .gte('created_at', startOfMonth.toISOString());
 
+    const filteredTotal = filteredStudents.length;
+
     return NextResponse.json({
       students: enrichedStudents,
       pagination: {
         page,
         limit,
-        total: totalCount || 0,
-        totalPages: Math.ceil((totalCount || 0) / limit),
+        total: nationality ? filteredTotal : (totalCount || 0),
+        totalPages: Math.ceil((nationality ? filteredTotal : (totalCount || 0)) / limit),
       },
       stats: {
-        total: totalCount || 0,
+        total: nationality ? filteredTotal : (totalCount || 0),
         active: activeCount || 0,
         newThisMonth: newThisMonthCount || 0,
         withApplications: applicationMap.size,
@@ -525,16 +524,8 @@ export async function POST(request: NextRequest) {
 
     // Set optional fields only if provided
     if (phone) userRecord.phone = phone;
-    if (nationality) userRecord.nationality = nationality;
-    if (gender) userRecord.gender = gender;
-    if (date_of_birth) userRecord.date_of_birth = date_of_birth;
-    if (passport_number) userRecord.passport_number = passport_number;
     if (country) userRecord.country = country;
     if (city) userRecord.city = city;
-    if (current_address) userRecord.current_address = current_address;
-    if (wechat_id) userRecord.wechat_id = wechat_id;
-    if (highest_education) userRecord.highest_education = highest_education;
-    if (institution_name) userRecord.institution_name = institution_name;
 
     const { error: insertUserError } = await supabaseAdmin
       .from('users')
@@ -557,6 +548,12 @@ export async function POST(request: NextRequest) {
       last_name: nameParts.slice(1).join(' ') || '',
       nationality: nationality || null,
       gender: gender || null,
+      date_of_birth: date_of_birth || null,
+      passport_number: passport_number || null,
+      current_address: current_address || null,
+      wechat_id: wechat_id || null,
+      highest_education: highest_education || null,
+      institution_name: institution_name || null,
     });
 
     if (studentInsertError) {

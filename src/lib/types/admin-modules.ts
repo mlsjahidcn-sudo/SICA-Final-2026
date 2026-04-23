@@ -73,6 +73,14 @@ export interface PartnerStudent {
   } | null;
   nationality: string | null;
   gender: string | null;
+  date_of_birth: string | null;
+  passport_number: string | null;
+  current_address: string | null;
+  wechat_id: string | null;
+  highest_education: string | null;
+  institution_name: string | null;
+  country: string | null;
+  city: string | null;
   created_at: string;
   updated_at: string | null;
   applications: {

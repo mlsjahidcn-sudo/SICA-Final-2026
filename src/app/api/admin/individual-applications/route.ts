@@ -151,8 +151,6 @@ export async function GET(request: NextRequest) {
     const filterStudentId = searchParams.get('student_id') || '';
     const offset = (page - 1) * limit;
 
-    // Build base query - filters BEFORE pagination (.range())
-    // Individual applications = applications from students who registered themselves (NOT referred by any partner)
     // First get user IDs of truly individual students (not referred by partner)
     const { data: individualUsers } = await supabaseAdmin
       .from('users')
@@ -173,7 +171,7 @@ export async function GET(request: NextRequest) {
     // Get student IDs for individual users
     const { data: individualStudentRecords } = await supabaseAdmin
       .from('students')
-      .select('id')
+      .select('id, user_id')
       .in('user_id', individualUserIds);
 
     const individualStudentIds = (individualStudentRecords || []).map(s => s.id);
@@ -187,7 +185,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    let query = supabaseAdmin
+    // Build base query for applications
+    let baseQuery = supabaseAdmin
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .in('student_id', individualStudentIds)
+      .is('partner_id', null);
+
+    if (status) baseQuery = baseQuery.eq('status', status);
+
+    const { count: totalCount } = await baseQuery;
+
+    // Now get applications data
+    let dataQuery = supabaseAdmin
       .from('applications')
       .select(`
         id,
@@ -199,76 +209,68 @@ export async function GET(request: NextRequest) {
         updated_at,
         partner_id,
         profile_snapshot,
-        students (
-          id,
-          user_id,
-          nationality,
-          gender,
-          highest_education,
-          users (
-            id,
-            full_name,
-            email,
-            referred_by_partner_id
-          )
-        ),
-        programs (
-          id,
-          name,
-          degree_level,
-          universities (
-            id,
-            name_en,
-            city,
-            province
-          )
-        )
-      `, { count: 'exact' })
+        student_id,
+        program_id
+      `)
       .in('student_id', individualStudentIds)
+      .is('partner_id', null)
       .order('created_at', { ascending: false });
 
-    // Apply ALL filters BEFORE .range() for accurate results
-    if (status) {
-      query = query.eq('status', status);
-    }
+    if (status) dataQuery = dataQuery.eq('status', status);
 
-    if (universityId) {
-      query = query.eq('programs.university_id', universityId);
-    }
+    const { data: applications, error: fetchError } = await dataQuery;
 
-    if (degreeLevel) {
-      query = query.eq('programs.degree_level', degreeLevel);
-    }
-
-    if (search) {
-      // Apply search at database level using OR across student name and program name
-      query = query.or(`students.users.full_name.ilike.%${search}%,programs.name.ilike.%${search}%`);
-    }
-
-    if (filterStudentId) {
-      query = query.eq('students.user_id', filterStudentId);
-    }
-
-    // Apply pagination LAST (after all filters)
-    query = query.range(offset, offset + limit - 1);
-
-    const { data: applications, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching individual applications:', error);
+    if (fetchError) {
+      console.error('Error fetching individual applications:', fetchError);
       return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
 
-    // Transform data
-    const transformedApplications: ApplicationWithPartner[] = (applications || []).map(app => {
-      const student = Array.isArray(app.students) ? app.students[0] : app.students;
-      const studentUser = student?.users
-        ? (Array.isArray(student.users) ? student.users[0] : student.users)
-        : null;
-      const program = Array.isArray(app.programs) ? app.programs[0] : app.programs;
-      const university = program?.universities
-        ? (Array.isArray(program.universities) ? program.universities[0] : program.universities)
-        : null;
+    // Collect IDs for batch fetching
+    const studentIds = [...new Set(applications?.map(a => a.student_id).filter(Boolean) || [])];
+    const programIds = [...new Set(applications?.map(a => a.program_id).filter(Boolean) || [])];
+
+    // Batch fetch students
+    const { data: studentsData } = studentIds.length > 0
+      ? await supabaseAdmin.from('students').select('id, user_id, nationality, gender, highest_education').in('id', studentIds)
+      : { data: [] };
+    
+    const studentUserIds = [...new Set(studentsData?.map(s => s.user_id).filter(Boolean) || [])];
+    
+    // Batch fetch student users
+    const { data: studentUsersData } = studentUserIds.length > 0
+      ? await supabaseAdmin.from('users').select('id, full_name, email').in('id', studentUserIds)
+      : { data: [] };
+
+    // Batch fetch programs
+    const { data: programsData } = programIds.length > 0
+      ? await supabaseAdmin.from('programs').select('id, name, degree_level, university_id').in('id', programIds)
+      : { data: [] };
+    
+    const universityIds = [...new Set(programsData?.map(p => p.university_id).filter(Boolean) || [])];
+    
+    // Batch fetch universities
+    const { data: universitiesData } = universityIds.length > 0
+      ? await supabaseAdmin.from('universities').select('id, name_en, city, province').in('id', universityIds)
+      : { data: [] };
+
+    // Build maps
+    const studentMap = new Map(studentsData?.map(s => [s.id, s]) || []);
+    const studentUserMap = new Map(studentUsersData?.map(u => [u.id, u]) || []);
+    const programMap = new Map(programsData?.map(p => [p.id, p]) || []);
+    const universityMap = new Map(universitiesData?.map(u => [u.id, u]) || []);
+
+    // Build user -> student map for filterStudentId
+    const userIdToStudentIdMap = new Map();
+    for (const sr of (individualStudentRecords || [])) {
+      userIdToStudentIdMap.set(sr.user_id, sr.id);
+    }
+
+    // Transform data and apply filters in-memory
+    let transformedApplications: ApplicationWithPartner[] = (applications || []).map(app => {
+      const student = studentMap.get(app.student_id);
+      const studentUser = student?.user_id ? studentUserMap.get(student.user_id) : null;
+      const program = programMap.get(app.program_id);
+      const university = program?.university_id ? universityMap.get(program.university_id) : null;
 
       return {
         id: app.id,
@@ -296,53 +298,65 @@ export async function GET(request: NextRequest) {
           } : null,
         } : null,
         student: {
-          id: student?.id,
-          user_id: student?.user_id,
-          full_name: studentUser?.full_name,
-          email: studentUser?.email,
-          nationality: student?.nationality,
-          gender: student?.gender,
-          highest_education: student?.highest_education,
+          id: student?.id || null,
+          user_id: student?.user_id || null,
+          full_name: studentUser?.full_name || null,
+          email: studentUser?.email || null,
+          nationality: student?.nationality || null,
+          gender: student?.gender || null,
+          highest_education: student?.highest_education || null,
           source: 'individual' as const,
-        },
+        } as any,
       };
     });
 
-    // Calculate stats based on current filter criteria
-    let statsQuery = supabaseAdmin
-      .from('applications')
-      .select('status', { count: 'exact', head: true })
-      .in('student_id', individualStudentIds);
+    // Apply in-memory filters
+    let filteredApplications = transformedApplications;
 
-    // Re-apply filters for accurate stats
-    if (status) {
-      statsQuery = statsQuery.eq('status', status);
-    }
     if (universityId) {
-      statsQuery = statsQuery.eq('programs.university_id', universityId); // Note: may need separate approach
+      filteredApplications = filteredApplications.filter(app => 
+        app.program?.university?.id === universityId
+      );
     }
 
-    // For stats, do a fresh count with same base criteria
-    const { count: totalCount } = await supabaseAdmin
-      .from('applications')
-      .select('id', { count: 'exact', head: true })
-      .in('student_id', individualStudentIds);
+    if (degreeLevel) {
+      filteredApplications = filteredApplications.filter(app => 
+        app.program?.degree_level?.toLowerCase() === degreeLevel.toLowerCase()
+      );
+    }
 
-    // Get detailed status counts
-    const { data: allAppsForStats } = await supabaseAdmin
-      .from('applications')
-      .select('status')
-      .in('student_id', individualStudentIds);
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredApplications = filteredApplications.filter(app => 
+        app.student?.full_name?.toLowerCase().includes(searchLower) ||
+        app.program?.name?.toLowerCase().includes(searchLower)
+      );
+    }
 
+    if (filterStudentId) {
+      const targetStudentId = userIdToStudentIdMap.get(filterStudentId);
+      if (targetStudentId) {
+        filteredApplications = filteredApplications.filter(app => 
+          app.student?.id === targetStudentId
+        );
+      } else {
+        filteredApplications = [];
+      }
+    }
+
+    // Manual pagination
+    const paginatedApplications = filteredApplications.slice(offset, offset + limit);
+
+    // Calculate stats
     const stats = {
-      total: totalCount || 0,
+      total: filteredApplications.length,
       pending: 0,
       underReview: 0,
       accepted: 0,
       rejected: 0,
     };
 
-    for (const a of (allAppsForStats || [])) {
+    for (const a of filteredApplications) {
       if (a.status === 'submitted' || a.status === 'draft') {
         stats.pending++;
       } else if (a.status === 'under_review') {
@@ -355,12 +369,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      applications: transformedApplications,
+      applications: paginatedApplications,
       pagination: {
         page,
         limit,
-        total: count ?? transformedApplications.length,
-        totalPages: Math.ceil((count ?? transformedApplications.length) / limit),
+        total: filteredApplications.length,
+        totalPages: Math.ceil(filteredApplications.length / limit),
       },
       stats,
     });
