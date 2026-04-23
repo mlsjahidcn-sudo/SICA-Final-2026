@@ -229,14 +229,14 @@ function UniversityCard({ university }: { university: University }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xs sm:text-sm font-semibold group-hover:text-primary transition-colors line-clamp-1">
+              <h3 className="text-sm sm:text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
                 {university.name_en}
               </h3>
               {university.name_cn && (
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{university.name_cn}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{university.name_cn}</p>
               )}
-              <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                <IconMapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+                <IconMapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 {university.city}, {university.province}
               </div>
             </div>
@@ -245,11 +245,11 @@ function UniversityCard({ university }: { university: University }) {
 
         {/* Meta Info: Deadline, Intake */}
         <div className="px-2.5 sm:px-3 py-1.5 sm:py-2">
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm">
             {/* Deadline */}
             <div className="flex flex-col gap-0.5">
               <span className="text-muted-foreground flex items-center gap-0.5 sm:gap-1">
-                <IconCalendar className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <IconCalendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Deadline
               </span>
               {deadlineInfo ? (
@@ -269,7 +269,7 @@ function UniversityCard({ university }: { university: University }) {
             {/* Intake */}
             <div className="flex flex-col gap-0.5">
               <span className="text-muted-foreground flex items-center gap-0.5 sm:gap-1">
-                <IconClock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <IconClock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Intake
               </span>
               <span className="font-medium truncate">
@@ -281,19 +281,19 @@ function UniversityCard({ university }: { university: University }) {
 
         {/* Footer: Tuition + View */}
         <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 border-t flex justify-between items-center">
-          <div className="text-xs sm:text-sm">
+          <div className="text-sm sm:text-base">
             {university.tuition_min ? (
               <span className="font-semibold">
                 {university.tuition_currency || '¥'}{university.tuition_min.toLocaleString()}
-                <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">/yr</span>
+                <span className="text-xs sm:text-sm text-muted-foreground font-normal">/yr</span>
               </span>
             ) : (
-              <span className="text-[10px] sm:text-xs text-muted-foreground">Tuition on request</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">Tuition on request</span>
             )}
           </div>
-          <span className="inline-flex items-center gap-1 rounded-md border border-blue-500 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+          <span className="inline-flex items-center gap-1 rounded-md border border-blue-500 px-2 py-0.5 text-xs sm:text-sm font-medium text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
             View
-            <IconChevronRight className="h-3 w-3" />
+            <IconChevronRight className="h-3.5 w-3.5" />
           </span>
         </div>
       </div>
