@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
   Card,
@@ -18,16 +18,10 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
+import { IconTrendingUp } from "@tabler/icons-react"
 
 interface ChartDataPoint {
   date: string
@@ -42,11 +36,11 @@ interface PartnerApplicationsChartProps {
 const chartConfig = {
   applications: {
     label: "Applications",
-    color: "var(--primary)",
+    color: "hsl(var(--primary))",
   },
   accepted: {
     label: "Accepted",
-    color: "var(--primary)",
+    color: "hsl(145 60% 45%)",
   },
 } satisfies ChartConfig
 
@@ -54,17 +48,20 @@ const chartConfig = {
 function generateChartData(days: number): ChartDataPoint[] {
   const data: ChartDataPoint[] = []
   const today = new Date()
-  
+
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today)
     date.setDate(date.getDate() - i)
+    const dayOfWeek = date.getDay()
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const baseApps = isWeekend ? 1 : 4
     data.push({
       date: date.toISOString().split("T")[0],
-      applications: Math.floor(Math.random() * 10) + 1,
-      accepted: Math.floor(Math.random() * 5),
+      applications: Math.floor(Math.random() * 6) + baseApps,
+      accepted: Math.floor(Math.random() * 3),
     })
   }
-  
+
   return data
 }
 
@@ -86,8 +83,8 @@ export function PartnerApplicationsChart({ data: propData }: PartnerApplications
   })()
 
   const filteredData = chartData.filter((item) => {
-    if (!propData) return true // Use generated data as-is
-    
+    if (!propData) return true
+
     const date = new Date(item.date)
     const referenceDate = new Date()
     let daysToSubtract = 90
@@ -101,83 +98,62 @@ export function PartnerApplicationsChart({ data: propData }: PartnerApplications
     return date >= startDate
   })
 
+  const totalApps = filteredData.reduce((sum, d) => sum + d.applications, 0)
+  const totalAccepted = filteredData.reduce((sum, d) => sum + d.accepted, 0)
+
   return (
-    <Card className="@container/card">
-      <CardHeader>
-        <CardTitle>Applications Overview</CardTitle>
-        <CardDescription>
-          <span className="hidden @[540px]/card:block">
+    <Card className="flex flex-col">
+      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
+        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5">
+          <div className="flex items-center gap-2">
+            <CardTitle>Applications Overview</CardTitle>
+            <div className="flex h-5 items-center gap-1 rounded-full bg-emerald-50 px-2 text-xs font-medium text-emerald-700 border border-emerald-200">
+              <IconTrendingUp className="h-3 w-3" />
+              Active
+            </div>
+          </div>
+          <CardDescription>
             Application trends over time
-          </span>
-          <span className="@[540px]/card:hidden">Trends</span>
-        </CardDescription>
-        <CardAction>
-          <ToggleGroup
-            type="single"
-            value={timeRange}
-            onValueChange={setTimeRange}
-            variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
-          >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
-          </ToggleGroup>
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a value"
+          </CardDescription>
+        </div>
+        <div className="flex flex-col justify-center gap-1 border-t bg-muted/20 px-6 py-4 sm:border-l sm:border-t-0">
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total</span>
+          <span className="text-2xl font-bold leading-none">{totalApps}</span>
+          <span className="text-xs text-emerald-600 font-medium">{totalAccepted} accepted</span>
+        </div>
+        <div className="flex">
+          <CardAction className="flex items-center px-6 py-4 self-center">
+            <ToggleGroup
+              type="single"
+              value={timeRange}
+              onValueChange={setTimeRange}
+              variant="outline"
+              className=""
             >
-              <SelectValue placeholder="Last 3 months" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">
-                Last 3 months
-              </SelectItem>
-              <SelectItem value="30d" className="rounded-lg">
-                Last 30 days
-              </SelectItem>
-              <SelectItem value="7d" className="rounded-lg">
-                Last 7 days
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardAction>
+              <ToggleGroupItem value="7d" className="text-xs h-8 px-3">7d</ToggleGroupItem>
+              <ToggleGroupItem value="30d" className="text-xs h-8 px-3">30d</ToggleGroupItem>
+              <ToggleGroupItem value="90d" className="text-xs h-8 px-3">90d</ToggleGroupItem>
+            </ToggleGroup>
+          </CardAction>
+        </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-2 sm:p-6">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-[280px] w-full"
         >
           <AreaChart data={filteredData}>
             <defs>
               <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-applications)"
-                  stopOpacity={1.0}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-applications)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.01} />
               </linearGradient>
               <linearGradient id="fillAccepted" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-accepted)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-accepted)"
-                  stopOpacity={0.1}
-                />
+                <stop offset="5%" stopColor="hsl(145 60% 45%)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(145 60% 45%)" stopOpacity={0.01} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="date"
               tickLine={false}
@@ -191,6 +167,13 @@ export function PartnerApplicationsChart({ data: propData }: PartnerApplications
                   day: "numeric",
                 })
               }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => `${value}`}
+              width={30}
             />
             <ChartTooltip
               cursor={false}
@@ -207,21 +190,37 @@ export function PartnerApplicationsChart({ data: propData }: PartnerApplications
               }
             />
             <Area
-              dataKey="accepted"
-              type="natural"
-              fill="url(#fillAccepted)"
-              stroke="var(--color-accepted)"
-              stackId="a"
+              type="monotone"
+              dataKey="applications"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill="url(#fillApplications)"
+              animationDuration={1000}
+              animationEasing="ease-out"
             />
             <Area
-              dataKey="applications"
-              type="natural"
-              fill="url(#fillApplications)"
-              stroke="var(--color-applications)"
-              stackId="a"
+              type="monotone"
+              dataKey="accepted"
+              stroke="hsl(145 60% 45%)"
+              strokeWidth={2}
+              fill="url(#fillAccepted)"
+              animationDuration={1200}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ChartContainer>
+
+        {/* Legend */}
+        <div className="mt-4 flex items-center justify-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+            <span className="text-xs text-muted-foreground">Applications</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-muted-foreground">Accepted</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
