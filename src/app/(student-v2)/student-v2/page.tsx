@@ -28,7 +28,8 @@ import {
   IconArrowRight,
   IconSchool,
   IconStar,
-  IconMail
+  IconMail,
+  IconClipboardCheck
 } from "@tabler/icons-react"
 import { studentApi, type StudentDashboard } from "@/lib/student-api"
 
@@ -488,7 +489,7 @@ export default function StudentDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/student-v2/universities">
             <CardContent className="pt-6 text-center">
@@ -508,6 +509,15 @@ export default function StudentDashboard() {
           </Link>
         </Card>
         <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <Link href="/assessment/apply">
+            <CardContent className="pt-6 text-center">
+              <IconClipboardCheck className="h-8 w-8 mx-auto mb-2 text-primary" />
+              <p className="font-medium">Free Assessment</p>
+              <p className="text-xs text-muted-foreground mt-1">Get your eligibility checked</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/student-v2/meetings">
             <CardContent className="pt-6 text-center">
               <IconVideo className="h-8 w-8 mx-auto mb-2 text-primary" />
@@ -522,8 +532,8 @@ export default function StudentDashboard() {
               <div className="relative inline-block">
                 <IconMail className="h-8 w-8 mx-auto mb-2 text-primary" />
                 {unreadNotifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs flex items-center justify-center"
                   >
                     {unreadNotifications > 99 ? "99+" : unreadNotifications}
