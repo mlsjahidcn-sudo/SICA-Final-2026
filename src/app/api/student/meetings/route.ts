@@ -16,38 +16,26 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    
+
     const status = searchParams.get('status');
     const upcoming = searchParams.get('upcoming') === 'true';
 
+    // Get student record id (meetings.student_id references students.id)
+    const { data: studentRecord } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    const studentId = studentRecord?.id;
+    if (!studentId) {
+      return NextResponse.json({ meetings: [] });
+    }
+
     let query = supabase
       .from('meetings')
-      .select(`
-        id,
-        title,
-        meeting_date,
-        duration_minutes,
-        platform,
-        meeting_url,
-        meeting_id,
-        meeting_password,
-        status,
-        notes,
-        created_at,
-        applications (
-          id,
-          programs (
-            id,
-            name_en,
-            universities (
-              id,
-              name_en,
-              logo_url
-            )
-          )
-        )
-      `)
-      .eq('student_id', user.id);
+      .select('id, title, meeting_date, duration_minutes, platform, meeting_url, meeting_id, meeting_password, status, notes, created_at, application_id')
+      .eq('student_id', studentId);
 
     // Apply status filter
     if (status && status !== 'all') {
@@ -63,14 +51,56 @@ export async function GET(request: NextRequest) {
 
     query = query.order('meeting_date', { ascending: true });
 
-    const { data: meetings, error } = await query;
+    const { data: meetingsRaw, error } = await query;
 
     if (error) {
       console.error('Error fetching meetings:', error);
       return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 });
     }
 
-    return NextResponse.json({ meetings: meetings || [] });
+    // Enrich with program/university info (step-by-step)
+    const appIds = (meetingsRaw || []).map(m => m.application_id).filter(Boolean);
+    let meetings: any[] = [];
+    if (appIds.length > 0) {
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('id, program_id')
+        .in('id', appIds);
+      const programIds = (apps || []).map(a => a.program_id).filter(Boolean);
+      const { data: programs } = programIds.length > 0
+        ? await supabase.from('programs').select('id, name, university_id').in('id', programIds)
+        : { data: [] };
+      const uniIds = (programs || []).map(p => p.university_id).filter(Boolean);
+      const { data: universities } = uniIds.length > 0
+        ? await supabase.from('universities').select('id, name_en, logo_url').in('id', uniIds)
+        : { data: [] };
+
+      const appMap = Object.fromEntries((apps || []).map(a => [a.id, a]));
+      const progMap = Object.fromEntries((programs || []).map(p => [p.id, p]));
+      const uniMap = Object.fromEntries((universities || []).map(u => [u.id, u]));
+
+      meetings = (meetingsRaw || []).map(m => {
+        const app = m.application_id ? appMap[m.application_id] : null;
+        const prog = app ? progMap[app.program_id] : null;
+        const uni = prog ? uniMap[prog.university_id] : null;
+        return {
+          ...m,
+          applications: app ? {
+            id: app.id,
+            programs: prog ? {
+              id: prog.id,
+              name: prog.name,
+              name_en: prog.name,
+              universities: uni ? { id: uni.id, name_en: uni.name_en, logo_url: uni.logo_url } : null,
+            } : null,
+          } : null,
+        };
+      });
+    } else {
+      meetings = meetingsRaw || [];
+    }
+
+    return NextResponse.json({ meetings });
 
   } catch (error) {
     console.error('Error in student meetings GET:', error);

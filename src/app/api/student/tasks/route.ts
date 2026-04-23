@@ -20,6 +20,15 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const applicationId = searchParams.get('applicationId');
 
+    // Get student record id (applications.student_id references students.id)
+    const { data: studentRecord } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    const studentId = studentRecord?.id;
+
     // Build query - students see tasks assigned to them OR related to their applications
     let query = supabase
       .from('admin_tasks')
@@ -50,10 +59,12 @@ export async function GET(request: NextRequest) {
 
     // Filter to only include tasks related to this student's applications
     // First get the student's application IDs
-    const { data: studentApps } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('student_id', user.id);
+    const { data: studentApps } = studentId
+      ? await supabase
+          .from('applications')
+          .select('id')
+          .eq('student_id', studentId)
+      : { data: [] };
 
     const applicationIds = (studentApps || []).map((a) => a.id);
 
