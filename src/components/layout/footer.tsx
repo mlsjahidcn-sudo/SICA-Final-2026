@@ -217,11 +217,11 @@ export function Footer() {
       {/* Trust Badges Section */}
       <div className="border-t border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          <div className="flex flex-nowrap items-center justify-center gap-3 sm:gap-8 md:gap-16 overflow-x-auto">
+          <div className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-8 md:gap-16">
             {trustBadges.map((badge, index) => (
-              <div key={index} className="flex items-center gap-1.5 sm:gap-2.5 text-primary shrink-0">
-                <badge.icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{badge.text}</span>
+              <div key={index} className="flex items-center gap-1 sm:gap-2.5 text-primary">
+                <badge.icon className="h-3 w-3 sm:h-5 sm:w-5" />
+                <span className="text-[10px] sm:text-sm font-medium whitespace-nowrap">{badge.text}</span>
               </div>
             ))}
           </div>
