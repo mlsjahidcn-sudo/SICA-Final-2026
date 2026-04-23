@@ -355,7 +355,7 @@ export function HomePageContent() {
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : featuredUniversities.length > 0 ? (
-                    featuredUniversities.map((university) => (
+                    featuredUniversities.slice(0, 3).map((university) => (
                       <Link key={university.id} href={`/universities/${university.id}`} className="block group">
                         <div className={`
                           relative overflow-hidden rounded-xl border bg-card transition-all duration-300
