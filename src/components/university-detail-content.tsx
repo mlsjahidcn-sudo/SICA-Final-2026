@@ -478,7 +478,10 @@ function InfoSidebarCard({ university }: { university: University }) {
           )}
 
           <Field orientation="horizontal">
-            <FieldTitle className="text-muted-foreground">Location</FieldTitle>
+            <FieldTitle className="text-muted-foreground flex items-center gap-1.5">
+              <IconMapPin className="h-4 w-4 text-red-500" />
+              Location
+            </FieldTitle>
             <FieldDescription>{university.city}, {university.province}</FieldDescription>
           </Field>
 
