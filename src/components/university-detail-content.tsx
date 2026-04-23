@@ -924,8 +924,8 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                     </Card>
                   ) : (
                     <>
-                      {/* Program Cards - Responsive Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Mobile Card View */}
+                      <div className="md:hidden space-y-3">
                         {programs.map((program) => (
                           <Card key={program.id} className="overflow-hidden group">
                             {/* Degree Level Color Strip */}
@@ -941,8 +941,8 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                                 {/* Header: Badge + Name */}
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <Badge
-                                      variant="outline"
+                                    <Badge 
+                                      variant="outline" 
                                       className={cn(
                                         "font-semibold px-2.5 py-0.5 text-[11px] uppercase tracking-wide",
                                         program.degree_level?.toLowerCase() === 'bachelor' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' :
@@ -1016,6 +1016,57 @@ export function UniversityDetailContent({ universityId }: UniversityDetailConten
                             </CardContent>
                           </Card>
                         ))}
+                      </div>
+
+                      {/* Desktop List View */}
+                      <div className="hidden md:block rounded-lg border overflow-hidden">
+                        <div className="divide-y">
+                          {programs.map((program) => (
+                            <div 
+                              key={program.id} 
+                              className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                            >
+                              {/* Degree Badge */}
+                              <Badge variant="secondary" className="font-medium px-2.5 py-0.5 text-[11px] shrink-0">
+                                {program.degree_level?.toLowerCase() === 'bachelor' ? 'Bachelor' : 
+                                 program.degree_level?.toLowerCase() === 'master' ? 'Master' : 
+                                 program.degree_level?.toLowerCase() === 'phd' || program.degree_level?.toLowerCase() === 'doctoral' ? 'PhD' : 
+                                 program.degree_level || 'N/A'}
+                              </Badge>
+
+                              {/* Program Name */}
+                              <Link 
+                                href={
+                                  university.slug && program.slug 
+                                    ? `/universities/${university.slug}/programs/${program.slug}` 
+                                    : `/programs/${program.id}`
+                                } 
+                                className="font-medium text-sm hover:underline truncate min-w-0"
+                              >
+                                {program.name}
+                              </Link>
+
+                              {/* Metadata - inline */}
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-auto">
+                                <span className="flex items-center gap-1">
+                                  <IconLanguage className="h-3 w-3" />
+                                  {program.language}
+                                </span>
+                                {program.tuition_fee_per_year && (
+                                  <span className="flex items-center gap-1 font-medium text-foreground">
+                                    <IconCoinYuan className="h-3 w-3" />
+                                    {program.currency || '¥'}{program.tuition_fee_per_year.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Apply Button */}
+                              <Button size="sm" variant="default" className="h-7 px-3 text-xs shrink-0" asChild>
+                                <Link href={`/apply?program_id=${program.id}`}>Apply</Link>
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </>
                   )}
