@@ -285,6 +285,12 @@ export function HomePageContent() {
                   <Button asChild variant="outline" size="lg" className="text-base h-11 sm:h-12">
                     <Link href="/apply">Apply Now</Link>
                   </Button>
+                  <Button asChild variant="secondary" size="lg" className="text-base h-11 sm:h-12">
+                    <Link href="/assessment/apply">
+                      <ClipboardCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Free Assessment
+                    </Link>
+                  </Button>
                 </div>
 
                 {/* Announcement Card */}
