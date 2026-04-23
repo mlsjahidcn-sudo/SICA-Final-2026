@@ -293,42 +293,6 @@ export function HomePageContent() {
                   </Button>
                 </div>
 
-                {/* Announcement Card */}
-                <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/3 to-background p-4 sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="default" className="text-xs sm:text-sm bg-primary text-primary-foreground">
-                          Now Open
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">Limited Seats</span>
-                      </div>
-                      <h3 className="text-base sm:text-lg font-bold mb-1">
-                        September 2026 Intake Applications Open
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Apply early to secure your spot at top Chinese universities. Scholarships available for qualified students.
-                      </p>
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
-                        <div className="flex items-center gap-1.5 text-primary font-medium">
-                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span>Sept 2026</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-500 font-medium">
-                          <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span>Seats Filling Fast</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-chart-4 font-medium">
-                          <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span>95% Success Rate</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Right Column - Featured Universities (Desktop only) */}
@@ -450,6 +414,47 @@ export function HomePageContent() {
           {/* Decorative elements */}
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl -z-10" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
+        </section>
+
+        {/* Announcement Card - Full Width */}
+        <section className="relative bg-gradient-to-br from-primary/5 via-background to-background border-b">
+          <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+            <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/3 to-background p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="default" className="text-xs sm:text-sm bg-primary text-primary-foreground">
+                      Now Open
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">Limited Seats</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold mb-1">
+                    September 2026 Intake Applications Open
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Apply early to secure your spot at top Chinese universities. Scholarships available for qualified students.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                    <div className="flex items-center gap-1.5 text-primary font-medium">
+                      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span>Sept 2026</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-500 font-medium">
+                      <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span>Seats Filling Fast</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-chart-4 font-medium">
+                      <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span>95% Success Rate</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* University Logo Slider */}
