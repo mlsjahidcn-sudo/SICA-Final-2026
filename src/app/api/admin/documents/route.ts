@@ -69,30 +69,53 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 2: Get student IDs from documents
-    const studentIds = [...new Set(documents.map(d => d.student_id).filter(Boolean))] as string[];
+    // NOTE: Some documents may have users.id in student_id (partner upload fallback)
+    // instead of students.id. We need to lookup by both id and user_id.
+    const docStudentIds = [...new Set(documents.map(d => d.student_id).filter(Boolean))] as string[];
 
-    // Step 3: Fetch students
-    let studentsData: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
-    if (studentIds.length > 0) {
+    // Step 3: Fetch students by id
+    let studentsById: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
+    let studentsByUserId: Record<string, { id: string; first_name: string; last_name: string; user_id: string; nationality: string | null }> = {};
+
+    if (docStudentIds.length > 0) {
       const { data: students } = await supabase
         .from('students')
         .select('id, first_name, last_name, user_id, nationality')
-        .in('id', studentIds);
-      (students || []).forEach(s => { studentsData[s.id] = s; });
+        .in('id', docStudentIds);
+      (students || []).forEach(s => {
+        studentsById[s.id] = s;
+        studentsByUserId[s.user_id] = s;
+      });
     }
 
-    // Step 4: Fetch users (emails) for students
-    const userIds = Object.values(studentsData).map(s => s.user_id).filter(Boolean);
+    // Step 4: For IDs that didn't match students.id, try matching by user_id
+    const unmatchedIds = docStudentIds.filter(id => !studentsById[id]);
+    if (unmatchedIds.length > 0) {
+      const { data: studentsByUid } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, user_id, nationality')
+        .in('user_id', unmatchedIds);
+      (studentsByUid || []).forEach(s => {
+        studentsByUserId[s.user_id] = s;
+      });
+    }
+
+    // Step 5: Fetch users (emails) for all matched students
+    const allMatchedStudentIds = [...new Set([
+      ...Object.values(studentsById).map(s => s.user_id),
+      ...Object.values(studentsByUserId).map(s => s.user_id),
+    ])];
+
     let usersData: Record<string, { email: string }> = {};
-    if (userIds.length > 0) {
+    if (allMatchedStudentIds.length > 0) {
       const { data: users } = await supabase
         .from('users')
         .select('id, email')
-        .in('id', userIds);
+        .in('id', allMatchedStudentIds);
       (users || []).forEach(u => { usersData[u.id] = u; });
     }
 
-    // Step 5: Get application IDs for related applications
+    // Step 6: Get application IDs for related applications
     const applicationIds = [...new Set(documents.map(d => d.application_id).filter(Boolean))] as string[];
     let applicationsData: Record<string, { id: string; status: string; program_id: string | null }> = {};
     if (applicationIds.length > 0) {
@@ -103,7 +126,7 @@ export async function GET(request: NextRequest) {
       (apps || []).forEach(a => { applicationsData[a.id] = a; });
     }
 
-    // Step 6: Get program names for applications
+    // Step 7: Get program names for applications
     const programIds = Object.values(applicationsData).map(a => a.program_id).filter(Boolean) as string[];
     let programsData: Record<string, { name: string }> = {};
     if (programIds.length > 0) {
@@ -114,9 +137,12 @@ export async function GET(request: NextRequest) {
       (programs || []).forEach(p => { programsData[p.id] = p; });
     }
 
-    // Step 7: Merge all data
+    // Step 8: Merge all data
     const enrichedDocuments = documents.map(doc => {
-      const student = doc.student_id ? studentsData[doc.student_id] : null;
+      // Look up student by id first, then by user_id fallback
+      const student = doc.student_id
+        ? (studentsById[doc.student_id] || studentsByUserId[doc.student_id])
+        : null;
       const user = student?.user_id ? usersData[student.user_id] : null;
       const app = doc.application_id ? applicationsData[doc.application_id] : null;
       const program = app?.program_id ? programsData[app.program_id] : null;
