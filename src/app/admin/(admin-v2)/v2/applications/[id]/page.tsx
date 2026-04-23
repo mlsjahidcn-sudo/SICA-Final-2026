@@ -142,20 +142,39 @@ function ApplicationDetailContent() {
     fetchApplication();
   }, [appId]);
 
-  // Fetch documents for this application
+  // Fetch documents for this application (by app_id and by student_id)
   useEffect(() => {
     async function fetchDocs() {
-      if (!appId) return;
+      if (!appId || !app?.student?.id) return;
       setDocsLoading(true);
       try {
         const token = await getValidToken();
-        const res = await fetch(`/api/admin/documents?application_id=${appId}&limit=50`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDocuments(data.documents || []);
+        const [appRes, studentRes] = await Promise.all([
+          fetch(`/api/admin/documents?application_id=${appId}&limit=50`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/admin/documents?student_id=${app.student.id}&limit=50`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        let allDocs: any[] = [];
+        if (appRes.ok) {
+          const appData = await appRes.json();
+          allDocs = [...(appData.documents || [])];
         }
+        if (studentRes.ok) {
+          const studentData = await studentRes.json();
+          const studentDocs = studentData.documents || [];
+          const seen = new Set(allDocs.map((d: any) => d.id));
+          studentDocs.forEach((d: any) => {
+            if (!seen.has(d.id)) {
+              allDocs.push(d);
+              seen.add(d.id);
+            }
+          });
+        }
+        setDocuments(allDocs);
       } catch (e) {
         console.error('Error fetching documents:', e);
       } finally {
@@ -163,7 +182,7 @@ function ApplicationDetailContent() {
       }
     }
     fetchDocs();
-  }, [appId]);
+  }, [app?.id, app?.student?.id]);
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { color: "default" | "secondary" | "destructive" | "outline"; label: string }> = {

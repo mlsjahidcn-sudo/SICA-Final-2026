@@ -105,17 +105,36 @@ function ApplicationDetailContent() {
 
   useEffect(() => {
     async function fetchDocs() {
-      if (!appId) return;
+      if (!appId || !application?.student?.id) return;
       setDocsLoading(true);
       try {
         const token = await getValidToken();
-        const res = await fetch(`/api/admin/documents?application_id=${appId}&limit=50`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDocuments(data.documents || []);
+        const [appRes, studentRes] = await Promise.all([
+          fetch(`/api/admin/documents?application_id=${appId}&limit=50`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/admin/documents?student_id=${application.student.id}&limit=50`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        let allDocs: any[] = [];
+        if (appRes.ok) {
+          const appData = await appRes.json();
+          allDocs = [...(appData.documents || [])];
         }
+        if (studentRes.ok) {
+          const studentData = await studentRes.json();
+          const studentDocs = studentData.documents || [];
+          const seen = new Set(allDocs.map((d: any) => d.id));
+          studentDocs.forEach((d: any) => {
+            if (!seen.has(d.id)) {
+              allDocs.push(d);
+              seen.add(d.id);
+            }
+          });
+        }
+        setDocuments(allDocs);
       } catch (e) {
         console.error('Error fetching documents:', e);
       } finally {
@@ -123,7 +142,7 @@ function ApplicationDetailContent() {
       }
     }
     fetchDocs();
-  }, [appId]);
+  }, [application?.id, application?.student?.id]);
 
   const fetchApplication = async () => {
     setLoading(true);
