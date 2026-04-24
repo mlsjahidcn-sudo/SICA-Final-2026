@@ -1,10 +1,27 @@
-# Rewrite all requests to the Node.js app
-RewriteEngine On
+# SICA - Hostinger Apache/LiteSpeed Configuration
+# Proxy all requests to Node.js app running on port 5000
 
-# If an existing asset or directory is requested go to it as it is
-RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -d
-RewriteRule ^ - [L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Proxy to Node.js application
+    RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
+</IfModule>
 
-# If the requested resource doesn't exist, use index.html
-RewriteRule ^ /index.html [L]
+# Increase rate limit thresholds for API-heavy application
+<IfModule mod_ratelimit.c>
+    SetOutputFilter RATE_LIMIT
+    LimitRate 0
+</IfModule>
+
+# Disable Hostinger's default rate limiting for this site
+<IfModule litespeed.c>
+    CacheEngine off
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
