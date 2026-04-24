@@ -1,8 +1,8 @@
 /**
- * Application Payments Summary API
- * GET /api/applications/[id]/payments
- * Returns payment config + all payment records for an application
- * Accessible by both partner (own apps) and admin
+ * Student Payments Summary API
+ * GET /api/students/[id]/payments
+ * Returns payment config + all payment records for a student
+ * Accessible by both partner (own students) and admin
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,7 +21,6 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user role
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -31,7 +30,7 @@ export async function GET(
     const isAdmin = profile?.role === 'admin';
 
     if (!isAdmin) {
-      // Partner: verify they own this application
+      // Partner: verify they have an application for this student
       const { data: partner } = await supabase
         .from('partners')
         .select('id')
@@ -42,29 +41,30 @@ export async function GET(
         return NextResponse.json({ error: 'Partner not found' }, { status: 403 });
       }
 
-      const { data: app } = await supabase
+      const { data: apps } = await supabase
         .from('applications')
-        .select('id, partner_id')
-        .eq('id', id)
-        .single();
+        .select('id')
+        .eq('student_id', id)
+        .eq('partner_id', partner.id)
+        .limit(1);
 
-      if (!app || app.partner_id !== partner.id) {
-        return NextResponse.json({ error: 'Application not found or access denied' }, { status: 403 });
+      if (!apps || apps.length === 0) {
+        return NextResponse.json({ error: 'Student not found or access denied' }, { status: 403 });
       }
     }
 
-    // Fetch payment config
+    // Fetch payment config for student
     const { data: config } = await supabase
       .from('app_payment_configs')
       .select('*')
-      .eq('application_id', id)
+      .eq('student_id', id)
       .maybeSingle();
 
-    // Fetch payment records
+    // Fetch payment records for student
     const { data: payments, error: paymentsError } = await supabase
       .from('application_payments')
       .select('*')
-      .eq('application_id', id)
+      .eq('student_id', id)
       .order('created_at', { ascending: false });
 
     if (paymentsError) {
@@ -114,7 +114,7 @@ export async function GET(
       },
     });
   } catch (err: unknown) {
-    console.error('Application payments GET error:', err);
+    console.error('Student payments GET error:', err);
     const msg = err instanceof Error ? err.message : 'Internal error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }

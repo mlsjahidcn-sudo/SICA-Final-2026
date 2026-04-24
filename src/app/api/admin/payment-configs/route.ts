@@ -1,7 +1,7 @@
 /**
  * Admin Payment Configs API
- * GET  /api/admin/payment-configs?application_id=xxx  - Get config for an app
- * POST /api/admin/payment-configs                       - Set/update config
+ * GET  /api/admin/payment-configs?student_id=xxx  - Get config for a student
+ * POST /api/admin/payment-configs                  - Set/update config
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,10 +10,10 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const application_id = searchParams.get('application_id');
+    const student_id = searchParams.get('student_id');
 
-    if (!application_id) {
-      return NextResponse.json({ error: 'application_id required' }, { status: 400 });
+    if (!student_id) {
+      return NextResponse.json({ error: 'student_id required' }, { status: 400 });
     }
 
     const supabase = getSupabaseClient();
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin role
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -36,7 +35,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('app_payment_configs')
       .select('*')
-      .eq('application_id', application_id)
+      .eq('student_id', student_id)
       .maybeSingle();
 
     if (error) {
@@ -56,15 +55,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      application_id,
+      student_id,
       deposit_amount,
       deposit_currency,
       service_fee_amount,
       service_fee_currency,
     } = body;
 
-    if (!application_id) {
-      return NextResponse.json({ error: 'application_id required' }, { status: 400 });
+    if (!student_id) {
+      return NextResponse.json({ error: 'student_id required' }, { status: 400 });
     }
 
     const supabase = getSupabaseClient();
@@ -73,7 +72,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin role
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -87,14 +85,14 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('app_payment_configs')
       .upsert({
-        application_id,
+        student_id,
         deposit_amount,
         deposit_currency: deposit_currency || 'USD',
         service_fee_amount,
         service_fee_currency: service_fee_currency || 'USD',
         created_by: user.id,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'application_id' })
+      }, { onConflict: 'student_id' })
       .select()
       .single();
 

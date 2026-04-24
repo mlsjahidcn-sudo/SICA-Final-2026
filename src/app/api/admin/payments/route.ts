@@ -1,7 +1,6 @@
 /**
  * Admin Payments API
- * GET  /api/admin/payments?application_id=xxx&partner_id=xxx&status=xxx  - List all payments
- * PATCH /api/admin/payments/[id]                                        - Confirm/Refund a payment
+ * GET  /api/admin/payments?student_id=xxx&partner_id=xxx&status=xxx  - List all payments
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +9,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const application_id = searchParams.get('application_id');
+    const student_id = searchParams.get('student_id');
     const partner_id = searchParams.get('partner_id');
     const status = searchParams.get('status');
 
@@ -20,7 +19,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin role
     const { data: profile } = await supabase
       .from('users')
       .select('role')
@@ -39,8 +37,8 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false });
 
-    if (application_id) {
-      query = query.eq('application_id', application_id);
+    if (student_id) {
+      query = query.eq('student_id', student_id);
     }
     if (partner_id) {
       query = query.eq('partner_id', partner_id);

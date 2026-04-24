@@ -1,7 +1,7 @@
 /**
  * Partner Payments API
- * GET  /api/partner/payments?application_id=xxx  - List payments for my apps
- * POST /api/partner/payments                      - Record a new payment
+ * GET  /api/partner/payments?student_id=xxx  - List payments for my students
+ * POST /api/partner/payments                 - Record a new payment
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +10,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const application_id = searchParams.get('application_id');
+    const student_id = searchParams.get('student_id');
 
     const supabase = getSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get partner record for this user
     const { data: partner } = await supabase
       .from('partners')
       .select('id')
@@ -31,14 +30,11 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('application_payments')
-      .select(`
-        *,
-        applications!inner(id, student_id)
-      `)
+      .select('*')
       .eq('partner_id', partner.id);
 
-    if (application_id) {
-      query = query.eq('application_id', application_id);
+    if (student_id) {
+      query = query.eq('student_id', student_id);
     }
 
     query = query.order('created_at', { ascending: false });
@@ -60,9 +56,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { application_id, payment_type, amount, currency, payment_date, notes, receipt_url } = body;
+    const { student_id, payment_type, amount, currency, payment_date, notes, receipt_url } = body;
 
-    if (!application_id || !payment_type || !amount) {
+    if (!student_id || !payment_type || !amount) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -72,7 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get partner record for this user
     const { data: partner } = await supabase
       .from('partners')
       .select('id')
@@ -83,21 +78,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Partner not found' }, { status: 403 });
     }
 
-    // Verify this application belongs to this partner
-    const { data: app } = await supabase
+    // Verify this partner has at least one application for this student
+    const { data: apps } = await supabase
       .from('applications')
-      .select('id, partner_id')
-      .eq('id', application_id)
-      .single();
+      .select('id')
+      .eq('student_id', student_id)
+      .eq('partner_id', partner.id)
+      .limit(1);
 
-    if (!app || app.partner_id !== partner.id) {
-      return NextResponse.json({ error: 'Application not found or access denied' }, { status: 403 });
+    if (!apps || apps.length === 0) {
+      return NextResponse.json({ error: 'Student not found or access denied' }, { status: 403 });
     }
 
     const { data, error } = await supabase
       .from('application_payments')
       .insert({
-        application_id,
+        student_id,
         partner_id: partner.id,
         payment_type,
         amount,
