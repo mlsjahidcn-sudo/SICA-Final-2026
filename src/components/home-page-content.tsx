@@ -190,39 +190,9 @@ const universityTypes = [
 ];
 
 export function HomePageContent() {
-  const [featuredUniversities, setFeaturedUniversities] = useState<FeaturedUniversity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [successCases, setSuccessCases] = useState<SuccessCase[]>([]);
-  const [successLoading, setSuccessLoading] = useState(true);
-
-  useEffect(() => {
-    fetchFeaturedUniversities();
-    fetchSuccessCases();
-  }, []);
-
-  const fetchFeaturedUniversities = async () => {
-    try {
-      const response = await fetch('/api/universities?limit=4&featured=true');
-      const data = await response.json();
-      setFeaturedUniversities(data.universities || []);
-    } catch (error) {
-      console.error('Error fetching featured universities:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSuccessCases = async () => {
-    try {
-      const response = await fetch('/api/success-cases?featured=true&limit=3&minimal=true');
-      const data = await response.json();
-      setSuccessCases(data.success_cases || []);
-    } catch (error) {
-      console.error('Error fetching success cases:', error);
-    } finally {
-      setSuccessLoading(false);
-    }
-  };
+  // Removed API calls to fix 429 errors
+  const [loading, setLoading] = useState(false);
+  const [successLoading, setSuccessLoading] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:5000';
   
@@ -295,119 +265,8 @@ export function HomePageContent() {
 
               </div>
 
-              {/* Right Column - Featured Universities (Desktop only) */}
+              {/* Right Column - Removed for now to fix 429 errors */}
               <div className="relative hidden lg:block">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-xl font-bold">Featured Universities</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">Top institutions for international students</p>
-                  </div>
-                  <Link 
-                    href="/universities" 
-                    className="group flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    View All 
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                </div>
-                
-                {/* Cards */}
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  ) : featuredUniversities.length > 0 ? (
-                    featuredUniversities.slice(0, 3).map((university) => (
-                      <Link key={university.id} href={`/universities/${university.id}`} className="block group">
-                        <div className={`
-                          relative overflow-hidden rounded-xl border bg-card transition-all duration-300
-                          hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-primary/30
-                        `}>
-                          <div className="p-4">
-                            <div className="flex items-start gap-4">
-                              {/* Logo */}
-                              <div className="flex-shrink-0">
-                                {university.logo_url && university.logo_url.trim() !== '' ? (
-                                  <img
-                                    src={university.logo_url}
-                                    alt={university.name_en}
-                                    className="w-14 h-14 rounded-lg object-cover border shadow-sm"
-                                  />
-                                ) : (
-                                  <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border">
-                                    <Building2 className="h-7 w-7 text-primary" />
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-base line-clamp-1 group-hover:text-primary transition-colors">
-                                      {university.name_en}
-                                    </h3>
-                                    {university.name_cn && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">{university.name_cn}</p>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Ranking Badge */}
-                                  {university.ranking_national && (
-                                    <div className="flex-shrink-0 flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md">
-                                      <Star className="h-3.5 w-3.5 fill-primary/20" />
-                                      <span className="text-sm font-bold">#{university.ranking_national}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {/* Meta info */}
-                                <div className="flex items-center flex-wrap gap-2 mt-2">
-                                  {/* Type Badges */}
-                                  {university.type && university.type.length > 0 && university.type.map((type) => (
-                                    <span
-                                      key={type}
-                                      className={`
-                                        inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                        ${type === '985' ? 'bg-destructive/10 text-destructive' : ''}
-                                        ${type === '211' ? 'bg-primary/10 text-primary' : ''}
-                                        ${type === 'Double First-Class' ? 'bg-chart-3/10 text-chart-3' : ''}
-                                        ${type === 'Provincial' ? 'bg-chart-2/10 text-chart-2' : ''}
-                                      `}
-                                    >
-                                      {type === 'Double First-Class' ? 'DOUBLE FIRST CLASS' : type.toUpperCase()}
-                                    </span>
-                                  ))}
-                                  
-                                  {/* Location */}
-                                  <span className="inline-flex items-center text-xs text-muted-foreground">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    {university.city}
-                                  </span>
-                                  
-                                  {/* Scholarship */}
-                                  {university.scholarship_available && (
-                                    <span className="inline-flex items-center text-xs text-chart-4 font-medium">
-                                      <Award className="h-3 w-3 mr-1" />
-                                      Scholarship
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      No featured universities available
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
 
