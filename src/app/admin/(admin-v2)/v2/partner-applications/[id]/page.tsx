@@ -45,6 +45,7 @@ import {
 import Link from 'next/link';
 import { getValidToken } from '@/lib/auth-token';
 import { toast } from 'sonner';
+import { ApplicationPaymentSection } from '@/app/admin/(admin-v2)/v2/components/application-payment-section';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -707,6 +708,9 @@ function ApplicationDetailContent() {
               </CardContent>
             </Card>
           )}
+
+          {/* Payment Tracking */}
+          <ApplicationPaymentSection applicationId={application.id} />
 
           {/* Metadata */}
           <Card>
