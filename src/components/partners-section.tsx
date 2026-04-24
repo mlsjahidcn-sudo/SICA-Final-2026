@@ -155,7 +155,12 @@ export function PartnersSection({
       }
     };
 
-    fetchPartners();
+    // Delay fetch to prevent Hostinger 429 rate limits on homepage load
+    const timer = setTimeout(() => {
+      fetchPartners();
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, [locale, showAll, limit]);
 
   if (loading) {
@@ -244,7 +249,12 @@ export function PartnersLogosScroller({ locale = 'en' }: { locale?: string }) {
       }
     };
 
-    fetchPartners();
+    // Delay fetch to prevent Hostinger 429 rate limits
+    const timer = setTimeout(() => {
+      fetchPartners();
+    }, 2500);
+
+    return () => clearTimeout(timer);
   }, [locale]);
 
   if (loading || partners.length === 0) {

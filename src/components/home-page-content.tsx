@@ -197,7 +197,10 @@ export function HomePageContent() {
 
   useEffect(() => {
     fetchFeaturedUniversities();
-    fetchSuccessCases();
+    // Stagger the success cases fetch to prevent Hostinger 429 rate limits
+    setTimeout(() => {
+      fetchSuccessCases();
+    }, 500);
   }, []);
 
   const fetchFeaturedUniversities = async () => {

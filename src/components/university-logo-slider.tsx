@@ -20,7 +20,11 @@ export function UniversityLogoSlider() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchUniversities();
+    // Delay fetch to prevent Hostinger 429 rate limits on homepage load
+    const timer = setTimeout(() => {
+      fetchUniversities();
+    }, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchUniversities = async () => {

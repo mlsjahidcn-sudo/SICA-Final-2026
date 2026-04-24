@@ -264,7 +264,12 @@ export function TestimonialsSection({
       }
     };
 
-    fetchTestimonials();
+    // Delay fetch to prevent Hostinger 429 rate limits on homepage load
+    const timer = setTimeout(() => {
+      fetchTestimonials();
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [locale, showAll, limit]);
 
   // Auto-slide for featured testimonials
@@ -437,7 +442,12 @@ export function TestimonialsCompact({ locale = 'en', limit = 3 }: { locale?: str
       }
     };
 
-    fetchTestimonials();
+    // Delay fetch to prevent Hostinger 429 rate limits
+    const timer = setTimeout(() => {
+      fetchTestimonials();
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, [locale, limit]);
 
   if (loading || testimonials.length === 0) {
