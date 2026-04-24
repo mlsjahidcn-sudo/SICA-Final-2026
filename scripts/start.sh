@@ -19,23 +19,36 @@ export COZE_SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJp
 
 echo "Supabase URL: ${COZE_SUPABASE_URL}"
 
-# Check for standalone build first (for shared hosting like Hostinger)
+# Determine correct standalone server path
+# Next.js standalone output may be nested depending on project structure
+SERVER_JS=""
 if [ -f ".next/standalone/server.js" ]; then
-    echo "Found Next.js standalone server..."
+    SERVER_JS=".next/standalone/server.js"
+    STANDALONE_DIR=".next/standalone"
+elif [ -f ".next/standalone/workspace/projects/server.js" ]; then
+    SERVER_JS=".next/standalone/workspace/projects/server.js"
+    STANDALONE_DIR=".next/standalone/workspace/projects"
+elif [ -f "dist/server.js" ]; then
+    SERVER_JS="dist/server.js"
+    STANDALONE_DIR="."
+fi
+
+if [ -n "${SERVER_JS}" ]; then
+    echo "Found server at: ${SERVER_JS}"
     
     # Ensure directories exist
-    mkdir -p .next/standalone/public
-    mkdir -p .next/standalone/.next/static
+    mkdir -p "${STANDALONE_DIR}/public"
+    mkdir -p "${STANDALONE_DIR}/.next/static"
     
     # Copy static files if they exist
     if [ -d "public" ]; then
-        cp -r public .next/standalone/ 2>/dev/null || true
+        cp -r public "${STANDALONE_DIR}/" 2>/dev/null || true
     fi
     if [ -d ".next/static" ]; then
-        cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+        cp -r .next/static "${STANDALONE_DIR}/.next/" 2>/dev/null || true
     fi
     
-    cd .next/standalone
+    cd "${STANDALONE_DIR}"
     echo "Starting server from: $(pwd)"
     
     # Start the server - Next.js standalone uses PORT and HOSTNAME env vars
@@ -44,15 +57,13 @@ if [ -f ".next/standalone/server.js" ]; then
     
     echo "Environment: PORT=${PORT}, HOSTNAME=${HOSTNAME}"
     exec node server.js
-elif [ -f "dist/server.js" ]; then
-    echo "Found custom server..."
-    PORT=${DEPLOY_RUN_PORT} node dist/server.js
 else
     echo "Error: No server found. Looking for:"
     echo "  - .next/standalone/server.js"
+    echo "  - .next/standalone/workspace/projects/server.js"
     echo "  - dist/server.js"
     echo ""
     echo "Directory contents:"
-    ls -la
+    ls -la .next/standalone/ 2>/dev/null || echo "  .next/standalone/ not found"
     exit 1
 fi
