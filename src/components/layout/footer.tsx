@@ -77,7 +77,7 @@ export function Footer() {
           
           {/* Brand Column */}
           <div className="sm:col-span-2 lg:col-span-1 space-y-5">
-            <Link href="/" className="inline-block">
+            <Link prefetch={false} href="/" className="inline-block">
               <Image
                 src="/logo.png"
                 alt="SICA - Study in China Academy"
@@ -92,7 +92,7 @@ export function Footer() {
             {/* Social Links */}
             <div className="flex items-center gap-4 pt-1">
               {socialLinks.map((social) => (
-                <Link
+                <Link prefetch={false}
                   key={social.name}
                   href={social.href}
                   target="_blank"
@@ -117,7 +117,7 @@ export function Footer() {
                 { name: 'Resources', href: '/blog' },
               ].map((link) => (
                 <li key={link.name}>
-                  <Link
+                  <Link prefetch={false}
                     href={link.href}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
@@ -138,7 +138,7 @@ export function Footer() {
                 { name: 'Blog', href: '/blog' },
               ].map((link) => (
                 <li key={link.name}>
-                  <Link
+                  <Link prefetch={false}
                     href={link.href}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
@@ -233,7 +233,7 @@ export function Footer() {
           <p className="text-[10px] sm:text-sm text-muted-foreground whitespace-nowrap">
             © {new Date().getFullYear()} Study in China Academy. All rights reserved.
           </p>
-          <Link
+          <Link prefetch={false}
             href="/contact"
             className="text-[10px] sm:text-sm text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
           >

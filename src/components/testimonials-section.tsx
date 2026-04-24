@@ -405,7 +405,7 @@ export function TestimonialsSection({
         {!showAll && (
           <div className="text-center mt-10">
             <Button variant="outline" asChild>
-              <Link href="/testimonials">
+              <Link prefetch={false} href="/testimonials">
                 Read More Stories
               </Link>
             </Button>

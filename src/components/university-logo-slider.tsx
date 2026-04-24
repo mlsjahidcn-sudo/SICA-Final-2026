@@ -139,7 +139,7 @@ export function UniversityLogoSlider() {
             }}
           >
             {displayUniversities.map((university, index) => (
-              <Link
+              <Link prefetch={false}
                 key={`${university.id}-${index}`}
                 href={`/universities/${university.slug}`}
                 className="group flex-shrink-0"

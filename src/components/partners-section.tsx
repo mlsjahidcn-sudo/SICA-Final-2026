@@ -212,7 +212,7 @@ export function PartnersSection({
         {!showAll && partners.length > 0 && (
           <div className="text-center mt-8">
             <Button variant="outline" asChild>
-              <Link href="/partners">
+              <Link prefetch={false} href="/partners">
                 View All Partners
                 <IconExternalLink className="ml-2 h-4 w-4" />
               </Link>

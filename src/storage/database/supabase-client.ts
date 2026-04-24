@@ -45,8 +45,8 @@ interface SupabaseCredentials {
  * - COZE_SUPABASE_SERVICE_ROLE_KEY: The service role key (for admin operations)
  */
 function getSupabaseCredentials(): SupabaseCredentials {
-  const url = process.env.COZE_SUPABASE_URL;
-  const anonKey = process.env.COZE_SUPABASE_ANON_KEY;
+  const url = process.env.COZE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.COZE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceRoleKey = process.env.COZE_SUPABASE_SERVICE_ROLE_KEY;
 
   // During build time, return placeholder credentials to prevent build failures

@@ -100,7 +100,7 @@ export function Header() {
     return (
       <li>
         <NavigationMenuLink asChild>
-          <Link
+          <Link prefetch={false}
             href={href}
             className={cn(
               "flex items-center gap-2 select-none rounded-md px-3 py-2 text-sm font-medium leading-none no-underline outline-none transition-colors",
@@ -139,7 +139,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link prefetch={false} href="/" className="flex items-center">
           <Image
             src="/logo.png"
             alt="SICA - Study in China Academy"
@@ -156,7 +156,7 @@ export function Header() {
             {/* Free Assessment - Highlighted */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
-                <Link
+                <Link prefetch={false}
                   href="/assessment"
                   className={cn(
                     navigationMenuTriggerStyle(),
@@ -199,7 +199,7 @@ export function Header() {
 
                   {/* View All */}
                   <li className="mt-2 pt-2 border-t">
-                    <Link
+                    <Link prefetch={false}
                       href="/programs"
                       className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
                     >
@@ -214,7 +214,7 @@ export function Header() {
             {/* Universities */}
             <NavigationMenuItem>
               <NavigationMenuLink asChild>
-                <Link href="/universities" className={cn(navigationMenuTriggerStyle(), "gap-1.5")}>
+                <Link prefetch={false} href="/universities" className={cn(navigationMenuTriggerStyle(), "gap-1.5")}>
                   <IconSchool className="h-4 w-4" />
                   Universities
                 </Link>
@@ -268,20 +268,20 @@ export function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'} className="flex items-center">
+                    <Link prefetch={false} href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'} className="flex items-center">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={user.role === 'partner' ? '/partner-v2/profile' : user.role === 'student' ? '/student-v2/profile' : '/profile'} className="flex items-center">
+                    <Link prefetch={false} href={user.role === 'partner' ? '/partner-v2/profile' : user.role === 'student' ? '/student-v2/profile' : '/profile'} className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
                   </DropdownMenuItem>
                   {user.role === 'student' && (
                     <DropdownMenuItem asChild>
-                      <Link href="/assessment/track" className="flex items-center">
+                      <Link prefetch={false} href="/assessment/track" className="flex items-center">
                         <FileText className="mr-2 h-4 w-4" />
                         My Assessments
                       </Link>
@@ -291,7 +291,7 @@ export function Header() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/admin/v2" className="flex items-center">
+                        <Link prefetch={false} href="/admin/v2" className="flex items-center">
                           <Settings className="mr-2 h-4 w-4" />
                           Admin Panel
                         </Link>
@@ -302,7 +302,7 @@ export function Header() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/partner-v2" className="flex items-center">
+                        <Link prefetch={false} href="/partner-v2" className="flex items-center">
                           <Building2 className="mr-2 h-4 w-4" />
                           Partner Portal
                         </Link>
@@ -329,13 +329,13 @@ export function Header() {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                      <Link href="/login" className="flex items-center">
+                      <Link prefetch={false} href="/login" className="flex items-center">
                         <LogIn className="mr-2 h-4 w-4" />
                         Sign In
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/register" className="flex items-center">
+                      <Link prefetch={false} href="/register" className="flex items-center">
                         <User className="mr-2 h-4 w-4" />
                         Register
                       </Link>
@@ -343,7 +343,7 @@ export function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                      <Link href="/login" className="flex items-center">
+                      <Link prefetch={false} href="/login" className="flex items-center">
                         <Building2 className="mr-2 h-4 w-4" />
                         Sign In
                       </Link>
@@ -353,7 +353,7 @@ export function Header() {
               )}
 
               <Button asChild className="gap-2">
-                <Link href="/apply">
+                <Link prefetch={false} href="/apply">
                   <Send className="h-4 w-4" />
                   Apply Now
                 </Link>
@@ -400,7 +400,7 @@ export function Header() {
                     <div className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2 px-3">
                       Menu
                     </div>
-                    <Link
+                    <Link prefetch={false}
                       href="/assessment"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-primary/10 text-primary font-medium transition-colors"
@@ -421,7 +421,7 @@ export function Header() {
                       <CollapsibleContent className="overflow-hidden">
                         <div className="ml-6 pl-4 border-l-2 border-primary/15 space-y-0.5">
                           {programItems.map((item) => (
-                            <Link
+                            <Link prefetch={false}
                               key={item.href}
                               href={item.href}
                               onClick={() => setIsOpen(false)}
@@ -431,7 +431,7 @@ export function Header() {
                               <span>{item.label}</span>
                             </Link>
                           ))}
-                          <Link
+                          <Link prefetch={false}
                             href="/programs"
                             onClick={() => setIsOpen(false)}
                             className="flex items-center gap-2 py-2 px-3 rounded-lg text-primary font-medium hover:bg-primary/5 transition-colors text-sm"
@@ -443,7 +443,7 @@ export function Header() {
                       </CollapsibleContent>
                     </Collapsible>
 
-                    <Link
+                    <Link prefetch={false}
                       href="/universities"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -452,7 +452,7 @@ export function Header() {
                       <span>Universities</span>
                     </Link>
 
-                    <Link
+                    <Link prefetch={false}
                       href="/scholarships"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -467,7 +467,7 @@ export function Header() {
                     <div className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2 px-3">
                       Resources
                     </div>
-                    <Link
+                    <Link prefetch={false}
                       href="/blog"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -475,7 +475,7 @@ export function Header() {
                       <IconFileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                       <span>Blog</span>
                     </Link>
-                    <Link
+                    <Link prefetch={false}
                       href="/success-cases"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -483,7 +483,7 @@ export function Header() {
                       <IconAward className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                       <span>Success Cases</span>
                     </Link>
-                    <Link
+                    <Link prefetch={false}
                       href="/faq"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -498,7 +498,7 @@ export function Header() {
                     <div className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2 px-3">
                       Company
                     </div>
-                    <Link
+                    <Link prefetch={false}
                       href="/about"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -506,7 +506,7 @@ export function Header() {
                       <IconInfoCircle className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                       <span>About</span>
                     </Link>
-                    <Link
+                    <Link prefetch={false}
                       href="/partners"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -514,7 +514,7 @@ export function Header() {
                       <IconBuilding className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                       <span>Partners</span>
                     </Link>
-                    <Link
+                    <Link prefetch={false}
                       href="/contact"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -530,7 +530,7 @@ export function Header() {
                       <div className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2 px-3">
                         Account
                       </div>
-                      <Link
+                      <Link prefetch={false}
                         href={user.role === 'partner' ? '/partner-v2' : user.role === 'admin' ? '/admin/v2' : user.role === 'student' ? '/student-v2' : '/dashboard'}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -538,7 +538,7 @@ export function Header() {
                         <IconLayoutDashboard className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                         <span>Dashboard</span>
                       </Link>
-                      <Link
+                      <Link prefetch={false}
                         href={user.role === 'partner' ? '/partner-v2/profile' : user.role === 'student' ? '/student-v2/profile' : '/profile'}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -547,7 +547,7 @@ export function Header() {
                         <span>Profile</span>
                       </Link>
                       {user.role === 'student' && (
-                        <Link
+                        <Link prefetch={false}
                           href="/assessment/track"
                           onClick={() => setIsOpen(false)}
                           className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-muted text-foreground transition-colors"
@@ -575,13 +575,13 @@ export function Header() {
                   </Button>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    <Link href="/login" onClick={() => setIsOpen(false)} className="block">
+                    <Link prefetch={false} href="/login" onClick={() => setIsOpen(false)} className="block">
                       <Button variant="outline" className="w-full h-10 gap-2">
                         <IconLogin className="h-4 w-4" />
                         Sign In
                       </Button>
                     </Link>
-                    <Link href="/register" onClick={() => setIsOpen(false)} className="block">
+                    <Link prefetch={false} href="/register" onClick={() => setIsOpen(false)} className="block">
                       <Button className="w-full h-10 gap-2">
                         <IconUser className="h-4 w-4" />
                         Register
@@ -590,7 +590,7 @@ export function Header() {
                   </div>
                 )}
 
-                <Link href="/apply" onClick={() => setIsOpen(false)} className="block">
+                <Link prefetch={false} href="/apply" onClick={() => setIsOpen(false)} className="block">
                   <Button className="w-full h-11 font-semibold shadow-sm transition-all active:scale-[0.98] gap-2">
                     <IconSend className="h-4 w-4" />
                     Apply Now
@@ -600,7 +600,7 @@ export function Header() {
                 {/* Portal Links */}
                 {!user && (
                   <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground pt-1">
-                    <Link
+                    <Link prefetch={false}
                       href="/login"
                       className="hover:text-primary transition-colors flex items-center gap-1"
                       onClick={() => setIsOpen(false)}
@@ -608,7 +608,7 @@ export function Header() {
                       <IconBuilding className="h-3.5 w-3.5" />
                       Partner
                     </Link>
-                    <Link
+                    <Link prefetch={false}
                       href="/login"
                       className="hover:text-primary transition-colors flex items-center gap-1"
                       onClick={() => setIsOpen(false)}

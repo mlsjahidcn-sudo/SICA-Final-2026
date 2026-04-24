@@ -280,16 +280,16 @@ export function HomePageContent() {
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <Button asChild size="lg" className="text-base h-11 sm:h-12">
-                    <Link href="/universities">
+                    <Link prefetch={false} href="/universities">
                       <Search className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Explore Universities
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="lg" className="text-base h-11 sm:h-12">
-                    <Link href="/apply">Apply Now</Link>
+                    <Link prefetch={false} href="/apply">Apply Now</Link>
                   </Button>
                   <Button asChild variant="secondary" size="lg" className="text-base h-11 sm:h-12">
-                    <Link href="/assessment/apply">
+                    <Link prefetch={false} href="/assessment/apply">
                       <ClipboardCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Free Assessment
                     </Link>
@@ -306,7 +306,7 @@ export function HomePageContent() {
                     <h2 className="text-xl font-bold">Featured Universities</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">Top institutions for international students</p>
                   </div>
-                  <Link 
+                  <Link prefetch={false} 
                     href="/universities" 
                     className="group flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                   >
@@ -323,7 +323,7 @@ export function HomePageContent() {
                     </div>
                   ) : featuredUniversities.length > 0 ? (
                     featuredUniversities.slice(0, 3).map((university) => (
-                      <Link key={university.id} href={`/universities/${university.id}`} className="block group">
+                      <Link prefetch={false} key={university.id} href={`/universities/${university.id}`} className="block group">
                         <div className={`
                           relative overflow-hidden rounded-xl border bg-card transition-all duration-300
                           hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:border-primary/30
@@ -516,7 +516,7 @@ export function HomePageContent() {
                   </CardContent>
                   <CardFooter>
                     <Button asChild variant="outline" className="w-full h-9 sm:h-10 text-sm">
-                      <Link href={feature.cta.href}>
+                      <Link prefetch={false} href={feature.cta.href}>
                         {feature.cta.text}
                         <ArrowRight className="ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Link>
@@ -563,7 +563,7 @@ export function HomePageContent() {
                   </CardContent>
                   <CardFooter>
                     <Button asChild variant="outline" className="w-full h-9 sm:h-10 text-sm">
-                      <Link href={feature.cta.href}>
+                      <Link prefetch={false} href={feature.cta.href}>
                         {feature.cta.text}
                         <ArrowRight className="ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Link>
@@ -593,7 +593,7 @@ export function HomePageContent() {
                 </p>
               </div>
               <Button asChild variant="outline" className="w-fit">
-                <Link href="/universities">
+                <Link prefetch={false} href="/universities">
                   View All Universities
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -622,7 +622,7 @@ export function HomePageContent() {
               <div ref={scrollRef} className="overflow-x-auto pb-4 mx-12 scrollbar-hide">
                 <div className="flex gap-4 md:gap-6 min-w-max">
                   {universityTypes.map((type, index) => (
-                    <Link
+                    <Link prefetch={false}
                       key={index}
                       href={type.href}
                       className="group flex-shrink-0 w-[280px] md:w-[320px]"
@@ -746,7 +746,7 @@ export function HomePageContent() {
             {/* CTA */}
             <div className="text-center mt-10 sm:mt-12">
               <Button asChild size="lg" className="text-base">
-                <Link href="/apply">
+                <Link prefetch={false} href="/apply">
                   Start Your Journey
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -784,7 +784,7 @@ export function HomePageContent() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {successCases.map((caseItem) => (
-                  <Link key={caseItem.id} href={`/success-cases/${caseItem.id}`}>
+                  <Link prefetch={false} key={caseItem.id} href={`/success-cases/${caseItem.id}`}>
                     <Card className="group h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
                       <div className="relative h-48 sm:h-56 bg-muted">
                         {caseItem.admission_notice_signed_url ? (
@@ -862,7 +862,7 @@ export function HomePageContent() {
             {/* View More */}
             <div className="text-center mt-8 sm:mt-10">
               <Button asChild variant="outline" size="lg">
-                <Link href="/success-cases">
+                <Link prefetch={false} href="/success-cases">
                   View All Success Stories
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -906,7 +906,7 @@ export function HomePageContent() {
                       size="lg"
                       className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg"
                     >
-                      <Link href="/register">
+                      <Link prefetch={false} href="/register">
                         Create Free Account
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
@@ -917,7 +917,7 @@ export function HomePageContent() {
                       size="lg"
                       className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
                     >
-                      <Link href="/contact">
+                      <Link prefetch={false} href="/contact">
                         Contact Us
                       </Link>
                     </Button>
