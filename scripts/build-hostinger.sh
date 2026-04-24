@@ -36,15 +36,10 @@ npm run build:next
 if [ -d ".next/standalone" ]; then
     echo "Standalone build created successfully at .next/standalone"
     
-    # Determine the actual server directory (Next.js may nest it under workspace/projects/)
-    SERVER_DIR=""
-    if [ -f ".next/standalone/server.js" ]; then
-        SERVER_DIR=".next/standalone"
-    elif [ -f ".next/standalone/workspace/projects/server.js" ]; then
-        SERVER_DIR=".next/standalone/workspace/projects"
-    fi
+    # Determine the actual server directory dynamically
+    SERVER_DIR=$(dirname "$(find .next/standalone -name "server.js" | grep -v "node_modules" | head -n 1)")
     
-    if [ -n "${SERVER_DIR}" ]; then
+    if [ -n "${SERVER_DIR}" ] && [ -d "${SERVER_DIR}" ]; then
         echo "Server directory: ${SERVER_DIR}"
         
         # Copy static files and public folder to the correct standalone directory
