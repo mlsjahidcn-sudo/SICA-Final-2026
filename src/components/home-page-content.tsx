@@ -264,9 +264,6 @@ export function HomePageContent() {
                 </div>
 
               </div>
-
-              {/* Right Column - Removed for now to fix 429 errors */}
-              <div className="relative hidden lg:block">
             </div>
           </div>
 
