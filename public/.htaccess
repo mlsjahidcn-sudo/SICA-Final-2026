@@ -1,22 +1,52 @@
 # SICA - Hostinger Apache/LiteSpeed Configuration
 # Proxy all requests to Node.js app running on port 5000
 
+# Disable ALL LiteSpeed caching and optimization
+<IfModule litespeed.c>
+    CacheEngine off
+    NoCache *
+    LiteSpeedConf Off
+    RewriteEngine On
+    RewriteRule .* - [E=noabort:1]
+    RewriteRule .* - [E=noconntimeout:1]
+</IfModule>
+
+# Disable mod_deflate to avoid conflicts with Node.js compression
+<IfModule mod_deflate.c>
+    SetOutputFilter DEFLATE
+    RemoveOutputFilter DEFLATE
+</IfModule>
+
+# Disable mod_ratelimit completely
+<IfModule mod_ratelimit.c>
+    SetOutputFilter RATE_LIMIT
+    RemoveOutputFilter RATE_LIMIT
+</IfModule>
+
+# Proxy to Node.js application - disable buffering
+<IfModule mod_proxy.c>
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyTimeout 600
+    SetEnv proxy-nokeepalive 1
+    SetEnv proxy-sendchunks 1
+    SetEnv proxy-initial-not-pooled 1
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Proxy to Node.js application
-    RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
-</IfModule>
-
-# Increase rate limit thresholds for API-heavy application
-<IfModule mod_ratelimit.c>
-    SetOutputFilter RATE_LIMIT
-    LimitRate 0
-</IfModule>
-
-# Disable Hostinger's default rate limiting for this site
-<IfModule litespeed.c>
-    CacheEngine off
+    # Disable rewrite logs
+    RewriteLogLevel 0
+    
+    # Proxy everything to Node.js on port 5000
+    # Use [P] for proxy, [L] for last rule, [QSA] to keep query strings
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L,QSA,E=noabort:1,E=noconntimeout:1]
+    
+    # Also proxy existing files/dirs to Node.js (Next.js handles static files)
+    RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L,QSA,E=noabort:1,E=noconntimeout:1]
 </IfModule>
 
 # Security headers
@@ -24,4 +54,10 @@
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
     Header set X-XSS-Protection "1; mode=block"
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
 </IfModule>
+
+# Disable server signature
+ServerSignature Off
