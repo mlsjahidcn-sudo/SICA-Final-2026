@@ -52,6 +52,14 @@ if [ -d ".next/standalone" ]; then
         cp -r public "${SERVER_DIR}/public" 2>/dev/null || true
         cp -r .next/static "${SERVER_DIR}/.next/static" 2>/dev/null || true
         
+        # CRITICAL FIX FOR HOSTINGER 429 ERRORS:
+        # Hostinger's Passenger/LiteSpeed serves static files from the 'public' folder.
+        # We need to put the Next.js static assets into public/_next/static so the web server 
+        # serves them directly instead of hitting the Node.js process, which triggers 429 rate limits.
+        echo "Setting up static asset serving for Hostinger..."
+        mkdir -p "${SERVER_DIR}/public/_next"
+        cp -r .next/static "${SERVER_DIR}/public/_next/static" 2>/dev/null || true
+        
         # Write correct .env.production with real credentials (NOT placeholders)
         echo "Writing production environment file with real credentials..."
         cat > "${SERVER_DIR}/.env.production" << 'ENVEOF'
