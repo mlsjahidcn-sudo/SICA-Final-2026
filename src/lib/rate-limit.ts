@@ -130,55 +130,55 @@ export function checkRateLimit(
 export const rateLimitPresets = {
   /**
    * Authentication endpoints (sign in, sign up)
-   * 5 requests per minute
+   * 10 requests per minute (increased for production)
    */
   auth: {
-    maxRequests: 5,
-    windowMs: 60 * 1000, // 1 minute
-  },
-
-  /**
-   * Password reset
-   * 3 requests per hour
-   */
-  passwordReset: {
-    maxRequests: 3,
-    windowMs: 60 * 60 * 1000, // 1 hour
-  },
-
-  /**
-   * API endpoints (general)
-   * 100 requests per minute
-   */
-  api: {
-    maxRequests: 100,
-    windowMs: 60 * 1000, // 1 minute
-  },
-
-  /**
-   * Export endpoints (expensive operations)
-   * 10 requests per minute
-   */
-  export: {
     maxRequests: 10,
     windowMs: 60 * 1000, // 1 minute
   },
 
   /**
-   * File upload endpoints
-   * 20 requests per minute
+   * Password reset
+   * 5 requests per hour (increased from 3)
    */
-  upload: {
+  passwordReset: {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000, // 1 hour
+  },
+
+  /**
+   * API endpoints (general)
+   * 200 requests per minute (increased for production)
+   */
+  api: {
+    maxRequests: 200,
+    windowMs: 60 * 1000, // 1 minute
+  },
+
+  /**
+   * Export endpoints (expensive operations)
+   * 20 requests per minute (increased from 10)
+   */
+  export: {
     maxRequests: 20,
     windowMs: 60 * 1000, // 1 minute
   },
 
   /**
+   * File upload endpoints
+   * 30 requests per minute (increased from 20)
+   */
+  upload: {
+    maxRequests: 30,
+    windowMs: 60 * 1000, // 1 minute
+  },
+
+  /**
    * Search endpoints
-   * 30 requests per minute
+   * 60 requests per minute (increased from 30)
    */
   search: {
-    maxRequests: 30,
+    maxRequests: 60,
     windowMs: 60 * 1000, // 1 minute
   },
 } as const;
@@ -228,4 +228,17 @@ export function createRateLimitMiddleware(config: RateLimitConfig) {
     const ip = identifier || getClientIP(request);
     return checkRateLimit(ip, config);
   };
+}
+
+/**
+ * Add rate limit headers to response
+ * Should be called even when request is allowed
+ */
+export function addRateLimitHeaders(
+  response: Response,
+  result: RateLimitResult
+): void {
+  response.headers.set('X-RateLimit-Limit', String(result.limit));
+  response.headers.set('X-RateLimit-Remaining', String(result.remaining));
+  response.headers.set('X-RateLimit-Reset', String(result.resetTime));
 }
