@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
+// import { Inspector } from 'react-dev-inspector'; // Disabled for production builds
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { ChatWidget } from '@/components/chat-widget';
@@ -108,7 +108,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={cn("font-sans", ubuntu.variable)}>
       <body className={`antialiased min-h-screen`} suppressHydrationWarning>
         <Providers>
-          {isDev && <Inspector />}
+          {/* {isDev && <Inspector />} */} {/* Disabled for production builds */}
           {children}
           <FloatingAssessmentButton />
           <ChatWidget />
