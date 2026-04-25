@@ -1,0 +1,261 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { requireAdmin } from '@/lib/auth-utils';
+import { apiCache, CACHE_TTL, withTimeout } from '@/lib/api-cache';
+
+const QUERY_TIMEOUT = 30000; // 30 seconds
+
+export async function GET(request: NextRequest) {
+  try {
+    // Use centralized auth helper
+    const user = await requireAdmin(request);
+    if (user instanceof NextResponse) return user;
+
+    // Check cache first (30 second TTL for admin dashboard)
+    const cached = apiCache.get('admin:dashboard') as Record<string, unknown> | null;
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    const supabaseAdmin = getSupabaseClient();
+
+    // Fetch all statistics in parallel with timeout protection
+    const [
+      studentsCount,
+      partnersCount,
+      applicationsCount,
+      universitiesCount,
+      programsCount,
+      applicationsByStatus,
+      recentApplications,
+      pendingPartners,
+      upcomingMeetings,
+      applicationsTrend,
+      partnersData,
+    ] = await Promise.all([
+      // Total students
+      withTimeout(
+        supabaseAdmin.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student'),
+        QUERY_TIMEOUT,
+        'Students count query timed out'
+      ),
+      
+      // Total partners
+      withTimeout(
+        supabaseAdmin.from('partners').select('id', { count: 'exact', head: true }),
+        QUERY_TIMEOUT,
+        'Partners count query timed out'
+      ),
+      
+      // Total applications
+      withTimeout(
+        supabaseAdmin.from('applications').select('id', { count: 'exact', head: true }),
+        QUERY_TIMEOUT,
+        'Applications count query timed out'
+      ),
+      
+      // Total universities
+      withTimeout(
+        supabaseAdmin.from('universities').select('id', { count: 'exact', head: true }),
+        QUERY_TIMEOUT,
+        'Universities count query timed out'
+      ),
+      
+      // Total programs
+      withTimeout(
+        supabaseAdmin.from('programs').select('id', { count: 'exact', head: true }),
+        QUERY_TIMEOUT,
+        'Programs count query timed out'
+      ),
+      
+      // Applications by status
+      withTimeout(
+        supabaseAdmin.from('applications').select('status'),
+        QUERY_TIMEOUT,
+        'Applications by status query timed out'
+      ),
+      
+      // Recent applications (simple select, enriched below)
+      withTimeout(
+        supabaseAdmin
+          .from('applications')
+          .select('id, status, created_at, student_id')
+          .order('created_at', { ascending: false })
+          .limit(5),
+        QUERY_TIMEOUT,
+        'Recent applications query timed out'
+      ),
+
+      // Pending partners
+      withTimeout(
+        supabaseAdmin
+          .from('partners')
+          .select('id, company_name as full_name, email, created_at, status as approval_status')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(5),
+        QUERY_TIMEOUT,
+        'Pending partners query timed out'
+      ),
+
+      // Upcoming meetings
+      withTimeout(
+        supabaseAdmin
+          .from('meetings')
+          .select(`
+            id,
+            title,
+            meeting_date,
+            status,
+            student:users!meetings_student_id_fkey (full_name, email)
+          `)
+          .gte('meeting_date', new Date().toISOString())
+          .eq('status', 'scheduled')
+          .order('meeting_date', { ascending: true })
+          .limit(5),
+        QUERY_TIMEOUT,
+        'Upcoming meetings query timed out'
+      ),
+      
+      // Applications trend (last 7 days)
+      withTimeout(
+        supabaseAdmin
+          .from('applications')
+          .select('created_at')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+        QUERY_TIMEOUT,
+        'Applications trend query timed out'
+      ),
+      
+      // Partners for management section
+      withTimeout(
+        supabaseAdmin
+          .from('partners')
+          .select('id, company_name as full_name, email, created_at, status as approval_status')
+          .order('created_at', { ascending: false }),
+        QUERY_TIMEOUT,
+        'Partners data query timed out'
+      ),
+    ]);
+
+    // Process applications by status
+    const statusCounts: Record<string, number> = {
+      draft: 0,
+      submitted: 0,
+      under_review: 0,
+      document_request: 0,
+      interview_scheduled: 0,
+      accepted: 0,
+      rejected: 0,
+      withdrawn: 0,
+    };
+    
+    for (const app of (applicationsByStatus.data || [])) {
+      if (app.status in statusCounts) {
+        statusCounts[app.status]++;
+      }
+    }
+
+    // Process applications trend
+    const trendData: { date: string; count: number }[] = [];
+    const trendMap = new Map<string, number>();
+    
+    for (const app of (applicationsTrend.data || [])) {
+      const date = new Date(app.created_at).toISOString().split('T')[0];
+      trendMap.set(date, (trendMap.get(date) || 0) + 1);
+    }
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      trendData.push({
+        date,
+        count: trendMap.get(date) || 0,
+      });
+    }
+
+    // Enrich recent applications with student names
+    let enrichedRecentApplications: any[] = [];
+    const recentAppStudentIds = [...new Set((recentApplications.data || []).map(a => a.student_id).filter(Boolean))];
+    if (recentAppStudentIds.length > 0) {
+      const { data: studentUsers } = await withTimeout(
+        supabaseAdmin
+          .from('students')
+          .select('id, user_id, first_name, last_name')
+          .in('id', recentAppStudentIds),
+        QUERY_TIMEOUT,
+        'Student enrichment query timed out'
+      );
+      const studentUserIds = [...new Set((studentUsers || []).map(s => s.user_id).filter(Boolean))];
+      const { data: usersData } = studentUserIds.length > 0
+        ? await withTimeout(
+            supabaseAdmin.from('users').select('id, full_name, email').in('id', studentUserIds),
+            QUERY_TIMEOUT,
+            'User enrichment query timed out'
+          )
+        : { data: [] };
+      const userMap = new Map((usersData || []).map(u => [u.id, u]));
+      const studentMap = new Map((studentUsers || []).map(s => [s.id, s]));
+      enrichedRecentApplications = (recentApplications.data || []).map(app => {
+        const student = studentMap.get(app.student_id);
+        const user = student?.user_id ? userMap.get(student.user_id) : null;
+        return {
+          ...app,
+          passport_first_name: student?.first_name || null,
+          passport_last_name: student?.last_name || null,
+          full_name: user?.full_name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || null,
+          email: user?.email || null,
+        };
+      });
+    } else {
+      enrichedRecentApplications = recentApplications.data || [];
+    }
+
+    // Group partners by status for the dashboard tabs
+    const partnersByStatus: Record<string, { id: string; company_name: string; email: string; approval_status: string }[]> = {
+      pending: [],
+      approved: [],
+      rejected: [],
+      suspended: [],
+    };
+
+    for (const partner of (partnersData.data || []) as unknown as { id: string; full_name: string; email: string; approval_status: string }[]) {
+      if (partner.approval_status && partnersByStatus[partner.approval_status]) {
+        partnersByStatus[partner.approval_status].push({
+          id: partner.id,
+          company_name: partner.full_name, // Map full_name back to company_name
+          email: partner.email,
+          approval_status: partner.approval_status,
+        });
+      }
+    }
+
+    const responseData = {
+      stats: {
+        students: studentsCount.count || 0,
+        partners: partnersCount.count || 0,
+        applications: applicationsCount.count || 0,
+        universities: universitiesCount.count || 0,
+        programs: programsCount.count || 0,
+      },
+      applicationsByStatus: statusCounts,
+      recentApplications: enrichedRecentApplications,
+      pendingPartners: pendingPartners.data || [],
+      upcomingMeetings: upcomingMeetings.data || [],
+      applicationsTrend: trendData,
+      partnersByStatus,
+    };
+
+    // Cache the response for 30 seconds
+    apiCache.set('admin:dashboard', responseData, CACHE_TTL.SHORT);
+
+    return NextResponse.json(responseData);
+  } catch (error) {
+    console.error('Error fetching admin dashboard data:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
